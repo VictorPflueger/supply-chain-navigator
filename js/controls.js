@@ -1,0 +1,184 @@
+// Control bar: start, scenario picker, live scan, model, replay speed, status, abort, reset, diagnostics.
+
+import { h, setDisabled, isDisabled } from "./dom.js";
+import { icon } from "./icons.js";
+import { MODELS } from "./config.js";
+import { RUN_STATES } from "./events.js";
+import { isRunning } from "./state.js";
+
+const STATE_TONE = {
+  idle: "", scanning: "active", diagnosing: "active", verifying: "active", simulating: "active",
+  options: "waiting", awaiting_approval: "waiting", executing: "active", done: "done", aborted: "stopped", error: "stopped"
+};
+
+/**
+ * handlers: { onStart, onLiveScan, onSelectScenario(id), onSelectCustom(), onSelectModel(id), onSpeed(n), onAbort, onReset, onDiagnostics }
+ */
+export function createControls(root, scenarios, handlers) {
+  const startBtn = h("button", { class: "btn btn-primary", type: "button", id: "btn-start" }, icon("play", 18), h("span", {}, "Start agent"));
+  startBtn.addEventListener("click", () => { if (!isDisabled(startBtn)) handlers.onStart(); });
+
+  const scenarioDd = dropdown({
+    id: "scenario",
+    caption: "Scenario",
+    width: 330,
+    items: [
+      ...scenarios.map((s) => ({ id: s.id, badge: String(s.number), title: s.title, hint: s.category })),
+      { sep: true },
+      { id: "custom", badge: "+", title: "Custom what-if…", hint: "Describe any disruption in your own words", liveOnly: true }
+    ],
+    onSelect: (id) => (id === "custom" ? handlers.onSelectCustom() : handlers.onSelectScenario(id))
+  });
+
+  const scanBtn = h("button", { class: "btn", type: "button", id: "btn-scan" }, icon("radar", 18), "Live scan");
+  scanBtn.addEventListener("click", () => { if (!isDisabled(scanBtn)) handlers.onLiveScan(); });
+
+  const modelDd = dropdown({
+    id: "model",
+    caption: "Model",
+    width: 210,
+    items: MODELS.map((m) => ({ id: m.id, title: m.label, hint: m.hint })),
+    onSelect: (id) => handlers.onSelectModel(id)
+  });
+
+  const speedBtns = [1, 2, 4].map((n) => {
+    const b = h("button", { type: "button", "aria-pressed": "false", "aria-label": `Replay speed ×${n}` }, `×${n}`);
+    b.addEventListener("click", () => { if (!isDisabled(speedGroup)) handlers.onSpeed(n); });
+    return b;
+  });
+  const speedGroup = h("div", { class: "segmented", role: "group", "aria-label": "Simulation replay speed" }, speedBtns);
+
+  const pill = h("div", { class: "status-pill", role: "status", "aria-live": "polite" }, h("span", { class: "dot" }), h("span", { class: "text" }, "Idle"));
+
+  const abortBtn = h("button", { class: "btn btn-danger", type: "button", id: "btn-abort" }, icon("stop", 18), "Abort");
+  abortBtn.addEventListener("click", () => { if (!isDisabled(abortBtn)) handlers.onAbort(); });
+  const resetBtn = h("button", { class: "btn", type: "button", id: "btn-reset", "aria-label": "Reset", title: "Clear the workspace" }, icon("reset", 18), h("span", { class: "btn-text" }, "Reset"));
+  resetBtn.addEventListener("click", () => handlers.onReset());
+  const diagBtn = h("button", { class: "btn btn-ghost", type: "button", id: "btn-diagnostics", "aria-label": "Diagnostics", title: "Test every external service from this browser" }, icon("pulse", 18), h("span", { class: "btn-text" }, "Diagnostics"));
+  diagBtn.addEventListener("click", () => handlers.onDiagnostics());
+
+  root.append(
+    startBtn,
+    scenarioDd.el,
+    scanBtn,
+    h("span", { class: "control-group" }, modelDd.el),
+    h("span", { class: "control-group" }, h("span", { class: "control-label" }, "Replay"), speedGroup),
+    h("span", { class: "spacer" }),
+    pill,
+    abortBtn,
+    resetBtn,
+    diagBtn
+  );
+
+  function update(s, { scenarioLabel } = {}) {
+    const running = isRunning(s);
+    const finished = ["done", "aborted", "error"].includes(s.runState);
+    const sim = s.mode === "simulation";
+    const live = s.mode === "live";
+
+    startBtn.lastChild.textContent = finished ? "New run" : "Start agent";
+    setDisabled(startBtn, running, "A run is in progress. Abort it or wait until it finishes.");
+
+    scenarioDd.setValue(s.entry === "custom" ? "custom" : s.scenarioId, s.entry === "custom" ? `Custom: ${shorten(s.customText, 34)}` : scenarioLabel);
+    scenarioDd.setDisabled(running, "Locked while the agent runs.");
+    scenarioDd.setItemDisabled("custom", sim && !finished, "Requires Live mode. Reset to switch modes.");
+
+    setDisabled(scanBtn, running || (sim && !finished), running ? "Locked while the agent runs." : "Requires Live mode. Reset to switch modes.");
+
+    const model = MODELS.find((m) => m.id === s.model) || MODELS[0];
+    modelDd.setValue(model.id, model.label);
+    modelDd.setDisabled(running || (sim && !finished), running ? "Locked while the agent runs." : "Requires Live mode.");
+
+    speedGroup.setAttribute("aria-disabled", String(live));
+    speedGroup.title = live ? "Replay speed applies to Simulation only." : "Replay speed for Simulation mode";
+    for (const [i, b] of speedBtns.entries()) b.setAttribute("aria-pressed", String([1, 2, 4][i] === s.speed));
+
+    setDisabled(abortBtn, !running, "Nothing to abort: no run in progress.");
+
+    pill.dataset.tone = STATE_TONE[s.runState] || "";
+    pill.querySelector(".text").textContent = RUN_STATES[s.runState] || s.runState;
+  }
+
+  return { update, focusStart: () => startBtn.focus() };
+}
+
+function shorten(text, n) {
+  const t = String(text || "").trim();
+  return t.length > n ? `${t.slice(0, n - 1)}…` : t;
+}
+
+// ---- dropdown ----------------------------------------------------------------------------------
+
+function dropdown({ id, caption, items, onSelect, width }) {
+  const valueEl = h("span", { class: "value" }, "");
+  const toggle = h("button", {
+    class: "btn dropdown-toggle", type: "button", id: `dd-${id}`,
+    "aria-haspopup": "menu", "aria-expanded": "false", style: width ? { minWidth: `${Math.min(width, 360)}px` } : undefined
+  }, h("span", { class: "caption" }, `${caption}:`), valueEl, icon("chevronDown", 16));
+  const menu = h("div", { class: "dropdown-menu", role: "menu", "aria-labelledby": `dd-${id}`, hidden: true });
+  const itemEls = new Map();
+
+  for (const it of items) {
+    if (it.sep) { menu.appendChild(h("div", { class: "menu-sep", role: "separator" })); continue; }
+    const el = h("button", { class: "menu-item", type: "button", role: "menuitemradio", "aria-checked": "false", dataset: { id: it.id } },
+      it.badge ? h("span", { class: "num-badge" }, it.badge) : h("span"),
+      h("span", {}, h("span", { class: "menu-title" }, it.title), it.hint ? h("span", { class: "menu-hint" }, it.hint) : null),
+      it.liveOnly ? h("span", { class: "chip", dataset: { tone: "live-only" } }, "Live only") : h("span"));
+    el.addEventListener("click", () => {
+      if (isDisabled(el)) return;
+      close();
+      onSelect(it.id);
+      toggle.focus();
+    });
+    itemEls.set(it.id, el);
+    menu.appendChild(el);
+  }
+
+  const wrap = h("div", { class: "dropdown" }, toggle, menu);
+
+  function open() {
+    if (isDisabled(toggle)) return;
+    menu.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    const current = menu.querySelector('[aria-checked="true"]') || menu.querySelector(".menu-item");
+    current?.focus();
+    document.addEventListener("mousedown", outside, true);
+  }
+  function close() {
+    menu.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+    document.removeEventListener("mousedown", outside, true);
+  }
+  function outside(e) {
+    if (!wrap.contains(e.target)) close();
+  }
+
+  toggle.addEventListener("click", () => (menu.hidden ? open() : close()));
+  toggle.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); open(); }
+  });
+  menu.addEventListener("keydown", (e) => {
+    const els = [...menu.querySelectorAll(".menu-item")];
+    const i = els.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); els[(i + 1) % els.length].focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); els[(i - 1 + els.length) % els.length].focus(); }
+    else if (e.key === "Escape") { e.preventDefault(); close(); toggle.focus(); }
+    else if (e.key === "Tab") close();
+  });
+
+  return {
+    el: wrap,
+    setValue(idVal, label) {
+      valueEl.textContent = label || "";
+      for (const [iid, el] of itemEls) el.setAttribute("aria-checked", String(iid === idVal));
+    },
+    setDisabled(disabled, reason) {
+      setDisabled(toggle, disabled, reason);
+      if (disabled) close();
+    },
+    setItemDisabled(itemId, disabled, reason) {
+      const el = itemEls.get(itemId);
+      if (el) setDisabled(el, disabled, reason);
+    }
+  };
+}

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The browser enforces where this page may connect: the API key can only ever reach api.anthropic.com,
+       and open data only the four documented hosts (TECH_NOTES §6). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net; img-src 'self' data: https://tile.openstreetmap.org https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self'; connect-src https://api.anthropic.com https://api.open-meteo.com https://earthquake.usgs.gov https://eonet.gsfc.nasa.gov https://www.pegelonline.wsv.de; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Navigator detects supply chain disruptions, maps them onto a fictional EV maker's supplier network, quantifies which plant stops when and proposes costed responses for human approval.">
+  <title>Navigator — Supply Chain Disruption Navigator</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <!-- Leaflet is loaded by js/libs.js (unpkg, then jsDelivr, then vendor/). The preloads only start the download early. -->
+  <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/console.css">
+  <link rel="stylesheet" href="css/drawer.css">
+  <link rel="stylesheet" href="css/modals.css">
+
+  <!-- Synthetic world and scripted replays: plain scripts that set window globals (no fetch needed). -->
+  <script src="data/world.js" defer></script>
+  <script src="data/scenarios.js" defer></script>
+  <script src="data/reference_cases.js" defer></script>
+  <script src="data/sim_runs.js" defer></script>
+  <script src="data/basemap_offline.js" defer></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#console">Skip to the agent console</a>
+
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="#7a1e3a"/>
+        <path d="M7 23.5 12.5 15l6 3.5L24 9.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="7" cy="23.5" r="2.2" fill="#ffffff"/>
+        <circle cx="12.5" cy="15" r="2" fill="#7a1e3a" stroke="#ffffff" stroke-width="1.8"/>
+        <circle cx="18.5" cy="18.5" r="2" fill="#7a1e3a" stroke="#ffffff" stroke-width="1.8"/>
+        <circle cx="24" cy="9.5" r="3.4" fill="none" stroke="#f7c890" stroke-width="2"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">Navigator</span>
+        <span class="brand-sub">Supply chain disruption agent for Nordwerk Automotive, a fictional EV maker</span>
+      </div>
+    </div>
+
+    <div class="header-badges">
+      <span id="mode-badge" class="mode-badge" data-mode="none" role="status" aria-live="polite" title="Choose a mode with Start agent">No run active</span>
+      <span class="ai-disclosure" title="Navigator is an AI system. Its analysis can be wrong. Every action is a draft that waits for your approval, and nothing is ever sent to a real company.">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8z"/><path d="M18.5 15.5l.8 2 2 .7-2 .8-.8 2-.7-2-2-.8 2-.7z"/></svg>
+        <span><span class="long">You are interacting with an </span>AI system</span>
+      </span>
+    </div>
+
+    <div id="kpis" class="kpis" role="group" aria-label="Key figures for the current run"></div>
+  </header>
+
+  <nav id="controls" class="controls" aria-label="Run controls"></nav>
+
+  <main class="workspace">
+    <section class="map-panel" aria-label="Supplier network map">
+      <div id="map"></div>
+    </section>
+    <section id="console" class="console-panel" aria-label="Agent console" tabindex="-1"></section>
+  </main>
+
+  <section id="drawer" class="drawer" aria-label="Options, outbox and audit log"></section>
+
+  <div id="banners" class="banner-stack"></div>
+
+  <!-- Boot screen: removed by js/main.js once the workspace is running. Without JavaScript modules
+       (for example when opened from disk via file://) it stays and explains what to do. -->
+  <div id="boot" class="boot" data-state="loading">
+    <div class="boot-card">
+      <div class="boot-brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect x="1" y="1" width="30" height="30" rx="8" fill="#7a1e3a"/>
+          <path d="M7 23.5 12.5 15l6 3.5L24 9.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="7" cy="23.5" r="2.2" fill="#ffffff"/>
+          <circle cx="12.5" cy="15" r="2" fill="#7a1e3a" stroke="#ffffff" stroke-width="1.8"/>
+          <circle cx="18.5" cy="18.5" r="2" fill="#7a1e3a" stroke="#ffffff" stroke-width="1.8"/>
+          <circle cx="24" cy="9.5" r="3.4" fill="none" stroke="#f7c890" stroke-width="2"/>
+        </svg>
+        <span class="brand-name">Navigator</span>
+      </div>
+      <p class="boot-status" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span id="boot-status">Starting Navigator…</span></p>
+      <p id="boot-detail" class="boot-detail" hidden></p>
+      <div class="boot-help">
+        <p>Still on this screen? Navigator has to be served over http or https. Browsers block its program modules when <code>index.html</code> is opened straight from disk, at an address starting with <code>file://</code>.</p>
+        <p>To run it on your computer, open a terminal in this folder, run <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>. Published on GitHub Pages, it works as is. Use a current Chrome or Edge.</p>
+      </div>
+      <noscript><p class="boot-detail">Navigator needs JavaScript. Allow it for this site and reload the page.</p></noscript>
+    </div>
+  </div>
+</body>
+</html>
