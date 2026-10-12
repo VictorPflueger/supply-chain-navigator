@@ -40,9 +40,16 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+const TERMINAL = ["done", "stopped", "aborted", "error"];
+
 /** True while a run is in progress (anything except idle and terminal states). */
 export function isRunning(s = state) {
-  return !["idle", "done", "aborted", "error"].includes(s.runState);
+  return s.runState !== "idle" && !TERMINAL.includes(s.runState);
+}
+
+/** True once a run has ended, whatever the outcome. */
+export function isFinished(s = state) {
+  return TERMINAL.includes(s.runState);
 }
 
 function readSession(key) {

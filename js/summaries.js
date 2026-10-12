@@ -1,5 +1,5 @@
 // One-line, human-readable summaries of tool results for the agent console.
-// Shared by the live tool executor (M3) and the simulation player so both read the same.
+// Shared by the live tool executor and the simulation player so both read the same.
 
 import { eurCompact } from "./format.js";
 

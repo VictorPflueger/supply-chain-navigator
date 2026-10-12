@@ -52,6 +52,15 @@ export function createMap(container, { onStatus } = {}) {
   L.control.zoom({ position: "bottomright" }).addTo(map);
   map.attributionControl.setPrefix(false);
 
+  // The last view the app asked for (a fit, a focus or an overview). When the map is resized, for
+  // example when the drawer opens, that view is re-applied so the marked region stays in sight.
+  // Any pan or zoom by the presenter takes over and clears it.
+  let viewIntent = null;
+  const userTookOver = () => { viewIntent = null; };
+  map.on("dragstart", userTookOver);
+  for (const type of ["wheel", "dblclick", "keydown"]) container.addEventListener(type, userTookOver, { passive: true });
+  container.addEventListener("click", (e) => { if (e.target.closest?.(".leaflet-control-zoom")) userTookOver(); });
+
   const panes = { offline: 150, spokes: 360, routes: 380, alt: 385, nodes: 410, pos: 420, suppliers: 440, plants: 620 };
   for (const [name, z] of Object.entries(panes)) {
     const pane = map.createPane(name);
@@ -246,11 +255,13 @@ export function createMap(container, { onStatus } = {}) {
   map.on("zoomend", syncZoomClass);
 
   function showNetwork() {
-    map.setView([UI.networkView.lat, UI.networkView.lon], UI.networkView.zoom, { animate: !prefersReducedMotion() });
+    viewIntent = { kind: "view", center: [UI.networkView.lat, UI.networkView.lon], zoom: UI.networkView.zoom };
+    map.setView(viewIntent.center, viewIntent.zoom, { animate: !prefersReducedMotion() });
   }
   function showWorld() {
     const pts = model.world.suppliers.map((s) => [s.lat, s.lon]);
-    map.fitBounds(L.latLngBounds(pts).pad(0.05), { animate: !prefersReducedMotion() });
+    viewIntent = { kind: "bounds", bounds: L.latLngBounds(pts).pad(0.05), maxZoom: 11 };
+    map.fitBounds(viewIntent.bounds, { animate: !prefersReducedMotion() });
   }
   showNetwork();
   syncZoomClass();
@@ -380,7 +391,17 @@ export function createMap(container, { onStatus } = {}) {
 
   function focus({ lat, lon, zoom } = {}) {
     if (typeof lat !== "number" || typeof lon !== "number") return;
-    map.flyTo([lat, lon], zoom ?? Math.max(map.getZoom(), 5), { duration: prefersReducedMotion() ? 0 : 1.2 });
+    const z = zoom ?? Math.max(map.getZoom(), 5);
+    viewIntent = { kind: "view", center: [lat, lon], zoom: z };
+    map.flyTo([lat, lon], z, { duration: prefersReducedMotion() ? 0 : 1.2 });
+  }
+
+  /** Re-measure after a layout change and keep the last requested view in sight. */
+  function invalidate() {
+    map.invalidateSize({ pan: false });
+    if (!viewIntent) return;
+    if (viewIntent.kind === "bounds") map.fitBounds(viewIntent.bounds, { animate: false, maxZoom: viewIntent.maxZoom });
+    else map.setView(viewIntent.center, viewIntent.zoom, { animate: false });
   }
 
   /** Fit the view to a set of entity ids (suppliers, plants, nodes). */
@@ -392,7 +413,8 @@ export function createMap(container, { onStatus } = {}) {
     }
     if (!pts.length) return;
     if (pts.length === 1) { focus({ lat: pts[0][0], lon: pts[0][1], zoom: 6 }); return; }
-    map.flyToBounds(L.latLngBounds(pts).pad(0.25), { duration: prefersReducedMotion() ? 0 : 1.2, maxZoom: 7 });
+    viewIntent = { kind: "bounds", bounds: L.latLngBounds(pts).pad(0.25), maxZoom: 7 };
+    map.flyToBounds(viewIntent.bounds, { duration: prefersReducedMotion() ? 0 : 1.2, maxZoom: 7 });
   }
 
   return {
@@ -403,7 +425,7 @@ export function createMap(container, { onStatus } = {}) {
     fitIds,
     showNetwork,
     showWorld,
-    invalidate: () => map.invalidateSize({ pan: false }),
+    invalidate,
     stateOf: (kind, id) => getState(`${kind}:${id}`),
     basemapInfo: () => ({ ...basemap })
   };

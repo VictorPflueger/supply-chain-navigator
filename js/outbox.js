@@ -45,7 +45,8 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
     const tone = status === "pending" ? "pending" : status;
     const statusText = status === "pending" ? "Pending approval" : status === "approved" ? "Approved — draft, not sent" : "Rejected";
     const bodyText = d.body || (d.payload ? JSON.stringify(d.payload, null, 2) : "");
-    const el = h("article", { class: "action-card", dataset: { status, expanded: "false" } },
+    const clipped = bodyText.split("\n").length > 6 || bodyText.length > 480;
+    const el = h("article", { class: "action-card", dataset: { status, expanded: "false", clipped: String(clipped) } },
       h("span", { class: "action-type", "aria-hidden": "true" }, icon(t.icon, 20)),
       h("div", {},
         h("div", { class: "action-meta" },
@@ -54,7 +55,7 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
           h("span", { class: "chip", dataset: { tone } }, statusText)),
         h("div", { class: "action-subject" }, d.subject),
         h("pre", { class: "action-body" }, bodyText),
-        bodyText.split("\n").length > 6 || bodyText.length > 480
+        clipped
           ? h("button", { class: "btn btn-ghost btn-sm action-more", type: "button", on: { click: (e) => {
             const open = el.dataset.expanded !== "true";
             el.dataset.expanded = String(open);
