@@ -22,6 +22,10 @@
 .leaflet-bar { border: 1px solid var(--line-strong) !important; box-shadow: var(--shadow-soft) !important; }
 .leaflet-bar a:hover { background: var(--brand-soft); color: var(--brand); }
 .leaflet-bar a.leaflet-disabled { background: var(--porcelain); color: var(--text-faint); }
+/* Projector-sized zoom buttons (all interactive elements are at least 40 px). */
+.leaflet-touch .leaflet-control-zoom a, .leaflet-control-zoom a {
+  width: 40px; height: 40px; line-height: 40px; font-size: 22px;
+}
 
 /* Map toolbar ------------------------------------------------------------------------------ */
 .map-tools { position: absolute; top: 12px; right: 12px; z-index: 800; display: flex; gap: 8px; }

@@ -3,7 +3,7 @@
 // producer is running; only the mode badge reads the mode.
 
 import { bus, newRunId } from "./events.js";
-import { getState, setState, subscribe, isRunning } from "./state.js";
+import { getState, setState, subscribe, isRunning, isFinished } from "./state.js";
 import { createMap } from "./map.js";
 import { createConsole } from "./console.js";
 import { createKpis } from "./kpi.js";
@@ -16,10 +16,14 @@ import { createControls } from "./controls.js";
 import { chooseMode, askApiKey, askCustomScenario, showReport } from "./dialogs.js";
 import { openDiagnostics } from "./diagnostics_view.js";
 import { createSimulationPlayer } from "./simulation.js";
-import { hasKey } from "./keystore.js";
+import { createLiveAgent } from "./agent.js";
+import { hasKey, forgetKey } from "./keystore.js";
 import { MODELS } from "./config.js";
 import { h } from "./dom.js";
 import { icon } from "./icons.js";
+import { dateWithYear } from "./format.js";
+
+const modelLabel = (id) => MODELS.find((m) => m.id === id)?.label || id || null;
 
 export function initUI() {
   const scenarios = window.SCENARIOS || [];
@@ -32,7 +36,11 @@ export function initUI() {
   const consoleUI = createConsole(document.getElementById("console"), {
     onOpenOptions: () => drawer.show("options"),
     onOpenOutbox: () => drawer.show("outbox"),
-    onOpenReport: (md) => showReport(md, { mode: getState().mode })
+    onOpenReport: (md) => showReport(md, { mode: getState().mode }),
+    onSaveSimulation: () => {
+      const r = auditPanel.saveSimulation();
+      showBanner({ level: r.ok ? "info" : "warn", title: r.ok ? "Run saved as simulation" : "Could not save the run", text: r.message, timeout: r.ok ? 9000 : 0 });
+    }
   });
   const kpis = createKpis(document.getElementById("kpis"));
   const drawer = createDrawer(document.getElementById("drawer"), {
@@ -54,6 +62,21 @@ export function initUI() {
   });
   const auditPanel = createAuditPanel(drawer.panel("audit"), { onCount: (n) => drawer.setCount("audit", n) });
   const player = createSimulationPlayer({ getSpeed: () => getState().speed });
+  const agent = createLiveAgent({
+    getWebSearchState: () => getState().webSearch,
+    onKeyRejected: () => {
+      forgetKey();
+      setState({ keyPresent: false });
+    },
+    onWebSearchUnavailable: () => {
+      setState({ webSearch: "unavailable" });
+      showBanner({
+        level: "warn",
+        title: "Web search is switched off for this API key",
+        text: "An organisation admin has disabled Claude's web search. The live agent continues with the open-data tools; preset scenarios and Simulation mode still work."
+      });
+    }
+  });
 
   const controls = createControls(document.getElementById("controls"), scenarios, {
     onStart: () => start(getState().entry === "custom" ? "custom" : "scenario"),
@@ -93,7 +116,7 @@ export function initUI() {
   bus.on("state_change", (ev) => setState({ runState: ev.payload.state }));
   bus.on("run_end", (ev) => {
     const st = ev.payload.status;
-    setState({ runState: st === "done" || st === "no_findings" ? "done" : st });
+    setState({ runState: st === "done" || st === "no_findings" ? "done" : st === "incomplete" ? "stopped" : st });
   });
   bus.on("map_update", (ev) => {
     const p = ev.payload;
@@ -112,7 +135,7 @@ export function initUI() {
   async function start(entry) {
     const s = getState();
     if (isRunning(s)) return;
-    if (["done", "aborted", "error"].includes(s.runState)) resetWorkspace();
+    if (isFinished(s)) resetWorkspace();
 
     const scenario = byId(getState().scenarioId);
     const runLabel = entry === "scan" ? "Live scan: real news and open data, no injected scenario"
@@ -143,37 +166,42 @@ export function initUI() {
     setState({ mode, runState: "scanning", runId: run_id });
     bus.beginRun({ run_id, mode });
     const title = entry === "scan" ? "Live scan for disruptions" : entry === "custom" ? "Custom what-if" : `Scenario ${scenario.number}: ${scenario.title}`;
+    const def = mode === "simulation" ? window.SIM_RUNS?.[scenario?.id] : null;
+    const recorded = def?.source === "recorded";
     bus.emit("run_start", {
       run_id, mode, entry, title,
       scenario_id: entry === "scenario" ? scenario.id : null,
       seed: entry === "scenario" ? scenario.seed : entry === "custom" ? s.customText : null,
       model: mode === "live" ? model.id : null,
-      model_label: mode === "live" ? model.label : null
+      model_label: mode === "live" ? model.label : null,
+      ...(mode === "simulation" ? {
+        sim_source: recorded ? "recorded" : "authored",
+        ...(recorded ? { recorded_on: def.recorded?.at ? dateWithYear(def.recorded.at) : null, recorded_model: modelLabel(def.recorded?.model) } : {})
+      } : {})
     });
     if (entry === "scenario" && scenario?.map_focus) map.focus(scenario.map_focus);
 
     if (mode === "simulation") {
-      const def = window.SIM_RUNS?.[scenario?.id];
       if (!def) {
-        bus.emit("notice", { level: "warn", text: `The scripted replay for “${scenario?.title}” is added in Milestone 4. In this build the Tangier harness fire (scenario 6) is fully scripted.` });
-        bus.emit("run_end", { status: "aborted", reason: "No scripted replay for this scenario yet." });
+        bus.emit("notice", { level: "error", text: `No simulation script found for “${scenario?.title}”. Check that data/sim_runs.js is complete, or run Diagnostics.` });
+        bus.emit("run_end", { status: "error", reason: "No simulation script for this scenario." });
         return;
       }
       player.play(def, { scenario: scenario.id });
       return;
     }
 
-    // Live agent: delivered in Milestone 3. This build is honest about it and spends nothing.
-    bus.emit("notice", { level: "info", text: "The live agent core (Claude tool-use loop, web search, open-data tools) is delivered in Milestone 3. Your key is stored for this tab only and was checked with a free call; no tokens were used." });
-    bus.emit("run_end", { status: "aborted", reason: "Live agent not included in this milestone build." });
+    agent.run({ entry, scenario, customText: s.customText, modelId: model.id });
   }
 
   function abort(reason) {
     if (player.isActive()) player.abort(reason);
+    if (agent.isActive()) agent.abort(reason);
   }
 
   function resetWorkspace({ keepMode = false, silent = false } = {}) {
     if (player.isActive()) player.abort("Reset by the user.");
+    if (agent.isActive()) agent.abort("Reset by the user.");
     bus.endRun();
     consoleUI.reset();
     map.clearStates();

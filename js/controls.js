@@ -4,11 +4,11 @@ import { h, setDisabled, isDisabled } from "./dom.js";
 import { icon } from "./icons.js";
 import { MODELS } from "./config.js";
 import { RUN_STATES } from "./events.js";
-import { isRunning } from "./state.js";
+import { isRunning, isFinished } from "./state.js";
 
 const STATE_TONE = {
   idle: "", scanning: "active", diagnosing: "active", verifying: "active", simulating: "active",
-  options: "waiting", awaiting_approval: "waiting", executing: "active", done: "done", aborted: "stopped", error: "stopped"
+  options: "waiting", awaiting_approval: "waiting", executing: "active", done: "done", stopped: "stopped", aborted: "stopped", error: "stopped"
 };
 
 /**
@@ -72,7 +72,7 @@ export function createControls(root, scenarios, handlers) {
 
   function update(s, { scenarioLabel } = {}) {
     const running = isRunning(s);
-    const finished = ["done", "aborted", "error"].includes(s.runState);
+    const finished = isFinished(s);
     const sim = s.mode === "simulation";
     const live = s.mode === "live";
 
@@ -83,7 +83,11 @@ export function createControls(root, scenarios, handlers) {
     scenarioDd.setDisabled(running, "Locked while the agent runs.");
     scenarioDd.setItemDisabled("custom", sim && !finished, "Requires Live mode. Reset to switch modes.");
 
-    setDisabled(scanBtn, running || (sim && !finished), running ? "Locked while the agent runs." : "Requires Live mode. Reset to switch modes.");
+    const noSearch = s.webSearch === "unavailable";
+    setDisabled(scanBtn, running || (sim && !finished) || noSearch,
+      running ? "Locked while the agent runs."
+        : noSearch ? "Live scan needs web search, which is switched off for this API key. Run a preset scenario instead."
+          : "Requires Live mode. Reset to switch modes.");
 
     const model = MODELS.find((m) => m.id === s.model) || MODELS[0];
     modelDd.setValue(model.id, model.label);

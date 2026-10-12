@@ -3,11 +3,12 @@
 
 import { buildModel, downstreamDays } from "./world.js";
 import { simulateImpact } from "./impact.js";
+import { checkSimRuns } from "./sim_check.js";
 
 /**
  * @returns {{ok: boolean, checks: Array<{name: string, ok: boolean, detail: string}>, stats: object}}
  */
-export function checkWorld(world, scenarios = [], referenceCases = {}) {
+export function checkWorld(world, scenarios = [], referenceCases = {}, simRuns = null) {
   const checks = [];
   const add = (name, ok, detail = "") => checks.push({ name, ok: !!ok, detail });
   const model = buildModel(world);
@@ -137,6 +138,9 @@ export function checkWorld(world, scenarios = [], referenceCases = {}) {
     add(`Reference case ${sc.number}: value at risk > 0 with 3 options`, b.value_at_risk_eur > 0 && res.variants.length === 3,
       `VaR €${(b.value_at_risk_eur / 1e6).toFixed(2)}M, first stop day ${b.first_stop_day ?? "—"}`);
   }
+
+  // ---- simulation scripts ------------------------------------------------------------------------
+  if (simRuns) checks.push(...checkSimRuns(model, simRuns, scenarios, referenceCases));
 
   return { ok: checks.every((c) => c.ok), checks, stats };
 }

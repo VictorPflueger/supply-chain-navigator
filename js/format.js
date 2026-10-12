@@ -54,9 +54,16 @@ export function shortDate(isoOrOffset) {
     const now = new Date();
     d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + isoOrOffset);
   } else {
-    d = new Date(`${isoOrOffset}T12:00:00`);
+    const text = String(isoOrOffset);
+    d = new Date(text.includes("T") ? text : `${text}T12:00:00`);
   }
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+
+/** "12 Oct 2026" from an ISO date or timestamp (for recordings made on another day). */
+export function dateWithYear(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "an earlier date" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** "15:56:03" local time from an ISO timestamp. */

@@ -3,8 +3,8 @@
 export const APP = {
   name: "Navigator",
   fullName: "Supply Chain Disruption Navigator",
-  version: "0.2.1-m2",
-  milestone: "M2 — app shell and UI"
+  version: "0.5.0-m5",
+  milestone: "M5 — agent, simulation, workflow and guardrails"
 };
 
 export const ANTHROPIC = {
@@ -39,6 +39,14 @@ export const MODELS = [
   }
 ];
 export const DEFAULT_MODEL = "claude-sonnet-5-5";
+
+// Live-agent guardrails (TECH_NOTES §7). A run stops at whichever limit it reaches first.
+export const AGENT = {
+  maxSteps: 40,          // model calls per run
+  budgetEur: 3.0,        // hard cost cap per run
+  idleTimeoutMs: 90000,  // no streamed data for this long counts as a failed request
+  maxOutputTokens: 128000
+};
 
 // ECB reference rate on 12 Oct 2026 (via api.frankfurter.dev). Fixed for a stable cost meter.
 export const FX_USD_EUR = 0.894;

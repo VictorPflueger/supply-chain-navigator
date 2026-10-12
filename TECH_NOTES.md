@@ -2,7 +2,7 @@
 
 Navigator calls the Claude API and four open-data APIs directly from the browser. Every external detail the code depends on is recorded here with its source and the date it was verified. If a fact changes, update this file first, then `js/config.js`.
 
-**Verification date:** 12 October 2026 (Milestone 0). Sources are official Anthropic documentation at `platform.claude.com/docs`, the open-data providers' own documentation, and live probes run from the build environment.
+**Verification date:** 12 October 2026 (Milestone 0). Sources are official Anthropic documentation at `platform.claude.com/docs`, the open-data providers' own documentation, and live probes run from the build environment. Sections 8–10 record the agent guardrails, the simulation format and the test log of Milestones 3–5 (app version 0.5.0-m5).
 
 ---
 
@@ -118,6 +118,7 @@ Notes:
 - `server_tool_use` and `web_search_tool_result` blocks stream as ordinary content blocks. The result block arrives complete in `content_block_start`.
 - Usage: `message_start` carries input usage. `message_delta.usage` is **cumulative** and includes `server_tool_use.web_search_requests`.
 - Mid-stream errors arrive as `event: error` with an error object, for example `overloaded_error`. Treat them like the equivalent HTTP error.
+- A body that ends without a `stop_reason` (cut connection, or a proxy that does not pass the event stream through) is treated as an interrupted connection and retried like a network error (D23).
 
 ### Tool-use protocol rules enforced in `js/agent.js`
 
@@ -128,7 +129,7 @@ Notes:
 
 | `stop_reason` | Navigator's handling |
 |---|---|
-| `end_turn` | Run ends, or the agent waits for a human decision |
+| `end_turn` | Run ends after `ui_final_report`. If the agent ends its turn earlier (for example to ask the presenter a question), Navigator tells it to continue on its own, at most twice and with a visible console note; after that the run ends as **Stopped** (D15) |
 | `tool_use` | Execute client tools, send results |
 | `pause_turn` | Resend unchanged |
 | `max_tokens` | Retry once with a higher `max_tokens` if the last block is an incomplete `tool_use`; otherwise continue |
@@ -147,6 +148,7 @@ Notes:
 | 413 | `request_too_large` | Show message |
 | 429 | `rate_limit_error` | Honour `retry-after` (max 2 retries). A spend-cap 429 (`details.error_code = "enforced_spend_limit_reached"`) has no `retry-after` and is shown immediately |
 | 500, 504, 529 | `api_error`, `timeout_error`, `overloaded_error` | Exponential backoff, max 2 retries, then stop with a clear message |
+| — | network error, cut stream, 90 s without data | Retried like 5xx (max 2), then stopped with a message that points to Diagnostics and Simulation mode |
 
 - Error bodies look like `{"type": "error", "error": {"type", "message"}, "request_id"}`. The `request-id` response header is logged to the audit trail for support.
 - Rate limits (Start tier, per model): 1,000 RPM, 2,000,000 ITPM, 400,000 OTPM. Only uncached input counts toward ITPM on these models, so a Navigator run uses a tiny fraction.
@@ -223,3 +225,67 @@ The browser itself enforces where the page may connect, which turns the key-hand
 | D12 | Content Security Policy as a meta tag | Enforces in the browser that the key and data can only reach the documented hosts |
 | D13 | Human decisions are queued from the start of a run | A decision is never lost while the producer is busy (for example "Approve all" sends five decisions at once). The live agent in M3 uses the same rule |
 | D14 | Light theme: white paper, burgundy (`#7a1e3a`) for brand and actions, pastel tints for meaning (review feedback, 12 Oct 2026) | Pastels carry state as fills; each pastel has a deeper line and text shade so text meets WCAG AA (≥ 4.5:1 on white) and state strokes on the map reach ≥ 3:1 against white |
+| D15 | If the agent ends its turn before `ui_final_report`, Navigator sends one short instruction to continue (at most twice, shown in the console); then the run ends as **Stopped**, not Done | Models sometimes stop to ask "Shall I continue?"; on stage nobody can answer in the console. The cap and the distinct end state keep it honest |
+| D16 | Option cards, the KPI payoff and the plant colours after a decision all come from the same engine variant (`js/payoff.js`, shared by both producers) | After approval the value-at-risk tile shows the exposure that remains ("€1.9M left with option B (was €19.1M)"), the first-stop tile the option's first stop, and exposed plants turn sage (nothing left) or amber |
+| D17 | Simulation scripts use `{{placeholders}}` for every engine figure (`js/sim_vars.js`) and are checked statically (`js/sim_check.js`) | A scripted replay can never show an invented number or a broken decision path; Diagnostics and `tools/check_world.mjs` run the checks |
+| D18 | "Save run as simulation" exports the UI event stream of a completed live run, not the API transcript | Thinking signatures only work in the account that produced them; events are what the UI needs. Evidence is labelled "recorded <date>", € figures are recomputed by the engine, options the live run did not take end the replay with a note |
+| D19 | `erp_list_suppliers` matches two-letter country codes exactly and accepts country names and comma-separated lists | A substring match made "SI" also match "Hsinchu" and "Silesia" (17 suppliers instead of 3) |
+| D20 | The map remembers the last view the app asked for and re-applies it when the drawer resizes the map, until the presenter pans or zooms | Without it, opening the options drawer cut the marked region off the bottom of the map |
+| D21 | Live scan is disabled when web search is unavailable for the key | A scan depends on news; preset scenarios still work with the open-data tools |
+| D22 | Console "Larger text" toggle (remembered per browser) | Readability at 1080p from five metres without making the whole layout larger |
+| D23 | A response stream without a stop reason counts as an interrupted connection; the 90 s idle limit also covers the wait for response headers | Prevents a broken proxy response from looking like an empty, finished answer, and a stalled connection from hanging the run |
+| D24 | Nothing from a run reaches the UI after it has ended: late tool results, throttled narration and tool emits are dropped after Abort or Reset | Found in review: a slow open-data call returning after Abort could appear in the next run's console and audit |
+| D25 | `ui_propose_options` refuses to cost options against an older `sim_impact` than the latest one | Otherwise the cards could show a superseded baseline while the KPI tile shows the revised one |
+| D26 | Safety lines are added in code: the AI footer on every draft (after truncation), "Mock booking…" on every booking, and "Live agent run…" on every live report | The prompt asks for them; the code guarantees them, and the recorder can always replace the live marker with the replay marker |
+| D27 | The recorder follows the agent's view of each decision (the tool result of `ui_propose_options`/`ui_await_decision`), not the click | A quick second click while the model still answers the first decision would otherwise mix a rejection line into the approved path |
+
+**Spec deviation (deliberate).** The kickoff lists `ui_propose_options({options: [{title, description, cost_eur, time_days, residual_risk}], baseline_cost_eur})`. Navigator's tool takes `variant_id` instead of `cost_eur`/`time_days`, and fills every € figure and time from the latest `sim_impact` result (D5). The agent cannot type a number onto an option card.
+
+## 8. Live-agent guardrails (Milestones 3 and 5)
+
+Enforced in code (`js/agent.js`, `js/tools.js`), not only in the system prompt (`js/prompt.js`):
+
+| Guardrail | Where | Behaviour |
+|---|---|---|
+| Step cap | `AGENT.maxSteps = 40` | At most 40 model calls per run; then the run stops with a message |
+| Cost cap | `AGENT.budgetEur = 3.00` | The run stops once its own cost passes €3.00. Estimate for a typical Sonnet run with caching: €0.30–0.80 (about 20 model calls, up to 5 searches); to be confirmed with the first real runs |
+| Idle timeout | `AGENT.idleTimeoutMs = 90000` | 90 s without streamed data counts as a failed request (retried) |
+| Compatibility | `callModel` | A 400 that names `output_config`/`effort`, `display`, `thinking` or `cache_control` drops that optional field and retries; a 400 about web search removes the tool, rebuilds the system prompt, shows a banner and disables Live scan |
+| Output limit | `max_tokens` | A tool call cut off mid-input is discarded and the turn retried once with 1.5× `max_tokens` (16,000 → 24,000 on Sonnet) |
+| Two-source rule | `ui_report_alert` | `basis: "verified"` needs at least two sources; otherwise the tool returns an error. Unverifiable injected scenarios run as `basis: "what_if"` and are labelled so |
+| Options | `ui_propose_options` | Exactly three, each a `variant_id` of the latest `sim_impact` result; figures come from the engine |
+| Decisions | `ui_propose_options`, `ui_await_decision` | Block until the human decides; approvals and rejections return as tool results with the next step spelled out |
+| Drafts | `ui_draft_action` | Only after an approved option; every draft gets the footer "Prepared with the Navigator AI assistant. Requires human approval before sending." Nothing is ever sent |
+| Report | `ui_final_report` | Refused while any draft is still pending; the agent must call `ui_await_approvals` first |
+| Key | 401 | The key is removed from the tab and the run stops |
+| Audit | `recordApiExchange` | Every request (appended messages, parameters) and response (content, usage, request id, duration) is logged; the system prompt and tool schemas once per run. Thinking signatures, redacted thinking and search `encrypted_content` are stripped; the key never enters the audit |
+
+Run states shown in the status pill and under the stopwatch: Idle → Scanning → Diagnosing → Verifying → Simulating → Options → Awaiting approval → Executing → Done (or Stopped, Aborted, Error).
+
+## 9. Simulation scripts and recorded runs (Milestone 4)
+
+- **Format.** `data/sim_runs.js` holds one script per preset scenario: `{ title, steps: [...] }`, with optional `source: "recorded"` and `recorded: {at, model, app_version, run_id, cost_eur}`. Step types: `state`, `say`, `think`, `tool` (ERP query, re-executed), `web`, `geo`, `recordedTool`, `impact` (a reference-case name or `{name, spec, label}`), `alert`, `map`, `options` (`texts` per variant, `recommended`, optional `from` and `order`), `awaitOption` (`rejected` lines and `approved` step lists per option, `baseline` and `default`), `draft`, `awaitActions`, `report`, `notice`, `end`.
+- **Numbers.** ERP results come from `js/erp.js` at playback; every € figure, stop day and date comes from the impact engine via placeholders such as `{{var}}`, `{{first_stop_date}}`, `{{V2.mit}}`, `{{part.P-SEAT.shortage_day}}`, `{{date:+5}}`.
+- **Evidence.** Web-search and open-data results in authored scripts are representative, carry no URLs and are labelled "(representative)" in the console and in the alert sources. Recorded scripts keep the real results of the live run, labelled "(recorded <date>)".
+- **Integrity.** SIMULATION badge, a hazard-tape watermark at the top of the console ("Scripted replay of a representative run" or "Replay of a live run recorded on <date> (<model>)"), a faint diagonal mark behind the log, `"mode": "simulation"` and `sim_source` in the audit export, and a report footer that names the run as simulated or recorded. `js/sim_check.js` rejects any script whose report calls itself a live run.
+- **Authored paths.** Each of the six scripts has a hypothesis, at least two pieces of evidence before the verified alert, a visible "Revised:" self-correction, 9–11 visible tool calls before the decision, rejection lines for all three options, and approval paths for options A, B, C and "accept the risk". Rejecting all three options leads to the do-nothing path.
+- **Recorder.** After a completed live run of a preset scenario, "Save run as simulation" (console end line and Audit tab) validates the recording with `js/sim_check.js` and downloads `sim-run-<scenario>-recorded-<date>.js`. Appending it to `data/sim_runs.js` replaces the authored script for that scenario. The live report's "Live agent run" line is rewritten to "Recorded live run, replayed in Simulation mode". Dates in recorded narration refer to the recording day.
+
+## 10. Verification log (Milestones 3–5, 12 Oct 2026)
+
+All tests run headless in Chromium at 1920×1080 against the static files, with external hosts mocked or blocked.
+
+| Test | What it covers | Result |
+|---|---|---|
+| `unit/stream.test.mjs` | SSE parsing (LF/CRLF, any chunking), thinking signatures, incomplete tool input, mid-stream errors, 429, retries, abort, truncated streams, cost maths per model | Pass |
+| Live agent vs scripted API mock: full run | Parallel tool calls, `pause_turn`, a 529 retry, two-source alert, rejection then approval as tool results, `max_tokens` cut-off retry (16k → 24k), draft approve/reject, report gate, every assistant turn echoed unchanged with signatures, cost meter equal to the usage maths to the cent | Pass, 0 protocol violations |
+| Live: web search disabled | 400 → tool removed, prompt rebuilt, banner, Live scan disabled, early end → nudge → report | Pass |
+| Live: open-data failure | PEGELONLINE 503 → `{error, fallback_hint}` as `is_error` tool result, console note, web-search fallback | Pass |
+| Live: key rejected, scan with no findings | 401 → key forgotten; honest "no material disruption" end | Pass |
+| Independent code review (separate agent, no prior context) | Protocol, races, integrity, key handling, numeric integrity | Seven findings (abort leaks, recorder branching, recorded state flicker, recorder rejecting valid runs, audit of merged turns, superseded impact, header timeout); all fixed (D23–D27) and covered by the tests above |
+| Save run as simulation | Export from the mock live run, load, replay: watermark "recorded on 12 Oct 2026", recorded sources, engine-recomputed figures, recorded path plays to the end, another option ends gracefully, audit `sim_source: recorded` | Pass |
+| Live: quick second decision | Reject A, approve B while the model still answers: the agent receives both decisions in order; the recording keeps "Option A rejected…" as the rejection line and starts the B path with the approval; a booking without the mock line gets it; an underscore-styled live footer is replaced | Pass |
+| Live: Abort during a model call | No console entry and no late text after "Aborted" | Pass |
+| All six simulations | Different decision paths (reject then approve, approve directly, accept the risk, reject all three), drafts approved and rejected, no unresolved placeholders, no network beyond map tiles, KPI and map payoff, audit `mode: simulation` | 6 of 6 pass |
+| Static checks | `node tools/check_world.mjs`: world, scenarios, reference cases and the six scripts | 32 of 32 pass; negative tests catch typos, missing paths, missing footers, live-run claims, single-source alerts, unknown tools and reports before the outbox |
+| Layout | 1920×1080, 1600×900, 1366×768, 1280×720: no horizontal overflow; every visible interactive element ≥ 40 px | Pass |

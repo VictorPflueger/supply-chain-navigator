@@ -315,6 +315,19 @@ Sea-lane polylines follow the real shipping lanes (Malacca Strait – south of S
 
 The scenario files only seed an **unverified trigger**. In Live mode the agent must confirm or refute it with live sources. If the trigger is a hypothetical exercise and nothing confirms it, the agent says so and labels the analysis as a what-if.
 
+### 4.5 Evidence shown in Simulation mode
+
+Simulation mode replays a script from `data/sim_runs.js`; it calls no API and no model.
+
+| Element | Where it comes from | How it is labelled |
+|---|---|---|
+| ERP answers (suppliers, parts, orders, routes, alternatives) | The synthetic world, queried at playback by the same functions the live agent uses | As in Live mode |
+| € figures, line-stop days and dates | The deterministic impact engine at playback; scripts contain placeholders, never typed numbers | "Figures calculated by the impact engine from the synthetic world" |
+| Web-search results and open-data readings in the six authored scripts | Written for the demo to resemble what a live run finds; no URLs, no real articles | "(representative)" on every source and reading, plus the SIMULATION badge and console watermark |
+| Web-search results and open-data readings in a recorded script | Captured from a real live run with "Save run as simulation" | "(recorded <date>)"; the watermark names the recording date and model |
+
+The representative results describe plausible events. They are not claims about real events on the day of the demo.
+
 ## 5. Model assumptions (deterministic impact engine)
 
 These are modelling choices, not data. They are stated in every `sim_impact` result.
@@ -332,6 +345,7 @@ These are modelling choices, not data. They are stated in every `sim_impact` res
 3. **NASA EONET** is a reference feed, not an authoritative source. Navigator always confirms it with a second source.
 4. **Web search results** come from the open web at run time. Navigator cites them in the console and never treats a single source as confirmation.
 5. **Real-world events.** The Rhine low-water crisis in autumn 2026 is real (PEGELONLINE, German media). Nordwerk's exposure to it is fictional.
+6. **Simulation evidence.** In Simulation mode, news headlines and sensor readings are representative or recorded (section 4.5). Present them as a replay, not as today's news.
 
 ## 7. What Navigator does **not** use
 

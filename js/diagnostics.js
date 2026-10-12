@@ -15,7 +15,7 @@ export const TESTS = [
   { id: "pegel", label: OPEN_DATA.pegel.label, host: "www.pegelonline.wsv.de", purpose: "Rhine water level at Kaub" },
   { id: "tiles", label: "Map tiles (OpenStreetMap)", host: "tile.openstreetmap.org", purpose: "Basemap (offline coastline fallback exists)" },
   { id: "leaflet", label: "Map library (Leaflet)", host: "unpkg.com, cdn.jsdelivr.net or vendor/", purpose: "Map rendering; loaded once at start-up" },
-  { id: "world", label: "World data integrity", host: "local", purpose: "Synthetic world, scenarios, reference cases" }
+  { id: "world", label: "World data integrity", host: "local", purpose: "Synthetic world, scenarios, reference cases, simulation scripts" }
 ];
 
 // ---- failure memory (sessionStorage) -----------------------------------------------------------
@@ -107,7 +107,7 @@ const RUNNERS = {
   },
   async world() {
     const started = performance.now();
-    const res = checkWorld(globalThis.WORLD, globalThis.SCENARIOS || [], globalThis.REFERENCE_CASES || {});
+    const res = checkWorld(globalThis.WORLD, globalThis.SCENARIOS || [], globalThis.REFERENCE_CASES || {}, globalThis.SIM_RUNS || {});
     const passed = res.checks.filter((c) => c.ok).length;
     return { status: res.ok ? "pass" : "fail", ms: Math.round(performance.now() - started), detail: `${passed}/${res.checks.length} integrity checks passed.`, checks: res.checks };
   }

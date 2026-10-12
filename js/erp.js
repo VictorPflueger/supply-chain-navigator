@@ -1,5 +1,5 @@
 // ERP-style queries over the synthetic world. Pure functions returning compact, JSON-safe objects.
-// Used by map popovers and (from M3) by the agent's erp_* tools — one source of truth for both.
+// Used by map popovers, the agent's erp_* tools and the simulation player: one source of truth.
 
 import { nameOf, routesThroughNode, routesOfSupplier, openPOs, chainPlantsOf, dayToISO } from "./world.js";
 
@@ -52,16 +52,30 @@ export function erpFootprint(model) {
   };
 }
 
-/** Suppliers filtered by region (country code, country, city, cluster text), part or tier. */
+// English country names for the ISO codes used in the world data, so "Slovenia" finds "SI".
+const COUNTRY_NAMES = {
+  AT: "Austria", BE: "Belgium", CN: "China", CZ: "Czechia Czech Republic", DE: "Germany", EE: "Estonia",
+  FI: "Finland", FR: "France", HU: "Hungary", IN: "India", IT: "Italy", JP: "Japan", KR: "South Korea",
+  MA: "Morocco", MY: "Malaysia", NL: "Netherlands", PL: "Poland", RO: "Romania", SI: "Slovenia",
+  TH: "Thailand", TN: "Tunisia", TW: "Taiwan"
+};
+
+/**
+ * Suppliers filtered by region, part or tier. A region term is a two-letter country code (matched
+ * exactly), or a country, city, cluster or company text (substring). Several terms can be given
+ * separated by commas, e.g. "SI, AT" or "Styria, Slovenia".
+ */
 export function erpListSuppliers(model, { region = null, part_id = null, tier = null } = {}) {
-  const q = region ? String(region).toLowerCase().trim() : null;
+  const terms = region ? String(region).toLowerCase().split(/[,;|/]+/).map((t) => t.trim()).filter(Boolean) : [];
+  const matchesTerm = (s, t) => {
+    if (/^[a-z]{2}$/.test(t)) return s.country.toLowerCase() === t;
+    const hay = `${s.country} ${COUNTRY_NAMES[s.country] || ""} ${s.city} ${s.cluster} ${s.name}`.toLowerCase();
+    return hay.includes(t);
+  };
   const list = model.world.suppliers.filter((s) => {
     if (tier && Number(tier) !== s.tier) return false;
     if (part_id && !s.parts.includes(part_id)) return false;
-    if (q) {
-      const hay = `${s.country} ${s.city} ${s.cluster} ${s.name}`.toLowerCase();
-      if (!hay.includes(q) && s.country.toLowerCase() !== q) return false;
-    }
+    if (terms.length && !terms.some((t) => matchesTerm(s, t))) return false;
     return true;
   });
   return {

@@ -21,7 +21,8 @@
 //   report           { markdown }
 //   cost_update      { eur, usd, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, web_searches, simulated }
 //   notice           { level: "info"|"warn"|"error", text }
-//   run_end          { status: "done"|"aborted"|"error"|"no_findings", reason? }
+//   run_end          { status: "done"|"no_findings"|"incomplete"|"aborted"|"error", reason? }
+//                    incomplete: the agent stopped before the workflow was finished
 
 export const RUN_STATES = {
   idle: "Idle",
@@ -33,6 +34,7 @@ export const RUN_STATES = {
   awaiting_approval: "Awaiting approval",
   executing: "Executing",
   done: "Done",
+  stopped: "Stopped",
   aborted: "Aborted",
   error: "Error"
 };

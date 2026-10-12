@@ -20,18 +20,32 @@ const LABELS = [
 ];
 
 const PHASES = new Set(["diagnosing", "verifying", "simulating", "options", "awaiting_approval", "executing"]);
+const TEXT_SIZE_KEY = "nav.consoleText";
 
-export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport } = {}) {
+export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport, onSaveSimulation } = {}) {
   const count = h("span", { class: "count num" }, "");
   const jumpBtn = h("button", { class: "btn btn-sm", type: "button", hidden: true }, icon("chevronDown", 16), "Jump to latest");
-  const watermark = h("div", { class: "sim-watermark", hidden: true, role: "note" },
-    "SIMULATION", h("span", {}, "Scripted replay of a representative run. Not live data, no model calls."));
+  // Larger text for projectors, remembered per browser (a convenience; storage may be unavailable).
+  const sizeBtn = h("button", { class: "btn btn-sm btn-ghost text-size", type: "button", "aria-pressed": "false", title: "Larger console text for projectors" }, "Larger text");
+  const applySize = (large) => {
+    panel.dataset.text = large ? "large" : "standard";
+    sizeBtn.setAttribute("aria-pressed", String(large));
+    pin();
+  };
+  sizeBtn.addEventListener("click", () => {
+    const large = panel.dataset.text !== "large";
+    applySize(large);
+    try { localStorage.setItem(TEXT_SIZE_KEY, large ? "large" : "standard"); } catch { /* storage unavailable */ }
+  });
+  const SCRIPTED = "Scripted replay of a representative run. Not live data, no model calls.";
+  const watermarkText = h("span", {}, SCRIPTED);
+  const watermark = h("div", { class: "sim-watermark", hidden: true, role: "note" }, "SIMULATION", watermarkText);
   const log = h("div", { class: "log", role: "log", "aria-live": "polite", "aria-relevant": "additions" });
 
   panel.append(
     h("div", { class: "console-head" },
       h("div", { class: "console-title" }, h("h2", {}, "Agent console"), count),
-      h("div", { class: "console-head-actions" }, jumpBtn)),
+      h("div", { class: "console-head-actions" }, jumpBtn, sizeBtn)),
     watermark,
     log
   );
@@ -39,6 +53,9 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
   const byMsg = new Map();
   const byCall = new Map();
   let entries = 0;
+  let lastPhase = null;
+  let runMeta = null;
+  let sawReport = false;
   // Auto-follow: the log stays pinned to the newest entry until the presenter scrolls up. Only
   // user input (wheel, touch, keys, scrollbar drag) can unpin it, so programmatic scrolling and
   // layout changes (the drawer opening) never stop the follow.
@@ -102,10 +119,15 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
   bus.on("run_start", (ev) => {
     const p = ev.payload;
     reset(false);
+    runMeta = p;
+    const recorded = p.mode === "simulation" && p.sim_source === "recorded";
     watermark.hidden = p.mode !== "simulation";
+    watermarkText.textContent = recorded
+      ? `Replay of a live run recorded${p.recorded_on ? ` on ${p.recorded_on}` : ""}${p.recorded_model ? ` (${p.recorded_model})` : ""}. Not live data, no model calls.`
+      : SCRIPTED;
     log.dataset.sim = String(p.mode === "simulation");
     const meta = p.mode === "simulation"
-      ? "Simulation: scripted replay, no API key, no cost."
+      ? recorded ? "Simulation: replay of a recorded live run, no API key, no cost." : "Simulation: scripted replay, no API key, no cost."
       : `Live agent on ${p.model_label || p.model || "Claude"}. Real model reasoning and real tool calls.`;
     add(entry("run", ev.t, "play", [
       h("div", { class: "run-title" }, p.title || "Agent run"),
@@ -116,7 +138,8 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
 
   bus.on("state_change", (ev) => {
     const s = ev.payload.state;
-    if (!PHASES.has(s)) return;
+    if (!PHASES.has(s) || s === lastPhase) return;
+    lastPhase = s;
     add(entry("phase", ev.t, null, h("span", { class: "phase" }, `Phase: ${RUN_STATES[s] || s}`)));
   });
 
@@ -176,7 +199,8 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
     result.append(toggle);
     if (Array.isArray(p.sources) && p.sources.length) {
       result.append(h("div", { class: "result-sources" }, p.sources.slice(0, 5).map((s) => {
-        const label = `${s.title || s.url}${s.page_age ? `, ${s.page_age}` : ""}${s.representative ? " (representative)" : ""}`;
+        const tag = s.representative ? " (representative)" : s.recorded ? ` (recorded${s.recorded_on ? ` ${s.recorded_on}` : ""})` : "";
+        const label = `${s.title || s.url}${s.page_age ? `, ${s.page_age}` : ""}${tag}`;
         return s.url ? h("a", { href: safeUrl(s.url), target: "_blank", rel: "noopener noreferrer" }, label) : h("span", {}, label);
       })));
     }
@@ -188,8 +212,9 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
   bus.on("alert", (ev) => {
     const p = ev.payload;
     const sev = String(p.severity || "high").toLowerCase();
-    const card = h("div", { class: "alert-card", dataset: { severity: sev } },
-      h("div", { class: "alert-sev" }, `Alert, severity ${sev}`),
+    const whatIf = p.basis === "what_if";
+    const card = h("div", { class: "alert-card", dataset: { severity: sev, basis: whatIf ? "what_if" : "verified" } },
+      h("div", { class: "alert-sev" }, whatIf ? `What-if exercise (not a verified event), severity ${sev}` : `Alert, severity ${sev}`),
       h("h3", {}, p.title || "Disruption alert"),
       p.summary ? renderInline(p.summary, h("div")) : null,
       Array.isArray(p.sources) && p.sources.length
@@ -229,6 +254,7 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
   });
 
   bus.on("report", (ev) => {
+    sawReport = true;
     const card = h("div", { class: "report-card" },
       renderMarkdown(ev.payload.markdown),
       h("div", { class: "report-actions" },
@@ -247,9 +273,15 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
       done: "Run complete.",
       aborted: "Run aborted.",
       error: "Run stopped because of an error.",
-      no_findings: "Run complete: no material disruption found."
+      no_findings: "Run complete: no material disruption found.",
+      incomplete: "Run stopped before the workflow was complete."
     }[status] || "Run ended.";
-    add(entry("notice", ev.t, status === "done" || status === "no_findings" ? "check" : "stop", h("span", {}, h("strong", {}, text), reason ? ` ${reason}` : ""), { level: status === "error" ? "error" : "info" }));
+    const canSave = status === "done" && sawReport && runMeta?.mode === "live" && runMeta?.entry === "scenario";
+    add(entry("notice", ev.t, status === "done" || status === "no_findings" ? "check" : "stop", h("div", {},
+      h("span", {}, h("strong", {}, text), reason ? ` ${reason}` : ""),
+      canSave ? h("div", { class: "entry-actions" },
+        h("button", { class: "btn btn-sm", type: "button", title: "Download this run as a simulation script that can replace the scripted replay of this scenario", on: { click: () => onSaveSimulation?.() } }, icon("download", 16), "Save run as simulation")) : null),
+    { level: status === "error" ? "error" : "info" }));
     for (const el of byMsg.values()) el.classList.remove("streaming");
   });
 
@@ -257,6 +289,9 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
     byMsg.clear();
     byCall.clear();
     entries = 0;
+    lastPhase = null;
+    runMeta = null;
+    sawReport = false;
     follow = true;
     jumpBtn.hidden = true;
     watermark.hidden = true;
@@ -264,6 +299,9 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
     if (empty) showEmpty(); else clear(log);
   }
 
+  let storedSize = null;
+  try { storedSize = localStorage.getItem(TEXT_SIZE_KEY); } catch { /* storage unavailable */ }
+  applySize(storedSize === "large");
   showEmpty();
   return { reset };
 }
