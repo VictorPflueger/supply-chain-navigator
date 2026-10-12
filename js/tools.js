@@ -234,7 +234,7 @@ const DEFINITIONS = [
   },
   {
     name: "ui_propose_options",
-    description: "Show exactly three response options plus the do-nothing baseline and wait for the human decision. Euro figures and times are filled in from your latest sim_impact result by variant_id, so run sim_impact with exactly these three variants first. Returns the decision.",
+    description: "Show exactly three response options plus the do-nothing baseline and wait for the human decision. Euro figures and times are filled in from your latest sim_impact result by variant_id, so run sim_impact with exactly these three variants first. On screen the options appear as A, B and C in the order you pass them. Returns the decision.",
     input_schema: {
       type: "object",
       properties: {
@@ -500,12 +500,12 @@ export function createToolbox(ctx) {
             next: "The human accepted the risk. Do not contact suppliers. Draft one internal re-plan note for the affected plant (ui_draft_action, type replan), then ui_await_approvals, then ui_final_report." }
         : { decision: "approved", option_id: id, option: label,
             figures: { mitigation_cost: eurCompact(opt.mitigation_cost_eur), remaining_exposure: eurCompact(opt.residual_var_eur), expected_total: eurCompact(opt.total_cost_eur), time_to_effect_days: opt.time_days },
-            next: "Draft the actions for this option with ui_draft_action (one per supplier, carrier or internal team), then call ui_await_approvals, then ui_final_report." };
+            next: `Call it "option ${opt.letter}" (as on screen), never ${id}. Draft the actions for this option with ui_draft_action (one per supplier, carrier or internal team), then call ui_await_approvals, then ui_final_report.` };
     }
     run.rejected.add(id);
     const remaining = run.options.filter((o) => !run.rejected.has(o.id)).map((o) => `Option ${o.letter} (${o.id})`);
     return {
-      decision: "rejected", option_id: id, option: label,
+      decision: "rejected", option_id: id, option: label, ...(opt ? { refer_to_it_as: `option ${opt.letter}` } : {}),
       remaining_options: remaining,
       next: remaining.length
         ? "Acknowledge the rejection in one sentence and do not draft anything for it. Then call ui_await_decision to wait for the next decision."

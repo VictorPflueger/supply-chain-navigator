@@ -150,6 +150,13 @@ export function initUI() {
       });
       if (!mode) return;
     }
+    if (mode === "key") {
+      // "Change or forget key": the key dialog shows the stored key masked, with Forget key.
+      const ok = await askApiKey({});
+      setState({ keyPresent: hasKey() });
+      if (!ok) return;
+      mode = "live";
+    }
     if (mode === "live" && !hasKey()) {
       const ok = await askApiKey({});
       setState({ keyPresent: hasKey() });

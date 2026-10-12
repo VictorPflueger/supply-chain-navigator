@@ -3,8 +3,8 @@
 export const APP = {
   name: "Navigator",
   fullName: "Supply Chain Disruption Navigator",
-  version: "0.5.0-m5",
-  milestone: "M5 — agent, simulation, workflow and guardrails"
+  version: "1.0.0",
+  milestone: "M7 — hardened, packaged and documented"
 };
 
 export const ANTHROPIC = {
@@ -15,8 +15,10 @@ export const ANTHROPIC = {
   browserHeader: "anthropic-dangerous-direct-browser-access",
   webSearchTool: { type: "web_search_20250305", name: "web_search", max_uses: 5 },
   webSearchUsdPer1000: 10,
+  // Spend limits are set per workspace (not per key, and not on the Default Workspace), so the
+  // advice is: a dedicated workspace with a monthly spend limit, and a key scoped to it (TECH_NOTES §3).
   consoleKeysUrl: "https://platform.claude.com/settings/keys",
-  consoleLimitsUrl: "https://platform.claude.com/settings/limits"
+  consoleWorkspacesUrl: "https://platform.claude.com/settings/workspaces"
 };
 
 // Prices in USD per million tokens (TECH_NOTES §1, verified 12 Oct 2026).

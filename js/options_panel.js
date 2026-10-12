@@ -11,6 +11,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
   let current = null;           // last options payload
   const status = new Map();     // option id -> "approved" | "rejected" | "not_selected"
   let locked = false;           // true once an option has been approved
+  let ended = false;            // the run ended (abort, error) before any option was approved
 
   function empty() {
     clear(panel);
@@ -23,7 +24,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
     clear(panel);
     if (!current) return empty();
     const { baseline, options = [], horizon_days: H = 30 } = current;
-    const pending = !locked && options.some((o) => !status.has(o.id));
+    const pending = !locked && !ended && options.some((o) => !status.has(o.id));
     const max = Math.max(1, baseline?.value_at_risk_eur || 0, ...options.map((o) => o.total_cost_eur || 0));
 
     // Summary column: what to decide and how the totals compare. Cards carry the detail.
@@ -32,7 +33,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
       { key: "–", name: "Do nothing", base: baseline?.value_at_risk_eur || 0, total: baseline?.value_at_risk_eur || 0 }
     ];
     const summary = h("div", { class: "options-summary" },
-      h("h3", {}, pending ? "Decide how to respond" : locked ? "Decision taken" : "Options"),
+      h("h3", {}, pending ? "Decide how to respond" : locked ? "Decision taken" : ended ? "Run ended before a decision" : "Options"),
       h("p", {}, `Expected total over ${H} days: what the response costs plus the line-stop exposure that remains. All figures come from the deterministic impact engine.`),
       h("div", { class: "compare", role: "img", "aria-label": `Expected total cost per option compared with doing nothing: ${rows.map((r) => `${r.name} ${eurCompact(r.total)}`).join("; ")}` },
         rows.map((r) => h("div", { class: "compare-row", dataset: { recommended: String(!!r.recommended) }, title: r.name },
@@ -55,7 +56,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
   }
 
   function optionCard(o) {
-    const st = status.get(o.id) || (locked ? "not_selected" : "");
+    const st = status.get(o.id) || (locked ? "not_selected" : ended ? "expired" : "");
     const card = h("article", { class: "option-card", dataset: { recommended: String(!!o.recommended), status: st, kind: "option" }, "aria-label": `Option ${o.letter}: ${o.title}` },
       h("div", { class: "option-top" },
         h("span", { class: "option-letter", "aria-hidden": "true" }, o.letter),
@@ -73,7 +74,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
   }
 
   function baselineCard(b, H) {
-    const st = status.get("baseline") || (locked ? "not_selected" : "");
+    const st = status.get("baseline") || (locked ? "not_selected" : ended ? "expired" : "");
     const firstStop = b?.first_stop_day === null || b?.first_stop_day === undefined
       ? `none within ${H} days`
       : `day ${b.first_stop_day}${b.first_stop_plant_name ? `, ${b.first_stop_plant_name}` : ""}`;
@@ -93,6 +94,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
     if (st === "approved") return h("div", { class: "option-status mark-pass" }, icon("check", 20), isBaseline ? "Risk accepted" : "Approved");
     if (st === "rejected") return h("div", { class: "option-status mark-fail" }, icon("x", 20), "Rejected");
     if (st === "not_selected") return h("div", { class: "option-status mark-skip" }, "Not selected");
+    if (st === "expired") return h("div", { class: "option-status mark-skip" }, "No decision: the run ended");
     if (isBaseline) {
       return h("div", { class: "option-actions" },
         h("button", { class: "btn", type: "button", on: { click: () => decide(o, "approved") } }, "Accept the risk"));
@@ -111,6 +113,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
     current = ev.payload;
     status.clear();
     locked = false;
+    ended = false;
     render();
     onCount?.(current.options?.length || 0, true);
   });
@@ -127,14 +130,23 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
     onCount?.(current?.options?.length || 0, !locked);
   });
 
+  // An aborted or failed run cannot take a decision any more: say so instead of offering buttons.
+  bus.on("run_end", () => {
+    if (!current || locked) return;
+    ended = true;
+    render();
+    onCount?.(current.options?.length || 0, false);
+  });
+
   function reset() {
     current = null;
     status.clear();
     locked = false;
+    ended = false;
     empty();
     onCount?.(0, false);
   }
 
   empty();
-  return { reset, hasPending: () => !!current && !locked };
+  return { reset, hasPending: () => !!current && !locked && !ended };
 }

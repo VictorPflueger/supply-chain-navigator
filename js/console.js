@@ -8,6 +8,8 @@ import { h, clear, prefersReducedMotion } from "./dom.js";
 import { icon } from "./icons.js";
 import { renderInline, renderMarkdown } from "./md.js";
 import { clock } from "./format.js";
+import { auditRows } from "./audit.js";
+import { computeRunFacts, describeRunFacts } from "./run_facts.js";
 
 const LABELS = [
   { re: /^(hypothesis)\s*:\s*/i, kind: "hypothesis" },
@@ -277,8 +279,14 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
       incomplete: "Run stopped before the workflow was complete."
     }[status] || "Run ended.";
     const canSave = status === "done" && sawReport && runMeta?.mode === "live" && runMeta?.entry === "scenario";
+    // Facts for completed runs (the audit has every event up to this one).
+    let facts = null;
+    if (["done", "no_findings", "incomplete"].includes(status)) {
+      try { facts = describeRunFacts(computeRunFacts(auditRows(), ev)); } catch (e) { console.error("[Navigator] run facts failed:", e); }
+    }
     add(entry("notice", ev.t, status === "done" || status === "no_findings" ? "check" : "stop", h("div", {},
       h("span", {}, h("strong", {}, text), reason ? ` ${reason}` : ""),
+      facts ? h("div", { class: "run-facts" }, h("strong", {}, runMeta?.mode === "simulation" ? "Replay facts: " : "Run facts: "), facts) : null,
       canSave ? h("div", { class: "entry-actions" },
         h("button", { class: "btn btn-sm", type: "button", title: "Download this run as a simulation script that can replace the scripted replay of this scenario", on: { click: () => onSaveSimulation?.() } }, icon("download", 16), "Save run as simulation")) : null),
     { level: status === "error" ? "error" : "info" }));

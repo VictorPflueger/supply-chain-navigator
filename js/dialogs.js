@@ -9,7 +9,7 @@ import { getKey, setKey, forgetKey, hasKey, looksLikeKey, maskKey } from "./keys
 import { checkKey } from "./anthropic.js";
 
 /**
- * Ask which mode to run in. Resolves "simulation" | "live" | null.
+ * Ask which mode to run in. Resolves "simulation" | "live" | "key" (change or forget the stored key) | null.
  * runLabel: what will run (scenario title or "Live scan"); simBlocked: reason Simulation is unavailable.
  */
 export function chooseMode({ runLabel, simBlocked = null }) {
@@ -38,6 +38,14 @@ export function chooseMode({ runLabel, simBlocked = null }) {
       h("div", { class: "mode-cta" },
         h("button", { class: "btn btn-primary", type: "button", autofocus: true, on: { click: () => pick("live") } }, icon("key", 18), hasKey() ? `Use my key (${maskKey()})` : "Continue with my API key")));
 
+    // With a key stored, the footer offers the only other way to it: change it or forget it.
+    const footer = hasKey()
+      ? [
+        h("span", { class: "left" }, "A key is stored for this tab: ", h("code", {}, maskKey())),
+        h("button", { class: "btn btn-ghost btn-sm", type: "button", id: "btn-manage-key", on: { click: () => pick("key") } }, icon("key", 16), "Change or forget key")
+      ]
+      : [];
+
     modal = openModal({
       title: "How should the agent run?",
       intro: "Live is the real thing. Simulation is for rehearsal, offline fallback and exploring without a key.",
@@ -45,6 +53,7 @@ export function chooseMode({ runLabel, simBlocked = null }) {
         h("div", { class: "run-summary" }, h("span", { class: "label" }, "Will run:"), h("strong", {}, runLabel)),
         h("div", { class: "mode-cards" }, simCard, liveCard)
       ],
+      footer,
       onClose: (result) => resolve(result || null)
     });
   });
@@ -101,7 +110,9 @@ export function askApiKey({ reason = "" } = {}) {
       msg.className = "field-error";
       msg.textContent = r.status === 401
         ? "Anthropic rejected this key (401). Check that it is active and copied completely."
-        : `Anthropic answered ${r.status}: ${r.error?.message || r.error?.type}.`;
+        : /workspace/i.test(r.error?.message || "")
+          ? `Anthropic answered ${r.status}: ${r.error.message} Use a key scoped to a single workspace.`
+          : `Anthropic answered ${r.status}: ${r.error?.message || r.error?.type}.`;
     }
 
     saveBtn.addEventListener("click", save);
@@ -121,9 +132,11 @@ export function askApiKey({ reason = "" } = {}) {
       size: "narrow",
       body: [
         h("div", { class: "key-advice" }, icon("alert", 22), h("div", {},
-          h("p", {}, h("strong", {}, "Use a dedicated key with a low monthly spend limit"), " (for example €10)."),
-          h("p", {}, "Create one at ", h("a", { href: ANTHROPIC.consoleKeysUrl, target: "_blank", rel: "noopener noreferrer" }, "platform.claude.com"),
-            " and set its limit under ", h("a", { href: ANTHROPIC.consoleLimitsUrl, target: "_blank", rel: "noopener noreferrer" }, "Limits"), "."))),
+          h("p", {}, h("strong", {}, "Use a dedicated key with a low monthly spend limit"), " (for example $10)."),
+          h("p", {}, "At platform.claude.com, create a workspace for Navigator and set its spend limit under ",
+            h("a", { href: ANTHROPIC.consoleWorkspacesUrl, target: "_blank", rel: "noopener noreferrer" }, "Workspaces"),
+            ", then create a key scoped to that workspace under ",
+            h("a", { href: ANTHROPIC.consoleKeysUrl, target: "_blank", rel: "noopener noreferrer" }, "API keys"), "."))),
         current,
         h("div", { class: "field" },
           h("label", { for: "api-key-input" }, "API key"),
@@ -131,7 +144,7 @@ export function askApiKey({ reason = "" } = {}) {
           h("span", { class: "help", id: "api-key-help" }, "Masked while you type. Checked with a free call that uses no tokens."),
           msg),
         h("ul", { class: "key-facts" },
-          h("li", {}, icon("check", 16), "Kept in this tab's session storage only; gone when you close the tab."),
+          h("li", {}, icon("check", 16), "Kept in this tab's session storage only; cleared when you close the tab. On a shared computer, click Forget key when you finish."),
           h("li", {}, icon("check", 16), "Sent only to api.anthropic.com, never to any other host."),
           h("li", {}, icon("check", 16), "Never written to the console, logs or the audit export."))
       ],

@@ -12,7 +12,7 @@ const TYPE = {
 };
 
 export function createOutbox(panel, { onDecision, onCount } = {}) {
-  const actions = new Map(); // id -> { draft, status }
+  const actions = new Map(); // id -> { draft, status: "pending" | "approved" | "rejected" | "expired" }
 
   function counts() {
     const pending = [...actions.values()].filter((a) => a.status === "pending").length;
@@ -43,7 +43,9 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
   function card(d, status) {
     const t = TYPE[d.type] || TYPE.email;
     const tone = status === "pending" ? "pending" : status;
-    const statusText = status === "pending" ? "Pending approval" : status === "approved" ? "Approved — draft, not sent" : "Rejected";
+    const statusText = status === "pending" ? "Pending approval"
+      : status === "approved" ? "Approved — draft, not sent"
+        : status === "expired" ? "Not decided: the run ended" : "Rejected";
     const bodyText = d.body || (d.payload ? JSON.stringify(d.payload, null, 2) : "");
     const clipped = bodyText.split("\n").length > 6 || bodyText.length > 480;
     const el = h("article", { class: "action-card", dataset: { status, expanded: "false", clipped: String(clipped) } },
@@ -88,6 +90,13 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
     a.status = ev.payload.decision;
     render();
     counts();
+  });
+
+  // Drafts still pending when a run ends (abort, error) can no longer be decided; nothing was sent.
+  bus.on("run_end", () => {
+    let changed = false;
+    for (const a of actions.values()) if (a.status === "pending") { a.status = "expired"; changed = true; }
+    if (changed) { render(); counts(); }
   });
 
   function reset() {
