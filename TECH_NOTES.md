@@ -2,7 +2,7 @@
 
 Navigator calls the Claude API and four open-data APIs directly from the browser. Every external detail the code depends on is recorded here with its source and the date it was verified. If a fact changes, update this file first, then `js/config.js`.
 
-**Verification date:** 12 October 2026 (Milestone 0). Sources are official Anthropic documentation at `platform.claude.com/docs`, the open-data providers' own documentation, and live probes run from the build environment. Sections 8–10 record the agent guardrails, the simulation format and the test log of Milestones 3–5 (app version 0.5.0-m5).
+**Verification date:** 12 October 2026 (Milestone 0). Sources are official Anthropic documentation at `platform.claude.com/docs`, the open-data providers' own documentation, and live probes run from the build environment. Sections 8–11 record the agent guardrails, the simulation format, the test log of Milestones 3–6 and the acceptance checklist. App version **1.0.0** (Milestone 7).
 
 ---
 
@@ -22,6 +22,16 @@ Source: Models overview and Pricing pages, `https://platform.claude.com/docs/en/
 - The Models API (`GET /v1/models`) returns `id`, `display_name`, `lifecycle`, `line`, `max_input_tokens`, `max_tokens` and a `capabilities` map, including `capabilities.server_tools.web_search.supported`. Diagnostics uses this free call to validate a key and confirm the three model IDs are active.
 
 **USD → EUR.** The API bills in USD. The cost meter converts at a fixed rate: **1 USD = 0.894 EUR** (ECB reference rate 12 Oct 2026, read via `api.frankfurter.dev`). The constant `FX_USD_EUR` lives in `js/config.js`.
+
+### Cost per run (measured and estimated)
+
+| Model | Cost per preset-scenario run | Basis |
+|---|---|---|
+| Sonnet 5.5 (default) | **€0.20 measured**; expect €0.15–0.40 | First real run, 12 Oct 2026 (Styria scenario, 12 data and engine tool calls, 2 web searches). More searches, rejections and longer reasoning move it up |
+| Haiku 5.5 | about €0.02–0.06 | Token prices are 1/20 of Sonnet's below 100k prompt tokens; the web-search fee (≈ €0.009 per search) then dominates |
+| Opus 5.5 | about €0.35–0.90 | Token prices twice Sonnet's, and Navigator runs it at high effort |
+
+A Live scan can use all five searches the prompt allows: add up to €0.05. The estimates for Haiku and Opus are derived from the Sonnet measurement and the price ratios; the cost meter shows the real figure on every run, and the audit export holds the usage of every model call.
 
 ## 2. Server-side web search tool
 
@@ -77,7 +87,8 @@ Sources: API overview, Errors, Streaming, Handle tool calls, Handling stop reaso
 Notes:
 
 - The API overview now lists `Authorization: Bearer <key>` as the primary scheme and `x-api-key` as a supported legacy fallback. Navigator uses `x-api-key`, as the project spec fixes, and the CORS allow-list confirms it.
-- Keys that span several workspaces also need `anthropic-workspace-id`. This is noted in the README troubleshooting section. The preflight echoes requested headers, so adding it is CORS-safe.
+- Keys that span several workspaces also need `anthropic-workspace-id`. This is noted in the README troubleshooting section. The preflight echoes requested headers, so adding it is CORS-safe. Navigator does not send it; a 400/403 that names the workspace is answered with "use a key scoped to a single workspace".
+- **Spend limits are per workspace, not per key** (re-verified 12 Oct 2026, docs "Workspaces" and "Authentication"): Settings → Workspaces → select the workspace → Spend limits. They cannot be set on the Default Workspace, and only organisation admins can create workspaces. Keys are created under Settings → API keys and can be scoped to one workspace. The key dialog therefore advises a dedicated workspace with a monthly spend limit and a key scoped to it (D35).
 - No `anthropic-beta` header is used anywhere.
 
 ### CORS probe results (12 Oct 2026, from the build environment, `Origin: https://victorpflueger.github.io`)
@@ -238,6 +249,17 @@ The browser itself enforces where the page may connect, which turns the key-hand
 | D25 | `ui_propose_options` refuses to cost options against an older `sim_impact` than the latest one | Otherwise the cards could show a superseded baseline while the KPI tile shows the revised one |
 | D26 | Safety lines are added in code: the AI footer on every draft (after truncation), "Mock booking…" on every booking, and "Live agent run…" on every live report | The prompt asks for them; the code guarantees them, and the recorder can always replace the live marker with the replay marker |
 | D27 | The recorder follows the agent's view of each decision (the tool result of `ui_propose_options`/`ui_await_decision`), not the click | A quick second click while the model still answers the first decision would otherwise mix a rejection line into the approved path |
+| D28 | The first real recording (Styria, 12 Oct 2026, Sonnet 5.5, €0.20) is **not** shipped in `data/sim_runs.js` | The run was technically clean (0 validation errors, honest what-if path because the flood could not be confirmed), but its reasoning had four flaws a partner would notice: no visible "Revised:" line; the duration was revised because "the 7-day case showed no stop" (assumption fitted to the result); option B's expected total (€2.98M) was higher than doing nothing (€2.2M) without comment; the agent called the options V1–V3. The authored script stays; README explains how to record a fresh run after D29 |
+| D29 | Prompt and tool results tuned from that run (`js/prompt.js`, `js/tools.js`) | Visible "Revised: old → new" or "Confirmed: the first estimate holds" lines with the evidence; assumptions follow evidence, never the result; an option costlier than doing nothing is replaced or explicitly justified; options are named A, B, C everywhere (the decision tool results now say how to refer to them); the opening restates the signal in one sentence; the report's "How we know" names the evidence per assumption |
+| D30 | Run facts: the console's last line and the audit export (`run_facts`) state agent time (excluding time waiting for the human), tool calls by kind, visible verification steps, revisions and cost (`js/run_facts.js`) | Acceptance item 2 becomes self-checking on every run, live or simulated, instead of a stopwatch exercise on stage |
+| D31 | Diagnostics "Key and privacy" self-test | Checks in the presenter's browser that the CSP allows exactly the five documented hosts, that no key sits in local storage, that redaction works and that the audit export holds no key. Turns the key promises into something the presenter can show |
+| D32 | "Change or forget key" in the mode dialog whenever a key is stored; the key dialog advises Forget key on shared computers | Before, Forget key was only reachable when no key was stored. Session storage ends with the tab, but duplicating a tab copies it and browser session restore can bring it back |
+| D33 | When a run ends without a decision (Abort, error), open options show "No decision: the run ended" and pending drafts "Not decided: the run ended", without buttons | Buttons that only produce a "run has ended" notice invite clicks on stage; the state is now explicit. Nothing was ever sent either way |
+| D34 | Version 1.0.0, shown in the Diagnostics footer | GitHub Pages caches files for up to 10 minutes; the presenter can confirm which version is loaded |
+| D35 | Key advice names the mechanism that actually caps spend: a dedicated workspace with a monthly spend limit, and a key scoped to it | The Console sets spend limits per workspace, not per key, and not on the Default Workspace. The earlier text ("set its limit under Limits") pointed at the organisation-wide page |
+| D36 | The browser test suites ship in `tests/` as optional developer tooling (Node.js and Playwright, installed outside the app); the app still has no dependencies or build step | The acceptance evidence in §10–11 can be reproduced by anyone after a change. The suites use fixtures for every external service, and their mock key (`sk-ant-test-MOCKKEY…`) is shaped so that secret scanners do not mistake it for a real key |
+| D37 | An intro window, "How Navigator works", opens by itself on a browser's first visit and from **How it works** in the header (`js/intro.js`). It covers what Navigator does, five steps (spot, check, calculate, propose, prepare, coloured like the map states) and three value points, in under 200 words. "Seen" is remembered in local storage (`nav.introSeen`) | Anyone opening the link understands the prototype in a minute without a presenter. Local storage holds only this per-browser convenience flag, never the key; during a run the window has no Start button and never interrupts the run |
+| D38 | The control bar collapses its labels below 1600 px (was 1500 px), and header badges wrap to a second row instead of overflowing | At 1536×864, a 1080p laptop at 125 % scaling and a common presenter set-up, the control bar wrapped to two rows. Wrapping the badges keeps the header's height (two rows fit) and can never overlap the KPI tiles |
 
 **Spec deviation (deliberate).** The kickoff lists `ui_propose_options({options: [{title, description, cost_eur, time_days, residual_risk}], baseline_cost_eur})`. Navigator's tool takes `variant_id` instead of `cost_eur`/`time_days`, and fills every € figure and time from the latest `sim_impact` result (D5). The agent cannot type a number onto an option card.
 
@@ -248,7 +270,7 @@ Enforced in code (`js/agent.js`, `js/tools.js`), not only in the system prompt (
 | Guardrail | Where | Behaviour |
 |---|---|---|
 | Step cap | `AGENT.maxSteps = 40` | At most 40 model calls per run; then the run stops with a message |
-| Cost cap | `AGENT.budgetEur = 3.00` | The run stops once its own cost passes €3.00. Estimate for a typical Sonnet run with caching: €0.30–0.80 (about 20 model calls, up to 5 searches); to be confirmed with the first real runs |
+| Cost cap | `AGENT.budgetEur = 3.00` | The run stops once its own cost passes €3.00. A typical Sonnet run costs about €0.20 (measured, §1) |
 | Idle timeout | `AGENT.idleTimeoutMs = 90000` | 90 s without streamed data counts as a failed request (retried) |
 | Compatibility | `callModel` | A 400 that names `output_config`/`effort`, `display`, `thinking` or `cache_control` drops that optional field and retries; a 400 about web search removes the tool, rebuilds the system prompt, shows a banner and disables Live scan |
 | Output limit | `max_tokens` | A tool call cut off mid-input is discarded and the turn retried once with 1.5× `max_tokens` (16,000 → 24,000 on Sonnet) |
@@ -271,13 +293,13 @@ Run states shown in the status pill and under the stopwatch: Idle → Scanning �
 - **Authored paths.** Each of the six scripts has a hypothesis, at least two pieces of evidence before the verified alert, a visible "Revised:" self-correction, 9–11 visible tool calls before the decision, rejection lines for all three options, and approval paths for options A, B, C and "accept the risk". Rejecting all three options leads to the do-nothing path.
 - **Recorder.** After a completed live run of a preset scenario, "Save run as simulation" (console end line and Audit tab) validates the recording with `js/sim_check.js` and downloads `sim-run-<scenario>-recorded-<date>.js`. Appending it to `data/sim_runs.js` replaces the authored script for that scenario. The live report's "Live agent run" line is rewritten to "Recorded live run, replayed in Simulation mode". Dates in recorded narration refer to the recording day.
 
-## 10. Verification log (Milestones 3–5, 12 Oct 2026)
+## 10. Verification log (Milestones 3–6, 12 Oct 2026)
 
-All tests run headless in Chromium at 1920×1080 against the static files, with external hosts mocked or blocked.
+All tests run headless in Chromium at 1920×1080 against the static files, with external hosts mocked or blocked. The suites ship in `tests/` (`tests/README.md`); `node tests/run-all.mjs` runs them all, and none calls a real API.
 
 | Test | What it covers | Result |
 |---|---|---|
-| `unit/stream.test.mjs` | SSE parsing (LF/CRLF, any chunking), thinking signatures, incomplete tool input, mid-stream errors, 429, retries, abort, truncated streams, cost maths per model | Pass |
+| `tests/unit.mjs` | SSE parsing (LF/CRLF, any chunking), thinking signatures, incomplete tool input, mid-stream errors, 429, retries, abort, truncated streams, cost maths per model | Pass |
 | Live agent vs scripted API mock: full run | Parallel tool calls, `pause_turn`, a 529 retry, two-source alert, rejection then approval as tool results, `max_tokens` cut-off retry (16k → 24k), draft approve/reject, report gate, every assistant turn echoed unchanged with signatures, cost meter equal to the usage maths to the cent | Pass, 0 protocol violations |
 | Live: web search disabled | 400 → tool removed, prompt rebuilt, banner, Live scan disabled, early end → nudge → report | Pass |
 | Live: open-data failure | PEGELONLINE 503 → `{error, fallback_hint}` as `is_error` tool result, console note, web-search fallback | Pass |
@@ -288,4 +310,27 @@ All tests run headless in Chromium at 1920×1080 against the static files, with 
 | Live: Abort during a model call | No console entry and no late text after "Aborted" | Pass |
 | All six simulations | Different decision paths (reject then approve, approve directly, accept the risk, reject all three), drafts approved and rejected, no unresolved placeholders, no network beyond map tiles, KPI and map payoff, audit `mode: simulation` | 6 of 6 pass |
 | Static checks | `node tools/check_world.mjs`: world, scenarios, reference cases and the six scripts | 32 of 32 pass; negative tests catch typos, missing paths, missing footers, live-run claims, single-source alerts, unknown tools and reports before the outbox |
-| Layout | 1920×1080, 1600×900, 1366×768, 1280×720: no horizontal overflow; every visible interactive element ≥ 40 px | Pass |
+| Layout (`tests/layout.mjs`) | 1920×1080, 1600×900, 1536×864, 1366×768, 1280×720: no horizontal overflow, header badges never overlap the KPI tiles, header height unchanged, control bar on one row; every visible interactive element ≥ 40 px, including the intro window | Pass |
+| Intro window (`tests/smoke.mjs intro`) | Opens by itself on the first visit (174 words, fits the screen, Start agent focused); stays closed after a reload; **How it works** reopens it; its Start agent opens the mode choice; during a run it offers Close only and the run carries on | Pass |
+| First real live run (presenter's key, 12 Oct 2026 19:39 UTC) | Scenario 4 (Styria) on Sonnet 5.5: 12 data and engine tool calls before the decision (5 ERP, 2 open data, 2 web-search steps, 3 impact runs), 2 visible "Check:" steps, honest what-if path because no source confirmed the flood, 3 drafts, €0.20. Saved as a simulation and replayed: 0 validation errors | Pass; reasoning flaws fed into D28–D29 |
+| M6 key lifecycle (`tests/accept.mjs key`) | No key at load; Start opens the mode dialog first, Live then the masked key dialog with the spend-limit advice; key in session storage only, absent from a new tab, the DOM, local storage, 124 console lines and the audit export; it travels only in the `x-api-key` header of `GET /v1/models` and `POST /v1/messages` to api.anthropic.com; Change or forget key clears it and Live asks again; Key and privacy row passes with and without a key | Pass |
+| M6 Diagnostics → agent (`tests/accept.mjs diag`) | PEGELONLINE blocked at network level: Diagnostics flags it (Fail), the other three open-data APIs pass; in the following live Rhine run `geo_rhine_level` makes no request, returns "failed the Diagnostics check … skipped" with the web-search hint, the console announces the fallback and the agent verifies through web search | Pass |
+| M6 Abort and Reset matrix (`tests/accept.mjs abort`) | Simulation: Abort while scanning (then Start again directly), Abort at the option decision, Reset while drafts wait, Reset after Done. Live: Abort at the option decision, Abort while drafts wait, Reset during a model call in flight, then a normal run. Every path: nothing appears after Abort, no further model call, Reset gives an empty Idle workspace, the next run completes | Pass (7 paths) |
+| M6 Simulation offline (`tests/accept.mjs offline`) | Every external host blocked, including both CDNs and the tile servers: Leaflet loads from `vendor/`, the offline coastline map shows, the Rhine replay runs to Done with a rejection, an approval and a rejected draft; SIMULATION badge and watermark visible at start, options, outbox and Done | Pass |
+
+## 11. Acceptance checklist (Milestone 6)
+
+Each item of the kickoff's checklist, how it was tested, and the evidence. "Mock" means the live agent ran against a scripted stand-in for the Anthropic API that checks every request against the protocol rules in §3; the real-key runs were made by the presenter.
+
+| # | Requirement | How it was verified | Result |
+|---|---|---|---|
+| 1 | Loads with no key; Start opens the mode dialog; Live then asks for the key; the key is gone after the tab closes and never appears in logs or the audit export | `tests/accept.mjs key` (see §10): session storage only, new tab has no key, not in DOM, console, local storage, audit export or recorded script; only in the `x-api-key` header to api.anthropic.com. The Diagnostics "Key and privacy" row repeats the checks in the presenter's browser | Pass |
+| 2 | A full run of each scenario takes under about 4 minutes on Sonnet, with ≥ 8 visible tool calls and ≥ 1 visible verification step | Simulation: all six scripts have 9–11 tool calls before the decision, hypothesis → second source → "Revised:" before the alert, and replay in about one minute at ×1 (`tools/check_world.mjs`, `tests/sims.mjs`). Live: the first real run had 12 tool calls before the decision and 2 visible checks; the run-facts line (D30) now reports agent time, tool calls and verification steps at the end of every run, so the four-minute target is confirmed in rehearsal per scenario | Pass for Simulation and for the tool-call and verification counts live; time to be read from the run-facts line in rehearsal |
+| 3 | Options always show a € comparison including do-nothing; approving one produces outbox drafts; nothing is sent anywhere except api.anthropic.com and the listed open APIs | Every simulation and mock live run shows three options plus "Do nothing" with engine figures and the comparison bars; approval produces drafts that wait for approval. The page's CSP allows `fetch` to exactly five hosts (D12, D31); request logs in `tests/accept.mjs` show only api.anthropic.com, the open-data APIs, the Leaflet CDN and map tiles (static GETs) | Pass |
+| 4 | A live scan with no findings ends honestly | Mock scan with quiet open data ends "Run complete: no material disruption found." with the monitoring report | Pass |
+| 5 | The cost meter is within ±25% of the usage maths; Abort and Reset always recover to Idle | Mock full run: meter equals the price table × usage to 1e-9 (€0.2513). Real run: €0.20 shown, per-call usage in the audit export. Abort/Reset matrix: 7 paths in both modes (§10) | Pass |
+| 6 | Diagnostics flags an unreachable API and the agent routes around it | `tests/accept.mjs diag`: blocked PEGELONLINE flagged; the live agent skips it without a request and verifies via web search. `tests/live.mjs geofail`: an HTTP 503 during a run gets the same fallback | Pass |
+| 7 | Simulation runs every preset with no key and no network beyond map tiles; badge and watermark always visible; approval and rejection paths play; "Save run as simulation" exports a valid script | `tests/sims.mjs`: six presets, four decision patterns, no request beyond tiles. `tests/accept.mjs offline`: runs with every host blocked. Recorder: mock exports replay end to end (`tests/live.mjs full`, `race`), and the presenter's real recording validates with 0 errors | Pass |
+
+**Not testable here.** Real model latency and real web-search results need a real key and are covered by the presenter's rehearsal; the run-facts line and the audit export give the numbers. Browser CORS of the four open-data APIs was not observable from the build environment (§4); Diagnostics tests it on the presentation laptop, and every failure falls back to web search.
+

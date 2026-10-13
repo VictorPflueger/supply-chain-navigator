@@ -137,8 +137,9 @@ a:hover { color: var(--brand-deep); }
 }
 .brand-sub { color: var(--text-muted); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.header-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
-@media (min-width: 1500px) { .header-badges { flex-wrap: nowrap; } }
+/* The badges wrap to a second row when the KPI strip needs the room; two rows fit the header's
+   height, so wrapping never shifts the layout (and never overlaps the KPI tiles). */
+.header-badges { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; min-width: 0; }
 
 /* Mode badge ------------------------------------------------------------------------------ */
 .mode-badge {
@@ -187,6 +188,21 @@ a:hover { color: var(--brand-deep); }
   white-space: nowrap;
 }
 .ai-disclosure svg { color: var(--brand); flex: none; }
+
+/* "How it works": reopens the intro window ------------------------------------------------ */
+.about-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 16px 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-mid);
+  background: var(--brand-wash);
+  color: var(--brand);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.about-btn:hover { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+.about-btn:active { transform: translateY(1px); }
 
 /* KPI strip: four tiles. A tile takes the pastel of its state, so the strip turns from rose to
    sage as the run moves from exposure to decision. */
@@ -345,14 +361,20 @@ a:hover { color: var(--brand-deep); }
   .brand-sub { display: none; }
 }
 
-/* Laptop widths: keep the control bar on one row. */
-@media (max-width: 1500px) {
+/* Laptop widths, including 1536 px (a 1080p screen at 125 % scaling): keep the control bar on one row. */
+@media (max-width: 1600px) {
   .controls { gap: 8px; padding: 10px 16px; }
   .control-label { display: none; }
   .controls .dropdown-toggle { min-width: 0 !important; }
   .controls .dropdown-toggle .caption { display: none; }
   .controls .btn-text { display: none; }
   #btn-reset, #btn-diagnostics { padding: 0 12px; }
+}
+
+/* Small laptops: "How it works" becomes an info icon so the header keeps at most two badge rows. */
+@media (max-width: 1300px) {
+  .about-btn { width: 40px; padding: 0; justify-content: center; }
+  .about-btn .btn-text { display: none; }
 }
 
 @media (max-width: 1180px) {

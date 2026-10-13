@@ -8,6 +8,7 @@
 import { bus } from "./events.js";
 import { APP } from "./config.js";
 import { redactSecrets } from "./keystore.js";
+import { computeRunFacts } from "./run_facts.js";
 
 const events = [];
 const apiExchanges = [];
@@ -119,6 +120,7 @@ export function buildAuditExport() {
     company_note: "Nordwerk Automotive GmbH and all suppliers are fictional (see DATA_SOURCES.md).",
     world_version: world.world_version || null,
     run,
+    run_facts: run && run.status !== "running" ? safeFacts() : null,
     cost: lastCost,
     counts: { ...countBy(events.map((e) => e.type)), model_calls: apiExchanges.length },
     events,
@@ -130,6 +132,10 @@ export function buildAuditExport() {
 export function auditFileName() {
   const id = run?.run_id || `navigator-${Date.now()}`;
   return `${id}${run?.mode === "simulation" ? "-SIMULATION" : run?.mode === "live" ? "-LIVE" : ""}-audit.json`;
+}
+
+function safeFacts() {
+  try { return computeRunFacts(rows); } catch { return null; }
 }
 
 function countBy(list) {

@@ -128,6 +128,7 @@
 .chip[data-tone="pending"] { color: var(--apricot-text); border-color: var(--apricot-mid); background: var(--apricot-fill); }
 .chip[data-tone="approved"] { color: var(--sage-text); border-color: var(--sage-mid); background: var(--sage-fill); }
 .chip[data-tone="rejected"] { color: var(--rose-text); border-color: var(--rose-mid); background: var(--rose-fill); }
+.chip[data-tone="expired"] { color: var(--text-muted); border-color: var(--line-strong); background: var(--porcelain); }
 .chip[data-tone="live-only"] { color: var(--text-muted); }
 .chip[data-tone="info"] { color: var(--brand); border-color: var(--brand-mid); background: var(--brand-soft); }
 .chip[data-tone="muted"] { color: var(--text-faint); }

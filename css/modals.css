@@ -110,3 +110,50 @@
   .mode-cards { grid-template-columns: 1fr; }
   .world-checks { columns: 1; }
 }
+
+/* Intro: what Navigator does, how it works, why it pays off ------------------------------------ */
+.modal.intro-modal { width: min(1000px, 100%); }
+.intro-modal .modal-head p { font-size: var(--fs-lg); line-height: 1.4; color: var(--text); max-width: 64ch; }
+.intro-modal .modal-body h3 { margin: 6px 0 14px; font-family: var(--font-figures); font-size: 1.25rem; color: var(--text); }
+
+/* Five steps on one track; each number takes the colour the map uses for that moment of a run. */
+.intro-steps {
+  list-style: none; margin: 0 0 26px; padding: 0;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px;
+}
+.intro-step { position: relative; display: flex; flex-direction: column; gap: 4px; padding-top: 52px; min-width: 0; }
+.intro-step::before {
+  content: ""; position: absolute; top: 20px; left: 50px; right: -8px;
+  height: 2px; background: var(--line-strong);
+}
+.intro-step:last-child::before { display: none; }
+.intro-num {
+  position: absolute; top: 0; left: 0;
+  width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 2px solid;
+  font-family: var(--font-figures); font-weight: 700; font-size: 1.25rem; line-height: 1;
+}
+.intro-step[data-tone="spot"] .intro-num { color: var(--rose-text); border-color: var(--rose-line); background: var(--rose-fill); }
+.intro-step[data-tone="check"] .intro-num { color: var(--sky-text); border-color: var(--sky-line); background: var(--sky-fill); }
+.intro-step[data-tone="calculate"] .intro-num { color: var(--apricot-text); border-color: var(--apricot-line); background: var(--apricot-fill); }
+.intro-step[data-tone="propose"] .intro-num { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
+.intro-step[data-tone="prepare"] .intro-num { color: var(--sage-text); border-color: var(--sage-line); background: var(--sage-fill); }
+.intro-step-title { font-family: var(--font-figures); font-size: 1.2rem; font-weight: 700; color: var(--text); }
+.intro-step-text { color: var(--text-muted); line-height: 1.4; }
+
+.intro-value {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 28px;
+}
+.intro-value li { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 3px solid var(--brand-mid); }
+.intro-value strong { font-family: var(--font-figures); font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: var(--brand); }
+.intro-value span { color: var(--text-muted); line-height: 1.4; }
+.intro-note { margin: 22px 0 0; color: var(--text-faint); font-size: var(--fs-sm); }
+
+@media (max-width: 760px) {
+  .intro-steps { grid-template-columns: 1fr; gap: 14px; }
+  .intro-step { padding: 2px 0 0 56px; min-height: 42px; }
+  .intro-step::before { top: 46px; bottom: -12px; left: 20px; right: auto; width: 2px; height: auto; }
+  .intro-value { grid-template-columns: 1fr; }
+}

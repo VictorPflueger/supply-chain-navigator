@@ -383,7 +383,9 @@ export function createLiveAgent(hooks = {}) {
         text = "Anthropic rejected the API key (401). It has been removed from this tab; start again and enter a valid key.";
         hooks.onKeyRejected?.();
       } else if (e.spendLimit || e.status === 402) {
-        text = "The API key has reached its spend limit or has no credit. Raise the limit at platform.claude.com, or use Simulation mode.";
+        text = "The API key has reached its spend limit or has no credit. Raise the workspace's spend limit at platform.claude.com (Settings, Workspaces), or use Simulation mode.";
+      } else if ((e.status === 400 || e.status === 403) && /workspace/i.test(e.message || "")) {
+        text = `Anthropic refused the request because of this key's workspace (${e.message}). If the key works in several workspaces, create one scoped to a single workspace at platform.claude.com (Settings, API keys) and enter that key.`;
       } else if (e.status === 404) {
         text = `The model ${r.modelDef.label} is not available to this API key. Choose another model.`;
       } else if (e.status === 0 && e.type === "network_error") {

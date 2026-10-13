@@ -7,7 +7,7 @@ import { openModal } from "./modal.js";
 import { TESTS, runAll, runTest, memory } from "./diagnostics.js";
 import { probeWebSearch } from "./anthropic.js";
 import { getKey } from "./keystore.js";
-import { FX_USD_EUR, MODELS } from "./config.js";
+import { APP, FX_USD_EUR, MODELS } from "./config.js";
 
 const STATUS_TEXT = { pass: "Pass", fail: "Fail", warn: "Check", skip: "Skipped", running: "Testing", idle: "Not run" };
 const STATUS_ICON = { pass: "check", fail: "x", warn: "alert", skip: "info", idle: "info" };
@@ -86,7 +86,7 @@ export function openDiagnostics({ onWebSearchResult, onCost } = {}) {
         worldList)
     ],
     footer: [
-      h("span", { class: "left" }, "Tip: run this on the presentation laptop and network before going on stage."),
+      h("span", { class: "left" }, `Navigator ${APP.version}. Run this on the presentation laptop and network before going on stage.`),
       runBtn
     ]
   });
@@ -94,6 +94,7 @@ export function openDiagnostics({ onWebSearchResult, onCost } = {}) {
   // Integrity check is local and instant: show it straight away.
   runTest("world").then((r) => setRow("world", r));
   runTest("leaflet").then((r) => setRow("leaflet", r));
+  runTest("privacy").then((r) => setRow("privacy", r));
   return modal;
 }
 
