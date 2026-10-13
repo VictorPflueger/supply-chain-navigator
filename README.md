@@ -74,6 +74,10 @@ On Windows, use `py -m http.server 8000`. Then open `http://localhost:8000`. Liv
 - **Cloudflare Pages:** in the dashboard, open **Workers & Pages → Create application → Get started** and choose **Drag and drop your files**. Name the project, drag in the folder and click **Deploy site**.
 - **Netlify:** sign in, then drag the folder onto `app.netlify.com/drop`.
 
+## First visit
+
+On a first visit, a short window explains what Navigator does, how it works (spot, check, calculate, propose, prepare) and why it pays off. Its **Start agent** button leads straight into the run. **How it works** in the header opens it again at any time; during a run it only explains and never interrupts.
+
 ## The two modes
 
 Clicking **Start agent** first asks how the agent should run.
@@ -176,7 +180,7 @@ Navigator is designed along the transparency and human-oversight lines of the EU
 | `tests/` | Optional browser test suites |
 | `README.md`, `DEMO_SCRIPT.md`, `DATA_SOURCES.md`, `TECH_NOTES.md` | This guide, the 8-minute stage script, every data source, verified API facts and decisions |
 
-Main modules: `agent.js` (live tool-use loop), `anthropic.js` (streaming client, retries), `prompt.js` (system prompt), `tools.js` (tool definitions and guardrails), `erp.js` (ERP queries), `impact.js` (impact engine), `geo.js` (open-data tools), `simulation.js` (replay), `recorder.js` (Save run as simulation), `events.js` (run-event bus), `ui.js` (orchestration), `map.js`, `console.js`, `kpi.js`, `options_panel.js`, `outbox.js`, `audit.js`, `diagnostics.js`, `keystore.js` (session-only key), `cost.js`, `run_facts.js`.
+Main modules: `agent.js` (live tool-use loop), `anthropic.js` (streaming client, retries), `prompt.js` (system prompt), `tools.js` (tool definitions and guardrails), `erp.js` (ERP queries), `impact.js` (impact engine), `geo.js` (open-data tools), `simulation.js` (replay), `recorder.js` (Save run as simulation), `events.js` (run-event bus), `ui.js` (orchestration), `intro.js` (the How it works window), `map.js`, `console.js`, `kpi.js`, `options_panel.js`, `outbox.js`, `audit.js`, `diagnostics.js`, `keystore.js` (session-only key), `cost.js`, `run_facts.js`.
 
 ## Credits and licences
 

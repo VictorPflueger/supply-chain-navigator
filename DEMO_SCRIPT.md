@@ -10,7 +10,7 @@
 
 ## Pre-flight (30 minutes before, on the presentation laptop and network)
 
-1. Open the site in Chrome or Edge and hard-reload (**Ctrl + Shift + R**). Close other tabs and silence notifications. Plug in the power and disable sleep.
+1. Open the site in Chrome or Edge and hard-reload (**Ctrl + Shift + R**). On a browser's first visit the **How Navigator works** window opens by itself; close it. Close other tabs and silence notifications. Plug in the power and disable sleep.
 2. Click **Diagnostics → Run all tests**. Check that every row passes and that the footer shows **Navigator 1.0.0**.
    - The PEGELONLINE row shows today's Kaub reading. **If Kaub is above about 150 cm**, the Rhine is not low today and the live run will become a labelled what-if. That is honest, but for the main demo choose **Live scan** (if the news has a real disruption near the network) or Scenario 6, **Tangier harness fire**, and present it as a what-if.
    - A failed open-data row is fine: the agent says so on screen and verifies through web search.
@@ -34,7 +34,7 @@
 
 ## 1. Hook (0:00–0:30)
 
-On screen: the idle map. Leipzig and Győr are the two plants; dots are suppliers in real industry clusters; lines are real corridors.
+On screen: the idle map. Leipzig and Győr are the two plants; dots are suppliers in real industry clusters; lines are real corridors. If the room needs a picture of the flow first, click **How it works** in the header: its five steps (spot, check, calculate, propose, prepare) are the run you are about to show, and its **Start agent** button leads straight into segment 2.
 
 > "This is Nordwerk, a fictional German EV maker with real geography: two plants, 57 suppliers, real ports and real rivers. When a disruption hits, a supply chain team needs a day or two to answer three questions: are we exposed, which plant stops when, and what does it cost to prevent it? Let's watch an AI agent do it in about four minutes, and ask for permission before it does anything."
 

@@ -2,6 +2,7 @@
 //   sim          a full Simulation run (Tangier) with options, outbox, summary and audit export
 //   live         key check (401, then accepted), a model that keeps ending its turn early
 //   diag         Diagnostics dialog, custom what-if blocks Simulation
+//   intro        first visit opens the intro window; "How it works" reopens it; Start agent leads to the mode choice
 //   cdn-down     both CDNs unreachable: Leaflet loads from vendor/
 //   no-leaflet   no Leaflet anywhere: map notice, the rest still works
 //   file         opened from file://: the page explains how to start a server
@@ -9,15 +10,16 @@
 // Usage: node tests/smoke.mjs [case…]
 import path from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
-import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, NETWORK_NOISE, MOCK_KEY } from "./lib/harness.mjs";
+import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, NETWORK_NOISE, MOCK_KEY, SKIP_INTRO } from "./lib/harness.mjs";
 
 const OUT = await outDir("smoke");
 const { base: BASE, blockLocal, close } = await serveStatic(APP_ROOT, 8765);
 const browser = await launchBrowser();
 const results = [];
 
-async function newPage({ cdn = "ok", anthropic = null } = {}) {
-  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, acceptDownloads: true });
+async function newPage({ cdn = "ok", anthropic = null, intro = false, viewport = { width: 1920, height: 1080 } } = {}) {
+  const context = await browser.newContext({ viewport, acceptDownloads: true });
+  if (!intro) await context.addInitScript(SKIP_INTRO);
   await context.addInitScript(() => {
     window.__csp = [];
     document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI} ${e.sample || ""}`.trim()));
@@ -238,6 +240,65 @@ if (wanted("diag")) {
     [/^Navigator \d+\.\d+\.\d+/.test(checks.footer || ""), "Diagnostics footer shows the version"],
     [/Custom/.test(checks.scenarioLabel || ""), "custom what-if selected"],
     [checks.simBlocked === "true", "custom what-ifs cannot run as Simulation"]
+  ]);
+}
+
+// ---- intro: first visit opens the intro window; "How it works" reopens it ----------------------------
+if (wanted("intro")) {
+  const t = await newPage({ cdn: "ok", intro: true });
+  const { page } = t;
+  const checks = {};
+  try {
+    await boot(page);
+    await page.waitForSelector(".intro-modal", { timeout: 5000 });
+    checks.autoOpened = true;
+    checks.title = (await page.textContent(".intro-modal h2")).trim();
+    checks.steps = await page.$$eval(".intro-step-title", (els) => els.map((e) => e.textContent));
+    checks.values = await page.$$eval(".intro-value strong", (els) => els.map((e) => e.textContent));
+    checks.words = await page.$eval(".intro-modal", (e) => e.innerText.split(/\s+/).filter(Boolean).length);
+    checks.fits = await page.$eval(".intro-modal", (e) => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
+    await page.waitForTimeout(200);
+    checks.focus = await page.evaluate(() => document.activeElement?.textContent?.trim());
+    await shot(page, "20-intro.png");
+    await page.click('.intro-modal .modal-foot button:has-text("Close")');
+    await page.waitForSelector(".intro-modal", { state: "detached", timeout: 3000 });
+    checks.flag = await page.evaluate(() => localStorage.getItem("nav.introSeen"));
+    await page.reload();
+    await page.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+    await page.waitForTimeout(800);
+    checks.reopenedOnReload = await page.isVisible(".intro-modal");
+    checks.buttonLabel = (await page.textContent("#btn-about")).trim();
+    await page.click("#btn-about");
+    await page.waitForSelector(".intro-modal", { timeout: 3000 });
+    await page.keyboard.press("Escape");
+    await page.waitForSelector(".intro-modal", { state: "detached", timeout: 3000 });
+    await page.click("#btn-about");
+    await page.click('.intro-modal .modal-foot button:has-text("Start agent")');
+    await page.waitForSelector(".mode-card", { timeout: 5000 });
+    checks.startOpensModeChoice = await page.$$eval(".mode-card", (els) => els.map((e) => e.dataset.mode).join(","));
+    // During a run the window only explains: Close is its only button and the run carries on.
+    await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
+    await page.waitForTimeout(1200);
+    await page.click("#btn-about");
+    await page.waitForSelector(".intro-modal", { timeout: 3000 });
+    checks.duringRunButtons = await page.$$eval(".intro-modal .modal-foot button", (els) => els.map((e) => e.textContent.trim()));
+    await page.keyboard.press("Escape");
+    checks.statusAfterClose = (await page.textContent(".status-pill .text")).trim();
+    await page.click("#btn-abort");
+  } catch (err) {
+    checks.FAILED = String(err.message).split("\n")[0];
+    await shot(page, "intro-fail.png");
+  }
+  await finish("intro: first visit, reopen, start", t, checks, [
+    [checks.autoOpened && checks.title === "How Navigator works", "the intro opens by itself on the first visit"],
+    [checks.steps?.join(",") === "Spot,Check,Calculate,Propose,Prepare" && checks.values?.length === 3, "five steps and three value points"],
+    [checks.words <= 200, `the intro stays brief (${checks.words} words)`],
+    [checks.fits, "the intro fits the screen"],
+    [checks.focus === "Start agent", "the main button has focus"],
+    [checks.flag === "1" && checks.reopenedOnReload === false, "once closed, it does not open again on reload"],
+    [checks.buttonLabel === "How it works", "header button labelled How it works"],
+    [checks.startOpensModeChoice === "simulation,live", "Start agent in the intro opens the mode choice"],
+    [JSON.stringify(checks.duringRunButtons) === '["Close"]' && /Scanning|Diagnosing|Verifying|Simulating|Options/.test(checks.statusAfterClose || ""), "during a run: Close only, and the run carries on"]
   ]);
 }
 

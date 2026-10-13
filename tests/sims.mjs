@@ -4,7 +4,7 @@
 // Usage: node tests/sims.mjs [scenarioId…]
 import path from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
-import { APP_ROOT, ONLY, outDir, launchBrowser, serveStatic, fulfilLeaflet, NETWORK_NOISE } from "./lib/harness.mjs";
+import { APP_ROOT, ONLY, outDir, launchBrowser, serveStatic, fulfilLeaflet, NETWORK_NOISE, SKIP_INTRO } from "./lib/harness.mjs";
 
 const OUT = await outDir("sims");
 const { base: BASE, close } = await serveStatic(APP_ROOT, 8768);
@@ -40,6 +40,7 @@ process.exit(results.every((r) => r.ok) ? 0 : 1);
 
 async function playScenario(id, plan) {
   const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, acceptDownloads: true });
+  await context.addInitScript(SKIP_INTRO);
   await context.addInitScript(() => {
     window.__csp = [];
     document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));

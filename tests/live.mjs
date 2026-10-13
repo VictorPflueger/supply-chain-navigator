@@ -14,7 +14,7 @@
 import path from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
 import { createFakeClaude } from "./lib/fake-claude.mjs";
-import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, CORS, MOCK_KEY, NETWORK_NOISE } from "./lib/harness.mjs";
+import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, CORS, MOCK_KEY, NETWORK_NOISE, SKIP_INTRO } from "./lib/harness.mjs";
 
 const ROOT = APP_ROOT;
 const OUT = await outDir("live");
@@ -56,6 +56,7 @@ function openData(url) {
 const served = new Map(); // extra same-origin files for a test (e.g. a recorded simulation script)
 async function newPage(fake, { models = "ok", failHosts = [] } = {}) {
   const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, acceptDownloads: true });
+  await context.addInitScript(SKIP_INTRO);
   await context.route(/^http:\/\/127\.0\.0\.1:8767\/test\//, (route) => {
     const p = new URL(route.request().url()).pathname;
     if (served.has(p)) return route.fulfill({ status: 200, headers: { "content-type": "text/javascript; charset=utf-8" }, body: served.get(p) });

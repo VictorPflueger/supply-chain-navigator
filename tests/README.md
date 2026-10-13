@@ -8,11 +8,11 @@ Navigator itself needs no Node.js, npm or build step. These scripts are the chec
 |---|---|---|
 | world | `node tools/check_world.mjs` | Synthetic world, scenarios, reference cases and the six simulation scripts (32 checks). Node.js only |
 | unit | `node tests/unit.mjs` | Streaming client: SSE parsing, thinking signatures, retries, aborts, truncated streams; cost maths per model. Node.js only |
-| smoke | `node tests/smoke.mjs` | A full Simulation run; key check and a model that stops early; Diagnostics; CDNs down; no Leaflet; `file://`; a missing data file |
+| smoke | `node tests/smoke.mjs` | A full Simulation run; key check and a model that stops early; Diagnostics; the intro window (first visit, reopen, start); CDNs down; no Leaflet; `file://`; a missing data file |
 | sims | `node tests/sims.mjs` | All six simulations with different decision paths; markings, placeholders, network, payoff, audit |
 | live | `node tests/live.mjs` | The live agent against `lib/fake-claude.mjs`, a scripted stand-in for the Messages API that checks every request against the protocol rules; includes Save run as simulation and its replay |
 | accept | `node tests/accept.mjs` | Key lifecycle and privacy, Diagnostics → agent fallback, the Abort/Reset matrix, Simulation fully offline |
-| layout | `node tests/layout.mjs` | No horizontal overflow from 1920×1080 down to 1280×720; touch targets ≥ 40 px |
+| layout | `node tests/layout.mjs` | From 1920×1080 down to 1280×720, including 1536×864: no horizontal overflow, header badges never overlap the KPI tiles, one-row control bar; touch targets ≥ 40 px |
 
 `node tests/run-all.mjs` runs everything in that order and prints a summary. Name suites to run only those (`node tests/run-all.mjs unit live`); name cases to run only those within a suite (`node tests/live.mjs full abort`).
 

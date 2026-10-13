@@ -37,10 +37,11 @@ async function boot() {
   const { initUI, showBanner } = ui;
   const { redactSecrets } = await import("./keystore.js");
 
-  initUI();
+  const app = initUI();
   installErrorReporting(showBanner, redactSecrets);
   document.documentElement.dataset.boot = "ready";
   hideBoot();
+  app.introOnFirstVisit();
 
   if (leaflet.ok && !leaflet.cssSource) {
     showBanner({ level: "warn", title: "Map styles missing", text: "The map library loaded but its stylesheet did not, so the map may look broken. Run Diagnostics or reload." });

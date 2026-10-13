@@ -12,7 +12,7 @@
 import path from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
 import { createFakeClaude } from "./lib/fake-claude.mjs";
-import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, CORS, MOCK_KEY, NETWORK_NOISE } from "./lib/harness.mjs";
+import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, CORS, MOCK_KEY, NETWORK_NOISE, SKIP_INTRO } from "./lib/harness.mjs";
 
 const ROOT = APP_ROOT;
 const OUT = await outDir("accept");
@@ -54,6 +54,7 @@ function openData(url) {
  */
 async function newPage({ blockHosts = [], offline = false } = {}) {
   const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, acceptDownloads: true });
+  await context.addInitScript(SKIP_INTRO);
   await context.addInitScript(() => {
     window.__csp = [];
     document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));

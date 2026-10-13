@@ -111,10 +111,11 @@ export const LIBS = {
 };
 
 export const STORAGE = {
-  apiKey: "nav.anthropic.key",
-  diagnostics: "nav.diag",
-  model: "nav.model",
-  speed: "nav.speed"
+  apiKey: "nav.anthropic.key",      // sessionStorage: this tab only
+  diagnostics: "nav.diag",          // sessionStorage
+  model: "nav.model",               // sessionStorage
+  speed: "nav.speed",               // sessionStorage
+  introSeen: "nav.introSeen"        // localStorage: the intro window opens by itself only on a first visit
 };
 
 export const UI = {

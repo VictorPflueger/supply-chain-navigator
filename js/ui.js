@@ -15,6 +15,7 @@ import { resetAudit } from "./audit.js";
 import { createControls } from "./controls.js";
 import { chooseMode, askApiKey, askCustomScenario, showReport } from "./dialogs.js";
 import { openDiagnostics } from "./diagnostics_view.js";
+import { openIntro, introSeen } from "./intro.js";
 import { createSimulationPlayer } from "./simulation.js";
 import { createLiveAgent } from "./agent.js";
 import { hasKey, forgetKey } from "./keystore.js";
@@ -98,6 +99,24 @@ export function initUI() {
       onCost: (eur) => kpis.addSessionCost(eur)
     })
   });
+
+  // ---- intro window: "How it works" in the header, and once by itself on a first visit -----------
+  const aboutBtn = h("button", {
+    class: "about-btn", type: "button", id: "btn-about",
+    "aria-label": "How it works", title: "What Navigator does, how it works and why it pays off"
+  }, icon("info", 18), h("span", { class: "btn-text" }, "How it works"));
+  aboutBtn.addEventListener("click", () => showIntro());
+  document.querySelector(".header-badges")?.appendChild(aboutBtn);
+
+  function showIntro() {
+    const s = getState();
+    // During a run the window only explains; it never starts or interrupts anything.
+    if (isRunning(s)) return openIntro({});
+    return openIntro({
+      startLabel: isFinished(s) ? "New run" : "Start agent",
+      onStart: () => start(getState().entry === "custom" ? "custom" : "scenario")
+    });
+  }
 
   // ---- state → view ----------------------------------------------------------------------------
   const render = (s) => {
@@ -226,7 +245,12 @@ export function initUI() {
     showBanner({ level, title: level === "warn" ? "Heads-up" : "Note", text, timeout: 6000 });
   }
 
-  return { map, start, resetWorkspace };
+  /** Opens the intro once per browser: called by main.js after the boot screen is gone. */
+  function introOnFirstVisit() {
+    if (!introSeen() && !document.querySelector(".modal-backdrop")) showIntro();
+  }
+
+  return { map, start, resetWorkspace, showIntro, introOnFirstVisit };
 }
 
 /** Transient banner under the header (also used for file:// and library warnings). */

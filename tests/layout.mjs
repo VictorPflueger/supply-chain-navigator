@@ -1,11 +1,13 @@
 // Layout checks for projector use:
-//   viewports  no horizontal overflow at 1920×1080, 1600×900, 1366×768 and 1280×720 (idle and options)
+//   viewports  at 1920×1080, 1600×900, 1536×864, 1366×768 and 1280×720 (idle and options): no
+//              horizontal overflow, header badges never overlap the KPI tiles, the header keeps its
+//              height and the control bar stays on one row
 //   targets    every visible interactive element is at least 40 px high and wide at 1920×1080, in the
-//              main states of a run (idle, mode dialog, options, outbox, audit, Diagnostics)
+//              main states of a run (idle, intro window, mode dialog, options, outbox, audit, Diagnostics)
 // Usage: node tests/layout.mjs [case…]
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
-import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet } from "./lib/harness.mjs";
+import { APP_ROOT, outDir, wanted, launchBrowser, serveStatic, fulfilLeaflet, SKIP_INTRO } from "./lib/harness.mjs";
 
 const OUT = await outDir("layout");
 const { base: BASE, close } = await serveStatic(APP_ROOT, 8766);
@@ -14,6 +16,7 @@ const results = [];
 
 async function newPage(width, height) {
   const context = await browser.newContext({ viewport: { width, height } });
+  await context.addInitScript(SKIP_INTRO);
   await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, async (route) => {
     if (await fulfilLeaflet(route)) return;
     return route.abort("blockedbyclient");
@@ -26,6 +29,18 @@ async function newPage(width, height) {
   return { context, page, errors };
 }
 
+async function headerGeometry(page) {
+  return page.evaluate(() => {
+    const items = [...document.querySelectorAll(".header-badges > *")].map((e) => e.getBoundingClientRect());
+    const kpis = document.querySelector("#kpis").getBoundingClientRect();
+    return {
+      overlap: items.some((r) => r.right > kpis.left - 4 && r.bottom > kpis.top && r.top < kpis.bottom),
+      headerHeight: Math.round(document.querySelector(".app-header").getBoundingClientRect().height),
+      controlsHeight: Math.round(document.querySelector("#controls").getBoundingClientRect().height)
+    };
+  });
+}
+
 async function toOptions(page) {
   await page.click('button[aria-label="Replay speed ×4"]');
   await page.click("#btn-start");
@@ -36,16 +51,23 @@ async function toOptions(page) {
 }
 
 if (wanted("viewports")) {
-  for (const [w, h] of [[1920, 1080], [1600, 900], [1366, 768], [1280, 720]]) {
+  for (const [w, h] of [[1920, 1080], [1600, 900], [1536, 864], [1366, 768], [1280, 720]]) {
     const { context, page, errors } = await newPage(w, h);
     const problems = [];
     try {
       const idle = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      const headerIdle = await headerGeometry(page);
       await page.screenshot({ path: path.join(OUT, `vp-${w}x${h}-idle.png`) });
       await toOptions(page);
       const options = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      const headerRun = await headerGeometry(page);
       await page.screenshot({ path: path.join(OUT, `vp-${w}x${h}-options.png`) });
       if (idle || options) problems.push(`horizontal overflow (idle ${idle}, options ${options})`);
+      for (const [label, g] of [["idle", headerIdle], ["options", headerRun]]) {
+        if (g.overlap) problems.push(`${label}: header badges overlap the KPI tiles`);
+        if (g.headerHeight > 115) problems.push(`${label}: header grew to ${g.headerHeight} px`);
+        if (g.controlsHeight > 70) problems.push(`${label}: control bar wraps (${g.controlsHeight} px)`);
+      }
     } catch (e) { problems.push(`exception: ${String(e.message).split("\n")[0]}`); }
     problems.push(...errors.map((e) => `page error: ${e}`));
     results.push({ name: `viewport ${w}×${h}`, ok: !problems.length, problems });
@@ -76,6 +98,11 @@ if (wanted("targets")) {
   };
   try {
     await audit("idle");
+    await page.click("#btn-about");
+    await page.waitForSelector(".intro-modal");
+    await audit("intro window");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector(".intro-modal", { state: "detached" });
     await page.click('button[aria-label="Replay speed ×4"]');
     await page.click("#btn-start");
     await page.waitForSelector(".mode-card");

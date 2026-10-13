@@ -93,3 +93,9 @@ export const NETWORK_NOISE = /Failed to load resource|net::ERR_|ERR_BLOCKED_BY_C
 
 /** A key-shaped string that is obviously not a real key. */
 export const MOCK_KEY = "sk-ant-test-MOCKKEY-0123456789abcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * Init script for browser contexts: marks the intro window as seen, so it does not open by itself
+ * and cover the controls. The smoke suite's "intro" case runs without it.
+ */
+export const SKIP_INTRO = () => { try { localStorage.setItem("nav.introSeen", "1"); } catch { /* file:// or blocked storage */ } };
