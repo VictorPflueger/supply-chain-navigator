@@ -7,13 +7,13 @@ import { icon } from "./icons.js";
 import { openModal } from "./modal.js";
 import { STORAGE } from "./config.js";
 
-// The five steps use the colours the map and KPI tiles use for the same moments of a run:
-// rose for a disruption, blue for verification, amber for risk, burgundy for the decision,
-// green for a resolved state.
+// The five steps are the same as the progress rail above the console. Their numbers use the
+// colours the app uses for the same moments: red for a disruption, blue for verification, amber
+// for risk, burgundy for your decision, green for a resolved state.
 const STEPS = [
-  { tone: "spot", title: "Spot", text: "Picks up a warning from live news and open data." },
+  { tone: "spot", title: "Spot", text: "Picks up a warning from live news and open data, and checks whether we are exposed." },
   { tone: "check", title: "Check", text: "Confirms it with a second, independent source." },
-  { tone: "calculate", title: "Calculate", text: "Finds the affected suppliers and parts: which factory stops when, at what cost." },
+  { tone: "calculate", title: "Calculate", text: "Works out which factory stops when, and what it costs." },
   { tone: "propose", title: "Propose", text: "Offers three costed options next to doing nothing. You decide." },
   { tone: "prepare", title: "Prepare", text: "Drafts the emails and bookings for your approval. Nothing is sent." }
 ];

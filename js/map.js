@@ -7,16 +7,31 @@ import { h, escapeHtml, prefersReducedMotion } from "./dom.js";
 import { icon, iconSvg } from "./icons.js";
 import { supplierPopover, plantPopover, routePopover, nodePopover, poPopover, alternativePopover } from "./popovers.js";
 
-// Light theme: pastel fills with deeper strokes, so shapes stay defined on a pale basemap.
-// Values mirror the tokens in css/style.css.
-const COLOR = {
-  affected: "#c9384f", at_risk: "#c6720f", resolved: "#3e9a6c",
-  route: "#8e9aaa", spoke: "#bcaeb7", node: "#7f8b9b", nodeFill: "#ffffff",
-  alternative: "#a79ba3", land: "#ffffff", coast: "#cbd6df", border: "#e0d7dc"
-};
-const STATE_FILL = { affected: "#f2a7b4", at_risk: "#f7c890", resolved: "#9fd6b8" };
-const TIER = { 1: "#a9c6e6", 2: "#c8b9ec", 3: "#efb8d0" };
-const TIER_LINE = { 1: "#5b8bc0", 2: "#8069c2", 3: "#b65c88" };
+// Map colours come from the design tokens (css/tokens.css), read once when the map is created:
+//   - the supply network (suppliers by tier, corridors, hubs) is a quiet slate ramp, darker = closer
+//     to our plants, so it recedes behind the states that matter;
+//   - states use the status colours: a saturated stroke for the line, a lighter fill for the shape,
+//     and a larger marker or heavier line than the network, so a state stands out without relying on
+//     hue alone (the popover names it in words; tools/palette.mjs checks the hues for colour blindness);
+//   - our plants and their supply links carry the brand burgundy.
+let COLOR = {};
+let STATE_FILL = {};
+let TIER = {};
+let TIER_LINE = {};
+const ROUTE_OPACITY = 0.75;
+
+function readMapColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+  COLOR = {
+    affected: v("--affected", "#c32b21"), at_risk: v("--at-risk", "#d3751a"), resolved: v("--resolved", "#36967a"),
+    route: v("--network", "#596989"), spoke: v("--wine-8", "#dca3ad"), node: v("--network", "#596989"), nodeFill: "#ffffff",
+    alternative: v("--slate-8", "#a9b5cf"), land: "#ffffff", coast: v("--slate-6", "#d2dae9"), border: v("--ink-5", "#ebe1e2")
+  };
+  STATE_FILL = { affected: v("--affected-fill", "#ffb6ab"), at_risk: v("--at-risk-fill", "#f5be97"), resolved: v("--resolved-fill", "#a8d7c6") };
+  TIER = { 1: v("--slate-8", "#a9b5cf"), 2: v("--slate-6", "#d2dae9"), 3: v("--slate-4", "#e7ecf5") };
+  TIER_LINE = { 1: v("--slate-11", "#445271"), 2: v("--slate-9", "#596989"), 3: v("--slate-8", "#a9b5cf") };
+}
 const LEG = {
   sea: { weight: 2, dash: "1 6" },
   barge: { weight: 3, dash: "8 5" },
@@ -41,6 +56,7 @@ const ALT_PATHS = ["ALT-CAPE", "ALT-MIDDLE", "ALT-TAUERN"];
  */
 export function createMap(container, { onStatus } = {}) {
   const L = window.L;
+  readMapColors();
   if (!L) return fallbackMap(container, "The map library (Leaflet) could not be loaded from unpkg, jsDelivr or the local copy in vendor/. Navigator keeps working without the map: the console, options, outbox and audit are unaffected.");
 
   const model = getModel();
@@ -145,7 +161,7 @@ export function createMap(container, { onStatus } = {}) {
       if (leg.mode === "air") pts = greatCircle(pts[0], pts[pts.length - 1], 48);
       const st = LEG[leg.mode] || LEG.road;
       const line = L.polyline(pts, {
-        pane: "routes", color: COLOR.route, weight: st.weight, opacity: 0.9,
+        pane: "routes", color: COLOR.route, weight: st.weight, opacity: ROUTE_OPACITY,
         dashArray: st.dash, lineCap: "round", lineJoin: "round", smoothFactor: 1.2
       });
       line.legMode = leg.mode;
@@ -303,7 +319,7 @@ export function createMap(container, { onStatus } = {}) {
     const st = getState(`route:${id}`);
     for (const line of lines) {
       const base = LEG[line.legMode] || LEG.road;
-      line.setStyle({ color: st === "neutral" ? COLOR.route : COLOR[st], weight: base.weight + (st === "neutral" ? 0 : 1.6), opacity: st === "neutral" ? 0.9 : 1 });
+      line.setStyle({ color: st === "neutral" ? COLOR.route : COLOR[st], weight: base.weight + (st === "neutral" ? 0 : 1.6), opacity: st === "neutral" ? ROUTE_OPACITY : 1 });
       if (st !== "neutral") line.bringToFront();
       pathClass(line, st, flash);
     }

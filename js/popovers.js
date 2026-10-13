@@ -29,7 +29,7 @@ export function supplierPopover(model, id, state) {
     h("div", { class: "pop-tags" },
       stateChip(state),
       s.directed_buy ? h("span", { class: "chip", dataset: { tone: "info" } }, "Directed buy") : null,
-      !s.dual_source ? h("span", { class: "chip", dataset: { tone: "pending" } }, "Single source") : null
+      !s.dual_source ? h("span", { class: "chip", dataset: { tone: "risk" } }, "Single source") : null
     ),
     dl([
       ["Cluster", s.cluster],

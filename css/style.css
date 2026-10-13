@@ -1,52 +1,65 @@
-/* Navigator — tokens, base typography and page layout.
- * Palette: white paper with burgundy as the brand and action colour, and pastel tints for meaning.
- * Pastel fills carry state (backgrounds, map shapes, bars); their deeper line and text shades keep
- * every label and stroke legible on a projector. Burgundy marks what you can act on and LIVE. */
+/* Navigator — semantic tokens, base typography and page layout.
+ *
+ * Colour system (DESIGN.md): every colour comes from css/tokens.css, generated in OKLCH from the
+ * brand burgundy by tools/palette.mjs. This file only assigns roles. Four rules:
+ *   1. Burgundy is identity and the human in charge: primary actions and every point where a person
+ *      decides or approves. It never encodes the state of the network.
+ *   2. Status colours describe the supply network and outcomes: red affected, amber at risk, green
+ *      resolved, blue checking. They always come with a second cue (an icon, a word, a size or a line
+ *      style), and their hues are fixed so they stay apart for colour-blind viewers.
+ *   3. Violet is the AI's voice: AI labels, hypotheses, revisions, what-if analyses, reasoning.
+ *   4. Ink, a neutral tinted with the brand hue, carries everything else. Colour appears only where
+ *      it means something.
+ */
 
 :root {
   color-scheme: light;
 
   /* surfaces */
-  --paper: #ffffff;           /* panels, cards, dialogs */
-  --porcelain: #f7f4f5;       /* app background, control bar, sunken areas */
-  --porcelain-2: #f0eaed;     /* hover on porcelain, chart tracks */
-  --line: #e8e0e4;
-  --line-strong: #d3c7cd;
+  --paper: #ffffff;                    /* panels, cards, dialogs */
+  --porcelain: var(--ink-3);           /* app background, control bar, sunken areas */
+  --porcelain-2: var(--ink-4);         /* hover on porcelain, chart tracks */
+  --line: var(--ink-5);                /* separators and card edges */
+  --line-strong: var(--ink-7);         /* button and panel borders */
+  --border-control: var(--ink-9);      /* inputs and toggles: 3:1 against paper (WCAG 1.4.11) */
 
   /* text */
-  --text: #2b2127;
-  --text-muted: #67585f;
-  --text-faint: #80727a;
+  --text: var(--ink-12);
+  --text-muted: var(--ink-11);
+  --text-faint: var(--ink-10);
   --on-brand: #ffffff;
 
-  /* brand: burgundy */
-  --brand: #7a1e3a;
-  --brand-deep: #5c1229;
-  --brand-mid: #c98a9d;       /* dusty rose: borders and secondary marks */
-  --brand-soft: #f5e6eb;      /* blush: selected and tinted backgrounds */
-  --brand-wash: #fcf6f8;      /* faintest blush: recommended card */
+  /* brand: burgundy, the colour of identity and of the human's decisions */
+  --brand: var(--wine-9);
+  --brand-deep: var(--wine-10);
+  --brand-text: var(--wine-11);
+  --brand-mid: var(--wine-8);          /* borders and secondary marks */
+  --brand-line: var(--wine-7);
+  --brand-soft: var(--wine-3);         /* selected and tinted backgrounds */
+  --brand-wash: var(--wine-2);         /* faintest tint */
 
-  /* pastel families: fill (backgrounds), mid (bars, map fills), line (strokes), text (on white) */
-  --rose-fill: #fbe0e5;    --rose-mid: #f2a7b4;    --rose-line: #c9384f;    --rose-text: #a3263c;
-  --apricot-fill: #fdebd6; --apricot-mid: #f7c890; --apricot-line: #c6720f; --apricot-text: #8f5208;
-  --sage-fill: #dcf1e5;    --sage-mid: #9fd6b8;    --sage-line: #3e9a6c;    --sage-text: #1f6b47;
-  --lilac-fill: #eee8f9;   --lilac-mid: #c8b9ec;   --lilac-line: #8069c2;   --lilac-text: #56419a;
-  --sky-fill: #e3edf8;     --sky-mid: #a9c6e6;     --sky-line: #5b8bc0;     --sky-text: #2c5a8b;
-  --pink-mid: #efb8d0;     --pink-line: #b65c88;
-  --butter: #f8e7a0;       --butter-edge: #e2c55c;  --hazard: #2b2127;
+  /* status families: fill (backgrounds), mid (map fills, bars), line (strokes, icons), text */
+  --danger-fill: var(--danger-3);   --danger-mid: var(--danger-7);   --danger-line: var(--danger-9);   --danger-text: var(--danger-11);
+  --warning-fill: var(--warning-3); --warning-mid: var(--warning-7); --warning-line: var(--warning-9); --warning-text: var(--warning-11);
+  --success-fill: var(--success-3); --success-mid: var(--success-7); --success-line: var(--success-9); --success-text: var(--success-11);
+  --info-fill: var(--info-3);       --info-mid: var(--info-7);       --info-line: var(--info-9);       --info-text: var(--info-11);
+  --violet-fill: var(--violet-3);   --violet-mid: var(--violet-7);   --violet-line: var(--violet-9);   --violet-text: var(--violet-11);
 
-  /* meaning (aliases used by components) */
-  --affected: var(--rose-line);      --affected-text: var(--rose-text);    --affected-soft: var(--rose-fill);
-  --at-risk: var(--apricot-line);    --at-risk-text: var(--apricot-text);  --at-risk-soft: var(--apricot-fill);
-  --resolved: var(--sage-line);      --resolved-text: var(--sage-text);    --resolved-soft: var(--sage-fill);
-  --hypothesis: var(--lilac-line);   --hypothesis-text: var(--lilac-text);
-  --info: var(--sky-line);           --info-text: var(--sky-text);         --info-soft: var(--sky-fill);
+  /* meaning: the network states and the network itself (read by the map), and the live badge */
+  --affected: var(--danger-line);      --affected-fill: var(--danger-mid);
+  --at-risk: var(--warning-line);      --at-risk-fill: var(--warning-mid);
+  --resolved: var(--success-line);     --resolved-fill: var(--success-mid);
+  --network: var(--slate-9);
   --live: var(--brand);
+
+  /* Simulation identity: hazard tape. Deliberately outside the brand system, so a replay can never
+     be mistaken for a live run. */
+  --butter: #f8e7a0;  --butter-edge: #e2c55c;  --butter-wash: #fffdf4;  --butter-text: #8a6d07;  --hazard: #2b2127;
   --sim-yellow: var(--butter);
   --sim-black: var(--hazard);
 
   /* map */
-  --sea: #e4ecf1;
+  --sea: var(--slate-3);
 
   /* type */
   --font-ui: "Barlow", "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -64,11 +77,13 @@
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 14px;
-  --hit: 44px;                /* minimum interactive size (≥ 40px for projector use) */
+  --hit: 44px;                         /* minimum interactive size (≥ 40px for projector use) */
   --gap: 12px;
-  --shadow-pop: 0 16px 40px rgba(64, 22, 38, 0.16), 0 2px 6px rgba(64, 22, 38, 0.06);
-  --shadow-soft: 0 4px 14px rgba(64, 22, 38, 0.08);
-  --focus: 0 0 0 3px rgba(122, 30, 58, 0.3);
+  /* Elevation: shadows tinted with the darkest burgundy, never neutral black. */
+  --shadow-pop: 0 16px 40px rgb(67 19 32 / 0.16), 0 2px 6px rgb(67 19 32 / 0.06);
+  --shadow-soft: 0 4px 14px rgb(67 19 32 / 0.08);
+  /* Focus: a 2px burgundy ring outside a 2px white gap, 10:1 against paper (WCAG 2.4.13). */
+  --focus: 0 0 0 2px var(--paper), 0 0 0 4px var(--brand);
 }
 
 /* Fluid root size: ~17px on a 1920px projector, never below 15px. */
@@ -96,7 +111,7 @@ body {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
-::selection { background: #f2cdd8; color: var(--text); }
+::selection { background: var(--wine-5); color: var(--text); }
 
 a { color: var(--brand); text-underline-offset: 2px; }
 a:hover { color: var(--brand-deep); }
@@ -127,6 +142,12 @@ a:hover { color: var(--brand-deep); }
 
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-mark { width: 34px; height: 34px; flex: none; }
+/* The mark is drawn from the tokens: a burgundy tile, a white route and a rose ring at the goal. */
+.brand-mark .mark-tile { fill: var(--brand); }
+.brand-mark .mark-line { fill: none; stroke: var(--on-brand); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.brand-mark .mark-start { fill: var(--on-brand); }
+.brand-mark .mark-node { fill: var(--brand); stroke: var(--on-brand); stroke-width: 1.8; }
+.brand-mark .mark-ring { fill: none; stroke: var(--wine-6); stroke-width: 2; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
 .brand-name {
   font-family: var(--font-figures);
@@ -187,7 +208,7 @@ a:hover { color: var(--brand-deep); }
   font-size: var(--fs-sm);
   white-space: nowrap;
 }
-.ai-disclosure svg { color: var(--brand); flex: none; }
+.ai-disclosure svg { color: var(--violet-line); flex: none; }
 
 /* "How it works": reopens the intro window ------------------------------------------------ */
 .about-btn {
@@ -204,8 +225,8 @@ a:hover { color: var(--brand-deep); }
 .about-btn:hover { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
 .about-btn:active { transform: translateY(1px); }
 
-/* KPI strip: four tiles. A tile takes the pastel of its state, so the strip turns from rose to
-   sage as the run moves from exposure to decision. */
+/* KPI strip: four tiles. A tile takes the pastel tint of its state, so the strip turns from red
+   and amber tints to green as the run moves from exposure to decision. */
 .kpis { display: flex; align-items: stretch; gap: 8px; }
 .kpi {
   display: flex; flex-direction: column; justify-content: center;
@@ -227,12 +248,13 @@ a:hover { color: var(--brand-deep); }
   white-space: nowrap;
 }
 .kpi-sub { color: var(--text-muted); font-size: var(--fs-xs); white-space: nowrap; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
-.kpi[data-tone="affected"] { background: var(--rose-fill); border-color: var(--rose-mid); }
-.kpi[data-tone="affected"] .kpi-value { color: var(--rose-text); }
-.kpi[data-tone="at-risk"] { background: var(--apricot-fill); border-color: var(--apricot-mid); }
-.kpi[data-tone="at-risk"] .kpi-value { color: var(--apricot-text); }
-.kpi[data-tone="resolved"] { background: var(--sage-fill); border-color: var(--sage-mid); }
-.kpi[data-tone="resolved"] .kpi-value { color: var(--sage-text); }
+/* State tiles use step 4 fills: still pale, but visible on a projector next to white tiles. */
+.kpi[data-tone="affected"] { background: var(--danger-4); border-color: var(--danger-mid); }
+.kpi[data-tone="affected"] .kpi-value { color: var(--danger-text); }
+.kpi[data-tone="at-risk"] { background: var(--warning-4); border-color: var(--warning-mid); }
+.kpi[data-tone="at-risk"] .kpi-value { color: var(--warning-text); }
+.kpi[data-tone="resolved"] { background: var(--success-4); border-color: var(--success-mid); }
+.kpi[data-tone="resolved"] .kpi-value { color: var(--success-text); }
 .kpi[data-tone="muted"] .kpi-value { color: var(--text-faint); }
 .kpi-value.flip { animation: kpiFlip 0.55s cubic-bezier(.2,.8,.2,1); }
 @keyframes kpiFlip {
@@ -264,13 +286,14 @@ a:hover { color: var(--brand-deep); }
   white-space: nowrap;
 }
 .status-pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint); }
-.status-pill[data-tone="active"] .dot { background: var(--brand); animation: livePulse 1.2s ease-in-out infinite; }
-.status-pill[data-tone="waiting"] { background: var(--apricot-fill); border-color: var(--apricot-mid); color: var(--apricot-text); }
-.status-pill[data-tone="waiting"] .dot { background: var(--apricot-line); animation: livePulse 1.2s ease-in-out infinite; }
-.status-pill[data-tone="done"] { background: var(--sage-fill); border-color: var(--sage-mid); color: var(--sage-text); }
-.status-pill[data-tone="done"] .dot { background: var(--sage-line); }
-.status-pill[data-tone="stopped"] { background: var(--rose-fill); border-color: var(--rose-mid); color: var(--rose-text); }
-.status-pill[data-tone="stopped"] .dot { background: var(--rose-line); }
+/* The agent working: ink. Waiting for you: burgundy, your turn. */
+.status-pill[data-tone="active"] .dot { background: var(--text); animation: livePulse 1.2s ease-in-out infinite; }
+.status-pill[data-tone="waiting"] { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-text); }
+.status-pill[data-tone="waiting"] .dot { background: var(--brand); animation: livePulse 1.2s ease-in-out infinite; }
+.status-pill[data-tone="done"] { background: var(--success-fill); border-color: var(--success-mid); color: var(--success-text); }
+.status-pill[data-tone="done"] .dot { background: var(--success-line); }
+.status-pill[data-tone="stopped"] { background: var(--danger-fill); border-color: var(--danger-mid); color: var(--danger-text); }
+.status-pill[data-tone="stopped"] .dot { background: var(--danger-line); }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Workspace: map (60 %) + agent console (40 %)                                               */
@@ -293,14 +316,14 @@ a:hover { color: var(--brand-deep); }
   border-radius: var(--r-md);
   background: var(--paper);
   border: 1px solid var(--line-strong);
-  border-left: 4px solid var(--sky-line);
+  border-left: 4px solid var(--info-line);
   box-shadow: var(--shadow-pop);
 }
-.banner[data-level="warn"] { border-left-color: var(--apricot-line); background: var(--apricot-fill); }
-.banner[data-level="error"] { border-left-color: var(--rose-line); background: var(--rose-fill); }
-.banner[data-level="info"] > .icon { color: var(--sky-line); }
-.banner[data-level="warn"] > .icon { color: var(--apricot-text); }
-.banner[data-level="error"] > .icon { color: var(--rose-text); }
+.banner[data-level="warn"] { border-left-color: var(--warning-line); background: var(--warning-fill); }
+.banner[data-level="error"] { border-left-color: var(--danger-line); background: var(--danger-fill); }
+.banner[data-level="info"] > .icon { color: var(--info-line); }
+.banner[data-level="warn"] > .icon { color: var(--warning-text); }
+.banner[data-level="error"] > .icon { color: var(--danger-text); }
 .banner-text { flex: 1 1 auto; }
 .banner-text strong { display: block; }
 
@@ -336,9 +359,9 @@ a:hover { color: var(--brand-deep); }
 .boot-detail {
   margin: 0 0 14px;
   padding: 12px 14px;
-  border-left: 3px solid var(--rose-line);
+  border-left: 3px solid var(--danger-line);
   border-radius: var(--r-sm);
-  background: var(--rose-fill);
+  background: var(--danger-fill);
   color: var(--text);
 }
 .boot-help { color: var(--text-muted); opacity: 0; visibility: hidden; animation: bootReveal 0.3s ease 6s forwards; }

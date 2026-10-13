@@ -525,12 +525,12 @@ if (run("offline")) {
     await marks("start");
     await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 90000 });
     await marks("options");
-    await page.click('.option-card[aria-label^="Option C:"] .btn-danger');
+    await page.click('.option-card[aria-label^="Option C:"] .btn-reject');
     await page.waitForTimeout(1500);
     await page.click('.option-card[data-recommended="true"] .btn-approve');
     await page.waitForFunction(() => /Waiting for your approval of \d+ draft/.test(document.querySelector("#console").innerText), null, { timeout: 90000 });
     await marks("outbox");
-    const cards = await page.$$(".action-card[data-status='pending'] .btn-danger");
+    const cards = await page.$$(".action-card[data-status='pending'] .btn-reject");
     if (cards.length) await cards[cards.length - 1].click();
     await page.waitForTimeout(200);
     await page.click('button:has-text("Approve all")').catch(() => {});

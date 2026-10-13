@@ -4,5 +4,5 @@
   <circle cx="7" cy="23.5" r="2.4" fill="#ffffff"/>
   <circle cx="12.5" cy="15" r="2.1" fill="#7a1e3a" stroke="#ffffff" stroke-width="1.9"/>
   <circle cx="18.5" cy="18.5" r="2.1" fill="#7a1e3a" stroke="#ffffff" stroke-width="1.9"/>
-  <circle cx="24" cy="9.5" r="3.5" fill="none" stroke="#f7c890" stroke-width="2.2"/>
+  <circle cx="24" cy="9.5" r="3.5" fill="none" stroke="#f2cfd5" stroke-width="2.2"/>
 </svg>

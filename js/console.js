@@ -3,13 +3,16 @@
 // Revised:, Finding:, Recommendation:) get distinct styling; "Revised: old → new" is rendered as an
 // amended entry with the superseded part struck through.
 
-import { bus, RUN_STATES } from "./events.js";
+import { bus } from "./events.js";
 import { h, clear, prefersReducedMotion } from "./dom.js";
 import { icon } from "./icons.js";
 import { renderInline, renderMarkdown } from "./md.js";
 import { clock } from "./format.js";
 import { auditRows } from "./audit.js";
 import { computeRunFacts, describeRunFacts } from "./run_facts.js";
+import { createProgressRail } from "./progress.js";
+import { aiLabel } from "./ai_label.js";
+import { runStateLabel } from "./handover.js";
 
 const LABELS = [
   { re: /^(hypothesis)\s*:\s*/i, kind: "hypothesis" },
@@ -43,11 +46,15 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
   const watermarkText = h("span", {}, SCRIPTED);
   const watermark = h("div", { class: "sim-watermark", hidden: true, role: "note" }, "SIMULATION", watermarkText);
   const log = h("div", { class: "log", role: "log", "aria-live": "polite", "aria-relevant": "additions" });
+  // The agent's plan and progress, above the log (agentic UX: show the plan, show the hand-over).
+  const rail = createProgressRail();
+  rail.reset();
 
   panel.append(
     h("div", { class: "console-head" },
       h("div", { class: "console-title" }, h("h2", {}, "Agent console"), count),
       h("div", { class: "console-head-actions" }, jumpBtn, sizeBtn)),
+    rail.el,
     watermark,
     log
   );
@@ -88,14 +95,8 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
     clear(log);
     log.appendChild(h("div", { class: "log-empty" },
       h("h3", {}, "Pick a scenario, then start the agent"),
-      h("p", {}, "You will choose between a free, scripted simulation and the live agent on your own API key. The agent will:"),
-      h("ol", {},
-        h("li", {}, "detect the disruption from live news and open data,"),
-        h("li", {}, "map it onto suppliers, parts, inventory and orders,"),
-        h("li", {}, "verify it against a second independent source,"),
-        h("li", {}, "calculate which plant stops when, and what it costs,"),
-        h("li", {}, "propose three costed options and wait for your approval.")
-      )));
+      h("p", {}, "The five steps above are the agent's plan. It spots the disruption and checks whether we are exposed, confirms it with a second source, calculates which plant stops when and what it costs, then proposes three costed options."),
+      h("p", {}, "When it needs you, the step turns burgundy. Nothing is sent without your approval. You choose between a free simulation and the live agent on your own API key.")));
     count.textContent = "";
   }
 
@@ -140,9 +141,10 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
 
   bus.on("state_change", (ev) => {
     const s = ev.payload.state;
+    rail.update(s);
     if (!PHASES.has(s) || s === lastPhase) return;
     lastPhase = s;
-    add(entry("phase", ev.t, null, h("span", { class: "phase" }, `Phase: ${RUN_STATES[s] || s}`)));
+    add(entry("phase", ev.t, null, h("span", { class: "phase" }, `Phase: ${runStateLabel(s)}`)));
   });
 
   bus.on("narration", (ev) => {
@@ -258,6 +260,7 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
   bus.on("report", (ev) => {
     sawReport = true;
     const card = h("div", { class: "report-card" },
+      aiLabel("report"),
       renderMarkdown(ev.payload.markdown),
       h("div", { class: "report-actions" },
         h("button", { class: "btn btn-sm btn-primary", type: "button", on: { click: () => onOpenReport?.(ev.payload.markdown) } }, icon("external", 16), "Open management summary")));
@@ -271,6 +274,7 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
 
   bus.on("run_end", (ev) => {
     const { status, reason } = ev.payload;
+    rail.finish(status);
     const text = {
       done: "Run complete.",
       aborted: "Run aborted.",
@@ -304,6 +308,7 @@ export function createConsole(panel, { onOpenOptions, onOpenOutbox, onOpenReport
     jumpBtn.hidden = true;
     watermark.hidden = true;
     log.dataset.sim = "false";
+    rail.reset();
     if (empty) showEmpty(); else clear(log);
   }
 
