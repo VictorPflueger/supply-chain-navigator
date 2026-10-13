@@ -3,8 +3,8 @@
 import { h, setDisabled, isDisabled } from "./dom.js";
 import { icon } from "./icons.js";
 import { MODELS } from "./config.js";
-import { RUN_STATES } from "./events.js";
 import { isRunning, isFinished } from "./state.js";
+import { runStateLabel, onAwaitedChange } from "./handover.js";
 
 const STATE_TONE = {
   idle: "", scanning: "active", diagnosing: "active", verifying: "active", simulating: "active",
@@ -70,6 +70,11 @@ export function createControls(root, scenarios, handlers) {
     diagBtn
   );
 
+  // The pill names the step the run waits for ("Awaiting your decision", then "Awaiting your
+  // approval"); that can change without a new run state, right after an option is approved.
+  let shownState = "idle";
+  onAwaitedChange(() => { pill.querySelector(".text").textContent = runStateLabel(shownState); });
+
   function update(s, { scenarioLabel } = {}) {
     const running = isRunning(s);
     const finished = isFinished(s);
@@ -100,7 +105,8 @@ export function createControls(root, scenarios, handlers) {
     setDisabled(abortBtn, !running, "Nothing to abort: no run in progress.");
 
     pill.dataset.tone = STATE_TONE[s.runState] || "";
-    pill.querySelector(".text").textContent = RUN_STATES[s.runState] || s.runState;
+    pill.querySelector(".text").textContent = runStateLabel(s.runState);
+    shownState = s.runState;
   }
 
   return { update, focusStart: () => startBtn.focus() };

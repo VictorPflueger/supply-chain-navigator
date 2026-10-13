@@ -4,6 +4,7 @@
 import { bus } from "./events.js";
 import { h, clear } from "./dom.js";
 import { icon } from "./icons.js";
+import { aiLabel } from "./ai_label.js";
 
 const TYPE = {
   email: { icon: "mail", label: "Email draft" },
@@ -25,7 +26,7 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
     panel.appendChild(h("div", { class: "outbox-head" },
       h("span", { class: "outbox-safety" }, icon("shield", 18), "Drafts only. Navigator has no email or booking integration; approving marks a draft as cleared for sending."),
       pending.length > 1
-        ? h("button", { class: "btn btn-approve btn-sm", type: "button", on: { click: () => pending.forEach((a) => decide(a.draft, "approved")) } }, icon("check", 16), `Approve all ${pending.length} pending`)
+        ? h("button", { class: "btn btn-approve btn-brand-outline btn-sm", type: "button", on: { click: () => pending.forEach((a) => decide(a.draft, "approved")) } }, icon("check", 16), `Approve all ${pending.length} pending`)
         : null));
 
     if (!actions.size) {
@@ -54,7 +55,8 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
         h("div", { class: "action-meta" },
           h("span", {}, t.label),
           h("span", {}, `To: ${d.recipient}`),
-          h("span", { class: "chip", dataset: { tone } }, statusText)),
+          h("span", { class: "chip", dataset: { tone } }, statusText),
+          aiLabel("draft")),
         h("div", { class: "action-subject" }, d.subject),
         h("pre", { class: "action-body" }, bodyText),
         clipped
@@ -67,7 +69,7 @@ export function createOutbox(panel, { onDecision, onCount } = {}) {
       status === "pending"
         ? h("div", { class: "action-buttons" },
           h("button", { class: "btn btn-approve", type: "button", on: { click: () => decide(d, "approved") } }, icon("check", 18), "Approve"),
-          h("button", { class: "btn btn-danger", type: "button", on: { click: () => decide(d, "rejected") } }, "Reject"))
+          h("button", { class: "btn btn-reject", type: "button", on: { click: () => decide(d, "rejected") } }, "Reject"))
         : h("div", { class: "action-buttons" }));
     return el;
   }

@@ -21,12 +21,19 @@
 .btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .btn-primary:hover { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--on-brand); }
 
-.btn-danger { background: var(--paper); color: var(--rose-text); border-color: var(--rose-mid); }
-.btn-danger:hover { background: var(--rose-fill); border-color: var(--rose-line); color: var(--rose-text); }
+/* Destructive: only for actions that throw work away (Abort, Forget key). */
+.btn-danger { background: var(--paper); color: var(--danger-text); border-color: var(--danger-mid); }
+.btn-danger:hover { background: var(--danger-fill); border-color: var(--danger-line); color: var(--danger-text); }
 
-/* Approve: pastel sage with dark text, so a decision reads as positive, not as an alarm. */
-.btn-approve { background: var(--sage-mid); border-color: #86c9a5; color: #17432e; }
-.btn-approve:hover { background: #8acda9; border-color: var(--sage-line); color: #123826; }
+/* Approve is a human decision, so it takes the brand colour, never a status colour. */
+.btn-approve { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.btn-approve:hover { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--on-brand); }
+/* Secondary brand: a decision that is available but not the recommended one. */
+.btn-brand-outline, .btn-approve.btn-brand-outline { background: var(--paper); border-color: var(--brand-mid); color: var(--brand-text); }
+.btn-brand-outline:hover, .btn-approve.btn-brand-outline:hover { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+/* Reject is an ordinary decision, not a destructive act: quiet neutral, no alarm colour. */
+.btn-reject { color: var(--text-muted); }
+.btn-reject:hover { color: var(--text); background: var(--porcelain); border-color: var(--border-control); }
 
 .btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
 .btn-ghost:hover { background: var(--porcelain-2); color: var(--text); border-color: var(--line); }
@@ -65,7 +72,7 @@
 }
 .segmented button:first-child { border-left: 0; }
 .segmented button:hover { background: var(--porcelain); color: var(--text); }
-.segmented button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand); }
+.segmented button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-text); box-shadow: inset 0 -2px 0 var(--brand); }
 .segmented[aria-disabled="true"] { opacity: 0.5; }
 .segmented[aria-disabled="true"] button { cursor: not-allowed; }
 
@@ -125,12 +132,15 @@
   color: var(--text-muted);
   white-space: nowrap;
 }
-.chip[data-tone="pending"] { color: var(--apricot-text); border-color: var(--apricot-mid); background: var(--apricot-fill); }
-.chip[data-tone="approved"] { color: var(--sage-text); border-color: var(--sage-mid); background: var(--sage-fill); }
-.chip[data-tone="rejected"] { color: var(--rose-text); border-color: var(--rose-mid); background: var(--rose-fill); }
+/* Waiting for you is burgundy (your turn); outcomes take status colours; a rejection is neutral. */
+.chip[data-tone="pending"] { color: var(--brand-text); border-color: var(--brand-line); background: var(--brand-soft); }
+.chip[data-tone="approved"] { color: var(--success-text); border-color: var(--success-mid); background: var(--success-fill); }
+.chip[data-tone="rejected"] { color: var(--text-muted); border-color: var(--line-strong); background: var(--porcelain); }
+.chip[data-tone="risk"] { color: var(--warning-text); border-color: var(--warning-mid); background: var(--warning-fill); }
+.chip[data-tone="recommended"] { color: var(--on-brand); border-color: var(--brand); background: var(--brand); }
 .chip[data-tone="expired"] { color: var(--text-muted); border-color: var(--line-strong); background: var(--porcelain); }
 .chip[data-tone="live-only"] { color: var(--text-muted); }
-.chip[data-tone="info"] { color: var(--brand); border-color: var(--brand-mid); background: var(--brand-soft); }
+.chip[data-tone="info"] { color: var(--info-text); border-color: var(--info-mid); background: var(--info-fill); }
 .chip[data-tone="muted"] { color: var(--text-faint); }
 
 /* Fields ----------------------------------------------------------------------------------- */
@@ -152,13 +162,13 @@
 .textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
 .input::placeholder, .textarea::placeholder { color: var(--text-faint); }
 .input:focus, .textarea:focus { outline: none; border-color: var(--brand); box-shadow: var(--focus); }
-.field-error { color: var(--rose-text); font-size: var(--fs-sm); min-height: 1.2em; }
-.field-ok { color: var(--sage-text); font-size: var(--fs-sm); min-height: 1.2em; }
+.field-error { color: var(--danger-text); font-size: var(--fs-sm); min-height: 1.2em; }
+.field-ok { color: var(--success-text); font-size: var(--fs-sm); min-height: 1.2em; }
 
 /* Inline status marks ---------------------------------------------------------------------- */
-.mark-pass { color: var(--sage-text); }
-.mark-fail { color: var(--rose-text); }
-.mark-warn { color: var(--apricot-text); }
+.mark-pass { color: var(--success-text); }
+.mark-fail { color: var(--danger-text); }
+.mark-warn { color: var(--warning-text); }
 .mark-skip { color: var(--text-faint); }
 
 /* Spinner ---------------------------------------------------------------------------------- */
@@ -173,3 +183,30 @@
   color: var(--text-muted);
 }
 .empty strong { color: var(--text); font-size: var(--fs-lg); font-weight: 600; }
+
+/* AI label (after IBM Carbon for AI): marks AI-written content and opens a short explanation.
+   Violet is the AI's colour; the 40 px target sits around a 24 px chip. --------------------------- */
+.ai-label-wrap { display: inline-flex; flex: none; }
+.ai-label {
+  display: inline-grid; place-items: center;
+  min-width: 40px; min-height: 40px; padding: 0 2px; margin: -8px 0;
+  border: 0; border-radius: var(--r-sm); background: transparent; cursor: pointer;
+}
+.ai-label-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; padding: 0 9px 0 7px;
+  border-radius: 999px; border: 1px solid var(--violet-mid);
+  background: var(--violet-2); color: var(--violet-text);
+  font: 700 var(--fs-xs) / 1 var(--font-ui); letter-spacing: 0.02em;
+}
+.ai-label:hover .ai-label-chip, .ai-label[aria-expanded="true"] .ai-label-chip { background: var(--violet-4); border-color: var(--violet-line); }
+.ai-tip {
+  position: fixed; z-index: 2500;
+  padding: 12px 14px; border-radius: var(--r-md);
+  background: var(--paper); border: 1px solid var(--violet-mid); border-top: 3px solid var(--violet-line);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.45;
+}
+.ai-tip strong { display: block; margin-bottom: 4px; color: var(--text); font-size: var(--fs-md); }
+.ai-tip p { margin: 4px 0 0; }
+

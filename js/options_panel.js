@@ -6,6 +6,7 @@ import { h, clear } from "./dom.js";
 import { icon } from "./icons.js";
 import { eurCompact, days } from "./format.js";
 import { renderInline } from "./md.js";
+import { aiLabel } from "./ai_label.js";
 
 export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
   let current = null;           // last options payload
@@ -33,7 +34,9 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
       { key: "–", name: "Do nothing", base: baseline?.value_at_risk_eur || 0, total: baseline?.value_at_risk_eur || 0 }
     ];
     const summary = h("div", { class: "options-summary" },
-      h("h3", {}, pending ? "Decide how to respond" : locked ? "Decision taken" : ended ? "Run ended before a decision" : "Options"),
+      h("div", { class: "options-summary-head" },
+        h("h3", {}, pending ? "Decide how to respond" : locked ? "Decision taken" : ended ? "Run ended before a decision" : "Options"),
+        aiLabel("options")),
       h("p", {}, `Expected total over ${H} days: what the response costs plus the line-stop exposure that remains. All figures come from the deterministic impact engine.`),
       h("div", { class: "compare", role: "img", "aria-label": `Expected total cost per option compared with doing nothing: ${rows.map((r) => `${r.name} ${eurCompact(r.total)}`).join("; ")}` },
         rows.map((r) => h("div", { class: "compare-row", dataset: { recommended: String(!!r.recommended) }, title: r.name },
@@ -61,7 +64,7 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
       h("div", { class: "option-top" },
         h("span", { class: "option-letter", "aria-hidden": "true" }, o.letter),
         h("h4", { class: "option-title" }, o.title),
-        o.recommended ? h("span", { class: "chip", dataset: { tone: "info" } }, "Recommended") : null),
+        o.recommended ? h("span", { class: "chip", dataset: { tone: "recommended" } }, "Recommended") : null),
       o.description ? renderInline(o.description, h("p", { class: "option-desc" })) : null,
       h("dl", { class: "option-figures" },
         h("dt", {}, "Response cost"), h("dd", {}, eurCompact(o.mitigation_cost_eur)),
@@ -100,8 +103,10 @@ export function createOptionsPanel(panel, { onDecision, onCount } = {}) {
         h("button", { class: "btn", type: "button", on: { click: () => decide(o, "approved") } }, "Accept the risk"));
     }
     return h("div", { class: "option-actions" },
-      h("button", { class: "btn btn-approve", type: "button", on: { click: () => decide(o, "approved") } }, icon("check", 18), "Approve"),
-      h("button", { class: "btn btn-danger", type: "button", on: { click: () => decide(o, "rejected") } }, "Reject"));
+      // The recommended option's Approve is the one solid brand button; the others stay available
+      // as outlined brand buttons. Reject is a neutral decision, not an alarm.
+      h("button", { class: `btn btn-approve${o.recommended ? "" : " btn-brand-outline"}`, type: "button", on: { click: () => decide(o, "approved") } }, icon("check", 18), "Approve"),
+      h("button", { class: "btn btn-reject", type: "button", on: { click: () => decide(o, "rejected") } }, "Reject"));
   }
 
   function decide(o, decision) {

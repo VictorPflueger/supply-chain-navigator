@@ -47,7 +47,9 @@ async function toOptions(page) {
   await page.waitForSelector(".mode-card");
   await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
   await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 120000 });
-  await page.waitForTimeout(800);
+  // The longest status label ("Awaiting your decision") is the one the control bar must fit.
+  await page.waitForFunction(() => document.querySelector(".status-pill .text")?.textContent.trim() === "Awaiting your decision", null, { timeout: 30000 });
+  await page.waitForTimeout(300);
 }
 
 if (wanted("viewports")) {

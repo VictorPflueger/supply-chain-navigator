@@ -82,7 +82,7 @@ async function playScenario(id, plan) {
     const letterOf = (v) => ({ V1: "A", V2: "B", V3: "C" }[v]);
     for (const v of plan.reject) {
       const n0 = await page.$$eval(".entry", (els) => els.length);
-      await page.click(`.option-card[aria-label^="Option ${letterOf(v)}:"] .btn-danger`);
+      await page.click(`.option-card[aria-label^="Option ${letterOf(v)}:"] .btn-reject`);
       await page.waitForFunction((n) => document.querySelectorAll(".entry").length > n + 1, n0, { timeout: 30000 });
       await page.waitForTimeout(400);
     }
@@ -103,7 +103,7 @@ async function playScenario(id, plan) {
     for (let i = 0; i < pending.length; i++) {
       const cards = await page.$$(".action-card[data-status='pending']");
       const last = i === pending.length - 1;
-      const btn = await cards[0].$(plan.drafts === "reject-last" && last && pending.length > 1 ? ".btn-danger" : ".btn-approve");
+      const btn = await cards[0].$(plan.drafts === "reject-last" && last && pending.length > 1 ? ".btn-reject" : ".btn-approve");
       await btn.click();
       await page.waitForTimeout(150);
     }

@@ -17,6 +17,53 @@
 #console[data-text="large"] .entry { grid-template-columns: 3.6em 28px minmax(0, 1fr); }
 #console[data-text="large"] .entry-time { font-size: 0.8125rem; }
 
+/* Progress rail: the agent's plan in five steps. Ink while the agent works; burgundy when it is
+   your turn. The connector after a step fills in once the step is done. */
+.console-panel { container-type: inline-size; container-name: console; }
+.rail {
+  display: flex; align-items: center;
+  margin: 0; padding: 9px 18px 10px;
+  list-style: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  counter-reset: none;
+}
+.rail-step { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+.rail-step:last-child { flex: 0 0 auto; }
+.rail-step:not(:last-child)::after {
+  content: ""; flex: 1 1 auto; min-width: 14px; height: 2px; margin: 0 6px 0 4px;
+  background: var(--line-strong); border-radius: 1px;
+}
+.rail-step[data-state="done"]:not(:last-child)::after { background: var(--ink-11); }
+.rail-dot {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 2px solid var(--ink-7); background: var(--paper); color: var(--text-faint);
+  font: 700 0.9rem / 1 var(--font-figures);
+}
+.rail-label { font-weight: 600; font-size: var(--fs-sm); color: var(--text-faint); white-space: nowrap; }
+.rail-turn {
+  flex: none; padding: 3px 9px; border-radius: 999px;
+  background: var(--brand); color: var(--on-brand);
+  font-size: var(--fs-xs); font-weight: 700; white-space: nowrap;
+}
+.rail-step[data-state="done"] .rail-dot { background: var(--ink-11); border-color: var(--ink-11); color: var(--paper); }
+.rail-step[data-state="done"] .rail-label { color: var(--text-muted); }
+.rail-step[data-state="active"] .rail-dot { border-color: var(--text); color: var(--text); box-shadow: 0 0 0 4px var(--ink-4); animation: railPulse 1.6s ease-in-out infinite; }
+.rail-step[data-state="active"] .rail-label { color: var(--text); }
+.rail-step[data-state="yours"] .rail-dot { background: var(--brand); border-color: var(--brand); color: var(--on-brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+.rail-step[data-state="yours"] .rail-label { color: var(--brand-text); }
+.rail-step[data-state="stopped"] .rail-dot { border-color: var(--danger-line); color: var(--danger-text); }
+.rail-step[data-state="stopped"] .rail-label { color: var(--danger-text); }
+.rail-step[data-state="skipped"] .rail-dot { border-style: dashed; }
+@keyframes railPulse { 0%, 100% { box-shadow: 0 0 0 4px var(--ink-4); } 50% { box-shadow: 0 0 0 6px var(--ink-3); } }
+/* Narrow consoles (small laptops): only the current step keeps its label. */
+@container console (max-width: 600px) {
+  .rail { padding: 8px 14px; }
+  .rail-step:not([aria-current]) .rail-label { display: none; }
+  .rail-step:not(:last-child)::after { min-width: 10px; }
+}
+
 /* Simulation watermark: a persistent hazard-tape band plus a faint diagonal mark behind the log. */
 .sim-watermark {
   display: flex; align-items: center; gap: 12px;
@@ -45,7 +92,7 @@
   text-align: center;
   font: 800 5.5rem / 0 var(--font-figures);
   letter-spacing: 0.08em;
-  color: rgba(176, 140, 20, 0.08);
+  color: color-mix(in srgb, var(--butter-text) 8%, transparent);
   transform: rotate(-18deg);
   pointer-events: none;
   z-index: 0;
@@ -72,44 +119,50 @@
 .entry-body p { margin: 0 0 6px; max-width: 72ch; }
 .entry-body p:last-child { margin-bottom: 0; }
 
-/* Narration paragraphs by kind (prefix labels written by the agent). Each kind owns one pastel. */
+/* Narration paragraphs by kind (prefix labels written by the agent). The colour says how sure the
+   agent is: violet for assumptions, blue while checking, green once confirmed, amber when it could
+   not confirm. Only two kinds get a tinted container, because they are the moments to point at:
+   a visible self-correction (Revised) and the recommendation handed to you (burgundy). */
 .para { position: relative; }
 .para .tag {
   display: inline-block; margin-right: 6px;
   font-weight: 700;
 }
-.para[data-kind="hypothesis"] .tag { color: var(--lilac-text); }
-.para[data-kind="check"] .tag { color: var(--sky-text); }
-.para[data-kind="confirmed"] .tag { color: var(--sage-text); }
-.para[data-kind="unconfirmed"] .tag { color: var(--apricot-text); }
-.para[data-kind="revised"] .tag { color: var(--apricot-text); }
-.para[data-kind="finding"] .tag { color: var(--brand); }
-.para[data-kind="recommendation"] .tag { color: var(--brand); }
+.para[data-kind="hypothesis"] .tag { color: var(--violet-text); }
+.para[data-kind="check"] .tag { color: var(--info-text); }
+.para[data-kind="confirmed"] .tag { color: var(--success-text); }
+.para[data-kind="unconfirmed"] .tag { color: var(--warning-text); }
+.para[data-kind="revised"] .tag { color: var(--violet-text); }
+.para[data-kind="finding"] .tag { color: var(--text); }
+.para[data-kind="recommendation"] .tag { color: var(--brand-text); }
 .para[data-kind="hypothesis"], .para[data-kind="check"], .para[data-kind="confirmed"],
-.para[data-kind="unconfirmed"], .para[data-kind="revised"], .para[data-kind="finding"] {
+.para[data-kind="unconfirmed"], .para[data-kind="revised"], .para[data-kind="finding"],
+.para[data-kind="recommendation"] {
   padding: 4px 10px; border-left: 3px solid var(--line-strong); border-radius: 0 var(--r-sm) var(--r-sm) 0;
 }
-.para[data-kind="hypothesis"] { border-left-color: var(--lilac-line); background: var(--lilac-fill); }
-.para[data-kind="check"] { border-left-color: var(--sky-line); }
-.para[data-kind="confirmed"] { border-left-color: var(--sage-line); background: var(--sage-fill); }
-.para[data-kind="unconfirmed"] { border-left-color: var(--apricot-line); }
-.para[data-kind="revised"] { border-left-color: var(--apricot-line); background: var(--apricot-fill); }
-.para[data-kind="finding"] { border-left-color: var(--brand); background: var(--brand-wash); }
-.para .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--apricot-line); color: var(--text-muted); }
-.para .arrow { color: var(--apricot-text); font-weight: 700; padding: 0 4px; }
+.para[data-kind="hypothesis"] { border-left-color: var(--violet-mid); }
+.para[data-kind="check"] { border-left-color: var(--info-mid); }
+.para[data-kind="confirmed"] { border-left-color: var(--success-line); }
+.para[data-kind="unconfirmed"] { border-left-color: var(--warning-line); }
+.para[data-kind="revised"] { border-left-color: var(--violet-line); background: var(--violet-2); }
+.para[data-kind="finding"] { border-left-color: var(--ink-8); }
+.para[data-kind="recommendation"] { border-left-color: var(--brand); background: var(--brand-wash); }
+.para .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--violet-line); color: var(--text-muted); }
+.para .arrow { color: var(--violet-text); font-weight: 700; padding: 0 4px; }
 .para .amended { color: var(--text); font-weight: 700; }
 
 .entry[data-type="narration"] .entry-mark { color: var(--text-faint); }
 .entry.streaming .entry-body::after {
   content: ""; display: inline-block; width: 0.55em; height: 1em; margin-left: 2px;
-  vertical-align: -0.12em; background: var(--brand); animation: livePulse 0.9s steps(2) infinite;
+  vertical-align: -0.12em; background: var(--violet-line); animation: livePulse 0.9s steps(2) infinite;
 }
 
 /* Tool calls -------------------------------------------------------------------------------- */
-.entry[data-type="tool_call"] .entry-mark { color: var(--brand-mid); }
-.entry[data-type="tool_call"][data-server="true"] .entry-mark { color: var(--sky-line); }
+/* Tool calls are the agent's own actions: ink, never the brand colour. */
+.entry[data-type="tool_call"] .entry-mark { color: var(--ink-9); }
+.entry[data-type="tool_call"][data-server="true"] .entry-mark { color: var(--info-line); }
 .tool-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
-.tool-name { font-family: var(--font-mono); font-weight: 500; font-size: 0.92em; color: var(--brand); }
+.tool-name { font-family: var(--font-mono); font-weight: 600; font-size: 0.92em; color: var(--text); }
 .tool-args { font-family: var(--font-mono); font-size: 0.86em; color: var(--text-muted); }
 .tool-query { color: var(--text); }
 .tool-query::before { content: "“"; color: var(--text-faint); }
@@ -127,7 +180,7 @@
 .result-toggle:hover { background: var(--porcelain); color: var(--text); }
 .result-toggle .icon { transition: transform 0.15s ease; }
 .result[data-open="true"] .result-toggle .icon { transform: rotate(90deg); }
-.result-summary[data-ok="false"] { color: var(--rose-text); }
+.result-summary[data-ok="false"] { color: var(--danger-text); }
 .result-body {
   display: none;
   margin: 2px 0 6px;
@@ -137,42 +190,44 @@
   background: var(--porcelain);
   border: 1px solid var(--line);
   font: 400 0.82rem / 1.45 var(--font-mono);
-  color: #4a3f46;
+  color: var(--ink-11);
   white-space: pre-wrap;
 }
 .result[data-open="true"] .result-body { display: block; }
 .result-sources { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 2px; font-size: var(--fs-sm); color: var(--text-muted); }
-.result-sources a { color: var(--sky-text); text-decoration: none; }
-.result-sources a:hover { color: var(--brand); text-decoration: underline; }
+.result-sources a { color: var(--info-text); text-decoration: none; }
+.result-sources a:hover { color: var(--info-12); text-decoration: underline; }
 
 /* Alerts, notices, decisions ------------------------------------------------------------------- */
-.entry[data-type="alert"] .entry-mark { color: var(--rose-line); }
+.entry[data-type="alert"] .entry-mark { color: var(--danger-line); }
 .alert-card {
-  border-left: 4px solid var(--rose-line);
-  background: var(--rose-fill);
+  border-left: 4px solid var(--danger-line);
+  background: var(--danger-2);
+  box-shadow: inset 0 0 0 1px var(--danger-5);
   border-radius: 0 var(--r-md) var(--r-md) 0;
   padding: 10px 12px;
 }
-.alert-card[data-severity="medium"], .alert-card[data-severity="low"] { border-left-color: var(--apricot-line); background: var(--apricot-fill); }
+.alert-card[data-severity="medium"], .alert-card[data-severity="low"] { border-left-color: var(--warning-line); background: var(--warning-2); box-shadow: inset 0 0 0 1px var(--warning-5); }
 .alert-card h3 { margin: 0 0 4px; font-size: var(--fs-lg); line-height: 1.25; color: var(--text); }
-.alert-card .alert-sev { font-size: var(--fs-xs); font-weight: 700; color: var(--rose-text); margin-bottom: 4px; }
-.alert-card[data-severity="medium"] .alert-sev, .alert-card[data-severity="low"] .alert-sev { color: var(--apricot-text); }
+.alert-card .alert-sev { font-size: var(--fs-xs); font-weight: 700; color: var(--danger-text); margin-bottom: 4px; }
+.alert-card[data-severity="medium"] .alert-sev, .alert-card[data-severity="low"] .alert-sev { color: var(--warning-text); }
 .alert-card ul { margin: 6px 0 0; padding-left: 18px; font-size: var(--fs-sm); color: var(--text-muted); }
-.alert-card[data-basis="what_if"] { border-left-color: var(--lilac-line); background: var(--lilac-fill); }
-.alert-card[data-basis="what_if"] .alert-sev { color: var(--lilac-text); }
+.alert-card[data-basis="what_if"] { border-left-color: var(--violet-line); background: var(--violet-2); box-shadow: inset 0 0 0 1px var(--violet-5); }
+.alert-card[data-basis="what_if"] .alert-sev { color: var(--violet-text); }
 
 .entry[data-type="notice"] { padding-top: 5px; padding-bottom: 5px; }
 .entry[data-type="notice"] .entry-body { color: var(--text-muted); font-size: var(--fs-sm); }
-.entry[data-type="notice"][data-level="warn"] .entry-mark { color: var(--apricot-text); }
-.entry[data-type="notice"][data-level="error"] .entry-mark { color: var(--rose-text); }
-.entry[data-type="notice"][data-level="error"] .entry-body { color: var(--rose-text); }
+.entry[data-type="notice"][data-level="warn"] .entry-mark { color: var(--warning-text); }
+.entry[data-type="notice"][data-level="error"] .entry-mark { color: var(--danger-text); }
+.entry[data-type="notice"][data-level="error"] .entry-body { color: var(--danger-text); }
 
-.entry[data-type="decision"] .entry-mark { color: var(--sage-line); }
-.entry[data-type="decision"][data-decision="rejected"] .entry-mark { color: var(--rose-line); }
+/* Your decisions are recorded in burgundy: the human in charge. */
+.entry[data-type="decision"] .entry-mark { color: var(--brand); }
+.entry[data-type="decision"][data-decision="rejected"] .entry-mark { color: var(--brand-mid); }
 .entry[data-type="decision"] .entry-body strong { font-weight: 700; }
 
 .entry[data-type="phase"] { padding-top: 12px; padding-bottom: 2px; }
-.entry[data-type="phase"] .phase { color: var(--brand); font-size: var(--fs-sm); font-weight: 600; }
+.entry[data-type="phase"] .phase { color: var(--text-muted); font-size: var(--fs-sm); font-weight: 600; }
 .entry[data-type="phase"] + .entry { border-top: 0; }
 
 .entry[data-type="run"] .entry-body { color: var(--text-muted); }
@@ -188,10 +243,13 @@
 .reasoning summary::-webkit-details-marker { display: none; }
 .reasoning summary:hover { color: var(--text-muted); }
 .reasoning[open] summary .icon { transform: rotate(90deg); }
-.reasoning .reasoning-text { color: var(--text-muted); font-size: var(--fs-sm); white-space: pre-wrap; max-width: 72ch; padding: 2px 0 6px 10px; border-left: 2px solid var(--line); }
+.reasoning .reasoning-text { color: var(--text-muted); font-size: var(--fs-sm); white-space: pre-wrap; max-width: 72ch; padding: 2px 0 6px 10px; border-left: 2px solid var(--violet-mid); }
 
 /* Report card ------------------------------------------------------------------------------------- */
-.report-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--brand-wash); padding: 12px 14px; }
+.report-card { border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--paper); padding: 12px 14px; box-shadow: var(--shadow-soft); }
+.report-card { position: relative; }
+.report-card > .ai-label-wrap { position: absolute; top: 8px; right: 6px; }
+.report-card > .md > :first-child { padding-right: 52px; }
 .report-card .report-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
 /* Markdown --------------------------------------------------------------------------------------- */
@@ -216,7 +274,7 @@
 .log-empty h3 { margin: 0 0 8px; color: var(--text); font-size: var(--fs-lg); }
 .log-empty ol { margin: 8px 0 0; padding-left: 20px; }
 .log-empty li { margin: 4px 0; }
-.log-empty li::marker { color: var(--brand); font-weight: 700; }
+.log-empty li::marker { color: var(--text-muted); font-weight: 700; }
 
 .entry-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
 .entry-actions .btn { min-height: 40px; }

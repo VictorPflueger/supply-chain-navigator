@@ -7,6 +7,7 @@ import { renderMarkdown } from "./md.js";
 import { ANTHROPIC } from "./config.js";
 import { getKey, setKey, forgetKey, hasKey, looksLikeKey, maskKey } from "./keystore.js";
 import { checkKey } from "./anthropic.js";
+import { aiLabel } from "./ai_label.js";
 
 /**
  * Ask which mode to run in. Resolves "simulation" | "live" | "key" (change or forget the stored key) | null.
@@ -195,7 +196,7 @@ export function showReport(markdown, { mode } = {}) {
     className: "report-modal",
     size: "wide",
     body: [renderMarkdown(markdown)],
-    footer: [status, copyBtn, dlBtn]
+    footer: [aiLabel("report"), status, copyBtn, dlBtn]
   });
 }
 

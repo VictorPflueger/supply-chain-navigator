@@ -207,7 +207,7 @@ if (run("full")) {
     await page.screenshot({ path: path.join(OUT, "L2-live-options.png") });
     checks.optionTotals = await page.$$eval(".option-card", (els) => els.map((e) => e.querySelector(".option-total .value")?.textContent));
     // Reject option A first, then approve the recommended option B.
-    await page.click('.option-card:nth-child(1) .btn-danger');
+    await page.click('.option-card:nth-child(1) .btn-reject');
     await page.waitForFunction(() => document.querySelector('.option-card:nth-child(1)')?.dataset.status === "rejected", null, { timeout: 5000 });
     await page.waitForFunction(() => [...document.querySelectorAll("#console .entry")].some((e) => /Option A rejected/.test(e.textContent)), null, { timeout: 15000 });
     await page.click('.option-card[data-recommended="true"] .btn-approve');
@@ -223,7 +223,7 @@ if (run("full")) {
     const approveButtons = await page.$$('.action-card .action-buttons .btn-approve');
     await approveButtons[0].click();
     await page.waitForTimeout(200);
-    const rejectButtons = await page.$$('.action-card .action-buttons .btn-danger');
+    const rejectButtons = await page.$$('.action-card .action-buttons .btn-reject');
     await rejectButtons[rejectButtons.length - 1].click();
     await page.waitForSelector('button:has-text("Open management summary")', { timeout: 30000 });
     await page.waitForFunction(() => /Done/.test(document.querySelector(".status-pill .text")?.textContent || ""), null, { timeout: 15000 });
@@ -406,7 +406,7 @@ if (run("race")) {
   try {
     await startLive(page);
     await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 20000 });
-    await page.click('.option-card:nth-child(1) .btn-danger');
+    await page.click('.option-card:nth-child(1) .btn-reject');
     await page.waitForTimeout(150);
     await page.click('.option-card[data-recommended="true"] .btn-approve');
     await page.waitForFunction(() => /Waiting for your approval of \d+ draft/.test(document.querySelector("#console").innerText), null, { timeout: 20000 });

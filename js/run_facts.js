@@ -42,7 +42,8 @@ export function computeRunFacts(rows, end = null) {
     (e.payload?.name === "web_search" || String(e.payload?.name || "").startsWith("geo_"))).length;
   const alert = alertIdx >= 0 ? events[alertIdx].payload : null;
 
-  // Time spent waiting for the human (status "Awaiting approval") is not agent time.
+  // Time spent waiting for the human (run state awaiting_approval: "Awaiting your decision" or
+  // "Awaiting your approval") is not agent time.
   let waitingMs = 0;
   let waitStart = null;
   for (const e of events) {
