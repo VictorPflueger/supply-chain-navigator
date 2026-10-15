@@ -187,6 +187,7 @@ Navigator is designed along the transparency and human-oversight lines of the EU
 | `data/sim_runs.js` | The six simulation scripts |
 | `data/basemap_offline.js` | Natural Earth land polygons for the offline map |
 | `fonts/`, `vendor/leaflet-1.9.4/` | Self-hosted fonts and the fallback copy of Leaflet, with licences |
+| `images/author.jpg` | The author's photo for the credit in the drawer bar |
 | `tools/check_world.mjs` | Static integrity checks (Node.js) |
 | `tools/palette.mjs` | The colour generator and its checks (Node.js) |
 | `tests/` | Optional browser test suites |

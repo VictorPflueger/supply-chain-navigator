@@ -6,12 +6,19 @@
   display: flex; flex-direction: column;
   min-height: 0;
 }
+/* The bar holds three groups: the tabs, the author's credit and, at the end, the note and the toggle.
+   The two sides share the width equally, which puts the credit in the middle of the bar; a side that
+   needs more room keeps its content's width, and the credit moves over instead of covering it. */
 .drawer-tabs {
-  display: flex; align-items: center; gap: 4px;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  align-items: center; gap: 12px;
   padding: 0 12px 0 14px;
   min-height: 52px;
   background: var(--porcelain);
 }
+.drawer-tablist { display: flex; align-items: center; gap: 4px; }
+.drawer-end { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .drawer-tab {
   display: inline-flex; align-items: center; gap: 8px;
   min-height: var(--hit);
@@ -31,9 +38,27 @@
 }
 /* A tab that needs your decision carries the brand colour. */
 .drawer-tab .count[data-tone="attention"] { background: var(--brand); color: var(--on-brand); }
-.drawer-tabs .spacer { flex: 1 1 auto; }
 .drawer-note { color: var(--text-muted); font-size: var(--fs-sm); display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
 .drawer-note .icon { color: var(--success-line); }
+
+/* The author's credit: quiet ink like the tabs, so it never competes with a decision; the photo's
+   thin burgundy ring is the colour of the person, as on the author's website. Both links are 44 px. */
+.drawer-credit {
+  display: flex; align-items: center; gap: 2px;
+  margin: 0;
+  color: var(--text-muted); font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.credit-label { margin-right: 4px; }
+.credit-person, .credit-linkedin {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: var(--hit); min-width: var(--hit);
+  border-radius: var(--r-md);
+  color: var(--text-muted); font-weight: 600; text-decoration: none;
+}
+.credit-person { padding: 0 10px 0 6px; }
+.credit-person:hover, .credit-linkedin:hover { background: var(--porcelain-2); color: var(--text); }
+.credit-photo { width: 28px; height: 28px; flex: none; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--brand); background: var(--paper); }
 
 .drawer-body {
   height: 0;
@@ -176,6 +201,16 @@
 }
 @media (max-width: 1400px) {
   .options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Narrower screens keep the credit in full on a second row of the bar, centred under the tabs. The
+   label goes first, where the bar is one row but tight. */
+@media (max-width: 1180px) {
+  .credit-label { display: none; }
+}
+@media (max-width: 1100px) {
+  .drawer-tabs { grid-template-columns: minmax(max-content, 1fr) auto; gap: 0 4px; padding-block: 4px; }
+  .drawer-credit { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+  .credit-label { display: inline; }
 }
 @media (max-width: 860px) {
   .options-grid { grid-template-columns: 1fr; }

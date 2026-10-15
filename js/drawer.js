@@ -1,7 +1,17 @@
-// Bottom drawer shell: tabs (Options, Outbox, Audit), counts, open/close.
+// Bottom drawer shell: tabs (Options, Outbox, Audit), counts, open/close, and the author's credit in
+// the middle of the bar (a link to his website and one to LinkedIn).
 
 import { h } from "./dom.js";
 import { icon } from "./icons.js";
+
+// The author's credit. The photo is a local file: the content security policy allows no image from
+// another site, and a click on either link opens it in a new tab, so a running demo is never left.
+const AUTHOR = {
+  name: "Victor Pflüger",
+  site: "https://victorpflueger.github.io/VIP/",
+  linkedin: "https://www.linkedin.com/in/victorpflueger",
+  photo: "images/author.jpg"
+};
 
 const TABS = [
   { id: "options", label: "Options" },
@@ -12,7 +22,10 @@ const TABS = [
 export function createDrawer(root, { onToggle } = {}) {
   const tabs = new Map();
   const panels = new Map();
-  const tabBar = h("div", { class: "drawer-tabs", role: "tablist", "aria-label": "Decision drawer" });
+  // The bar holds three groups: the tabs on the left, the credit in the middle, the note and the
+  // toggle on the right. Only the tabs form the tab list.
+  const tabBar = h("div", { class: "drawer-tabs" });
+  const tabList = h("div", { class: "drawer-tablist", role: "tablist", "aria-label": "Decision drawer" });
   const body = h("div", { class: "drawer-body" });
   let active = "options";
   let open = false;
@@ -28,7 +41,7 @@ export function createDrawer(root, { onToggle } = {}) {
       else show(t.id);
     });
     tabs.set(t.id, { btn, count });
-    tabBar.appendChild(btn);
+    tabList.appendChild(btn);
     const panel = h("div", { class: "drawer-panel", id: `panel-${t.id}`, role: "tabpanel", "aria-labelledby": `tab-${t.id}`, hidden: true });
     panels.set(t.id, panel);
     body.appendChild(panel);
@@ -36,10 +49,19 @@ export function createDrawer(root, { onToggle } = {}) {
 
   const toggleBtn = h("button", { class: "btn btn-ghost btn-sm", type: "button", "aria-label": "Show or hide the drawer" }, icon("chevronUp", 18), h("span", {}, "Show"));
   toggleBtn.addEventListener("click", () => setOpen(!open));
+  const credit = h("p", { class: "drawer-credit" },
+    h("span", { class: "credit-label" }, "Built by"),
+    h("a", { class: "credit-person", href: AUTHOR.site, target: "_blank", rel: "noopener", "aria-label": `${AUTHOR.name}, website (opens in a new tab)` },
+      h("img", { class: "credit-photo", src: AUTHOR.photo, alt: "", width: "28", height: "28", decoding: "async" }),
+      h("span", { class: "credit-name" }, AUTHOR.name)),
+    h("a", { class: "credit-linkedin", href: AUTHOR.linkedin, target: "_blank", rel: "noopener", "aria-label": `${AUTHOR.name} on LinkedIn (opens in a new tab)` },
+      icon("linkedin", 18)));
   tabBar.append(
-    h("span", { class: "spacer" }),
-    h("span", { class: "drawer-note" }, icon("shield", 16), "Actions stay drafts until you approve them and are never sent to anyone."),
-    toggleBtn
+    tabList,
+    credit,
+    h("div", { class: "drawer-end" },
+      h("span", { class: "drawer-note" }, icon("shield", 16), "Actions stay drafts until you approve them and are never sent to anyone."),
+      toggleBtn)
   );
 
   root.append(tabBar, body);
