@@ -92,7 +92,7 @@
 /* Menu items at today's size: 44 px high, 1rem text, the scenario's number in front. */
 .dropdown-menu .vc-menu__item {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   min-height: var(--hit);
@@ -102,16 +102,19 @@
 }
 .dropdown-menu .vc-menu__item[aria-checked="true"] { background: var(--vc-surface-selected); }
 .dropdown-menu .vc-menu__item[aria-disabled="true"] { cursor: not-allowed; }
+/* The scenario's number in a hexagon cell with a 1 px outline (merlot when chosen). */
 .vc-menu__item .num-badge {
+  position: relative; isolation: isolate;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 50%;
-  border: 1px solid var(--vc-border);
-  background: var(--vc-surface);
+  width: 30px; height: 26px; clip-path: var(--vc-hex);
+  background: var(--vc-border);
   font: var(--vc-weight-semibold) var(--vc-font-size-sm) / 1 var(--vc-font-text);
   font-variant-numeric: tabular-nums;
   color: var(--vc-text-muted);
 }
-.vc-menu__item[aria-checked="true"] .num-badge { background: var(--vc-accent); border-color: var(--vc-accent); color: var(--vc-on-accent); }
+.vc-menu__item .num-badge::before { content: ""; position: absolute; inset: 1px 1.1547px; z-index: -1; clip-path: var(--vc-hex); background: var(--vc-surface); }
+.vc-menu__item[aria-checked="true"] .num-badge { background: var(--vc-accent); color: var(--vc-on-accent); }
+.vc-menu__item[aria-checked="true"] .num-badge::before { background: var(--vc-accent); }
 .vc-menu__item .menu-title { display: block; }
 .vc-menu__item .menu-hint { display: block; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 
@@ -150,7 +153,10 @@
 .ai-tip strong { display: block; margin-bottom: 4px; color: var(--vc-text); font-size: var(--vc-font-size-md); }
 .ai-tip p { margin: 4px 0 0; }
 
-/* Alerts ---------------------------------------------------------------------------------------- */
-/* An alert that leads with one of the app's own icons (not a .vc-icon) keeps it in the first column. */
-.vc-alert:has(> .icon) { grid-template-columns: auto 1fr auto; }
-.vc-alert > .icon { margin-top: 0.1rem; color: var(--_icon); }
+/* Forced colours (Windows contrast themes): the app's own hexagons keep their outlines, as Vici's cells do. */
+@media (forced-colors: active) {
+  .vc-menu__item .num-badge { forced-color-adjust: none; background-color: CanvasText; color: CanvasText; }
+  .vc-menu__item .num-badge::before { background-color: Canvas; }
+  .vc-menu__item[aria-checked="true"] .num-badge { background-color: Highlight; color: HighlightText; }
+  .vc-menu__item[aria-checked="true"] .num-badge::before { background-color: Highlight; }
+}

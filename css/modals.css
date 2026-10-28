@@ -38,9 +38,9 @@
 /* The simulation card wears the tape along its top edge; the live card a merlot one. */
 .mode-card[data-mode="simulation"] { background: repeating-linear-gradient(-45deg, var(--vc-text) 0 6px, var(--vc-surface) 6px 12px) top / 100% 6px no-repeat, var(--vc-bg-subtle); }
 .mode-card[data-mode="simulation"] .vc-card__body { padding-top: 23px; }
-.mode-card[data-mode="simulation"] h3 .icon { color: var(--vc-text); }
+.mode-card[data-mode="simulation"] h3 .vc-icon { color: var(--vc-text); }
 .mode-card[data-mode="live"] { border-top: 6px solid var(--vc-accent); background: var(--vc-surface-hover); }
-.mode-card[data-mode="live"] h3 .icon { color: var(--vc-accent-text); }
+.mode-card[data-mode="live"] h3 .vc-icon { color: var(--vc-accent-text); }
 .mode-card .mode-tag { --_h: 24px; align-self: flex-start; font-weight: var(--vc-weight-bold); letter-spacing: var(--vc-tracking-caps); }
 .mode-card .mode-tag[data-mode="simulation"] {
   --_fg: var(--vc-text);
@@ -55,9 +55,9 @@
 .key-advice .vc-alert__body p { margin: 0 0 4px; }
 .key-facts { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .key-facts li { display: flex; gap: 8px; align-items: flex-start; }
-.key-facts .icon { color: var(--vc-success-solid); margin-top: 1px; }
+.key-facts .vc-icon { color: var(--vc-success-solid); margin-top: 1px; }
 .key-current.vc-alert { align-items: center; margin-bottom: 12px; color: var(--vc-text); font-size: var(--vc-font-size-md); }
-.key-current .icon { color: var(--vc-accent-text); }
+.key-current .vc-icon { color: var(--vc-accent-text); }
 
 /* Diagnostics -------------------------------------------------------------------------------- */
 .diag-table td.status { white-space: nowrap; }

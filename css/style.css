@@ -41,7 +41,6 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 }
 .app-shell, .app-shell * { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
 
-.icon { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 0; }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Header: brand, mode badge, "How it works", AI disclosure, KPI strip                          */
@@ -90,8 +89,9 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   font-size: 1.05rem;
   letter-spacing: var(--vc-tracking-caps);
 }
+/* The live pip: a small hexagon that pulses. */
 .mode-badge[data-mode="live"] .mode-dot {
-  width: 10px; height: 10px; border-radius: 50%; background: var(--vc-on-accent);
+  width: 11.55px; height: 10px; clip-path: var(--vc-hex); background: var(--vc-on-accent);
   animation: livePulse 1.6s ease-in-out infinite;
 }
 .mode-badge[data-mode="simulation"] {
@@ -109,7 +109,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 
 /* AI disclosure: the EU AI Act notice, in the AI's lilac (Vici's feature tag) at today's size. */
 .ai-disclosure { --_h: 36px; gap: 8px; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-medium); }
-.ai-disclosure svg { color: var(--vc-feature-solid); flex: none; }
+.ai-disclosure .vc-icon { color: var(--vc-feature-solid); }
 
 /* KPI strip: four of Vici's stat cards, compact (the header's height is fixed). A tile takes the
    tone of its state, so the strip turns from danger and warning to success as the run moves from
@@ -165,7 +165,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   font-size: var(--vc-font-size-md);
   font-weight: var(--vc-weight-semibold);
 }
-.status-pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--vc-text-subtle); }
+.status-pill .dot { width: 11.55px; height: 10px; flex: none; clip-path: var(--vc-hex); background: var(--vc-text-subtle); }
 .status-pill[data-tone="active"] .dot { background: var(--vc-text); animation: livePulse 1.2s ease-in-out infinite; }
 .status-pill[data-tone="waiting"] .dot { background: var(--vc-accent); animation: livePulse 1.2s ease-in-out infinite; }
 .status-pill[data-tone="done"] .dot { background: var(--vc-success-solid); }
@@ -193,7 +193,6 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   font-size: var(--vc-font-size-md);
   box-shadow: var(--vc-shadow-lg);
 }
-.banner.vc-alert > .icon { color: var(--_icon); }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Skip link and boot screen                                                                  */
@@ -272,4 +271,9 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   .ai-disclosure .long { display: none; }
   .kpis { flex-wrap: wrap; }
   .kpi.vc-stat { min-width: calc(50% - 4px); }
+}
+
+/* Forced colours: the status and live pips keep their hexagons. */
+@media (forced-colors: active) {
+  .status-pill .dot, .mode-badge[data-mode="live"] .mode-dot { forced-color-adjust: none; background-color: CanvasText; }
 }

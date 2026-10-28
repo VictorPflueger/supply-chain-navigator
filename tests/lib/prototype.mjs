@@ -52,3 +52,76 @@ export const SEPARATIONS = [
   ["Map: affected vs resolved fills", "danger-border", "success-border"],
   ["Map: at-risk vs resolved fills", "warning-border", "success-border"]
 ];
+
+/**
+ * The hexagon test's tour of the app (tests/hexagon.mjs): the main states of a simulation run, and
+ * the dialogs and map views on the way. The page has just been opened, without SKIP_INTRO, so the
+ * intro opens by itself. visit(name, { settle }) checks the page as it is, settle ms (250) after the step.
+ */
+export async function hexagonTour(page, visit) {
+  const approve = '.option-card[data-recommended="true"] [data-action="approve"]';
+  await page.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+  await page.waitForSelector(".intro-modal", { timeout: 10000 });
+  await visit("start screen with the intro");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector(".intro-modal", { state: "detached", timeout: 5000 });
+  await visit("idle map, Europe network");
+  // The legend opened (if the map folded it), a supplier's details, and the global view before a run.
+  const fold = await page.$('.legend[data-collapsed="true"] .legend-head button');
+  if (fold && (await fold.isVisible())) {
+    await fold.click();
+    await visit("idle map, legend open");
+  }
+  await page.$eval('.hex-marker[data-id="S-DEB-CELL"]', (el) => el.closest(".leaflet-marker-icon").click());
+  await page.waitForSelector(".leaflet-popup .pop-title", { timeout: 5000 });
+  await visit("details of a supplier");
+  await page.click(".leaflet-popup .pop-close");
+  await page.waitForSelector(".leaflet-popup", { state: "detached", timeout: 5000 });
+  await page.click('.map-tools button:has-text("Global view")');
+  await page.waitForTimeout(800);
+  await visit("global view");
+  await page.click('.map-tools button:has-text("Europe network")');
+  await page.click("#btn-diagnostics");
+  await page.waitForSelector(".diag-table", { timeout: 5000 });
+  await visit("diagnostics");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector(".diag-table", { state: "detached", timeout: 5000 });
+  // The mode dialog, the key dialog behind the live card, then a simulation: at ×1 until the map
+  // first marks an entity, then at ×4.
+  await page.click('button[aria-label="Replay speed ×1"]');
+  await page.click("#btn-start");
+  await page.waitForSelector(".mode-card", { timeout: 5000 });
+  await visit("mode dialog");
+  await page.click('.mode-card[data-mode="live"] .mode-cta button');
+  await page.waitForSelector("#api-key-input", { timeout: 5000 });
+  await visit("key dialog");
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("#api-key-input", { state: "detached", timeout: 5000 });
+  if (!(await page.$(".mode-card"))) await page.click("#btn-start");
+  await page.waitForSelector(".mode-card", { timeout: 5000 });
+  await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
+  await page.waitForSelector('.hex-marker:not([data-state="neutral"]), .plant-marker:not([data-state="neutral"])', { state: "attached", timeout: 90000 });
+  await visit("the first entity marked on the map", { settle: 50 });
+  await page.click('button[aria-label="Replay speed ×4"]');
+  await page.waitForSelector(approve, { state: "visible", timeout: 180000 });
+  await page.waitForTimeout(800);
+  await visit("decision");
+  await page.click(approve);
+  await page.waitForSelector('button:has-text("Approve all")', { state: "visible", timeout: 120000 });
+  await page.waitForTimeout(800);
+  await visit("drafts");
+  await page.click('button:has-text("Approve all")');
+  await page.waitForFunction(() => /Done/.test(document.querySelector(".status-pill .text")?.textContent || ""), null, { timeout: 60000 });
+  await page.waitForTimeout(800);
+  await visit("finished");
+  await page.click("#tab-audit");
+  await visit("finished, audit");
+  // The drawer hidden: the whole map with the run's states on it.
+  await page.click(".drawer-toggle");
+  await page.waitForTimeout(1500);
+  await visit("finished, drawer hidden");
+  await page.click('button:has-text("Open management summary")');
+  await page.waitForSelector(".report-modal", { timeout: 5000 });
+  await visit("management summary");
+  await page.keyboard.press("Escape");
+}

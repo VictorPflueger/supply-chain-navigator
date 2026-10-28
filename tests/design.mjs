@@ -88,14 +88,17 @@ if (wanted("states")) {
       for (const [st, name] of [["affected", "--vc-danger-solid"], ["at_risk", "--vc-warning-text"], ["resolved", "--vc-success-solid"]]) {
         const want = token(name);
         const paths = [...document.querySelectorAll(`.leaflet-interactive.state-${st}`)];
-        out.counted[st] = paths.length;
+        // The suppliers, hubs and alternatives are hexagon cells in SVG: their outline is the body's stroke.
+        const cells = [...document.querySelectorAll(`.hex-marker[data-state="${st}"]:not([data-kind="badge"]) .hex-body`)];
+        out.counted[st] = paths.length + cells.length;
         for (const p of paths) if ((p.getAttribute("stroke") || "").toLowerCase() !== want) out.mismatches.push(`${st} path stroke ${p.getAttribute("stroke")} ≠ ${want}`);
+        for (const c of cells) if (getComputedStyle(c).stroke !== rgb(want)) out.mismatches.push(`${st} cell outline ${getComputedStyle(c).stroke} ≠ ${rgb(want)}`);
       }
       const legend = [...document.querySelectorAll(".legend-group")].find((g) => /Status/.test(g.textContent));
       const rows = legend ? [...legend.querySelectorAll(".legend-row")] : [];
       for (const [label, name] of [["Affected", "--vc-danger-solid"], ["At risk", "--vc-warning-text"], ["Resolved", "--vc-success-solid"]]) {
         const row = rows.find((r) => r.textContent.trim().startsWith(label));
-        const got = row ? getComputedStyle(row.querySelector(".legend-swatch-line")).borderTopColor : "missing";
+        const got = row ? getComputedStyle(row.querySelector(".legend-swatch .hex-body")).stroke : "missing";
         if (got !== rgb(token(name))) out.mismatches.push(`legend "${label}" ${got} ≠ ${rgb(token(name))}`);
       }
       return out;

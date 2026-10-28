@@ -31,7 +31,7 @@
 .drawer-tab .vc-badge { --_h: 24px; min-width: 28px; font-size: var(--fs-xs); font-weight: var(--vc-weight-semibold); }
 .drawer-tab .vc-badge.badge-quiet { --_bg: var(--vc-neutral-bg); --_fg: var(--vc-text); }
 .drawer-note { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
-.drawer-note .icon { color: var(--vc-success-solid); }
+.drawer-note .vc-icon { color: var(--vc-success-solid); }
 
 /* The author's credit: quiet ink like the tabs, so it never competes with a decision. Both links are 44 px. */
 .drawer-credit {
@@ -49,7 +49,7 @@
 }
 .credit-person { padding: 0 10px 0 6px; }
 .credit-person:hover, .credit-linkedin:hover { background: var(--vc-surface-hover); color: var(--vc-text); }
-.credit-photo { width: 28px; height: 28px; flex: none; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--vc-accent); background: var(--vc-surface); }
+.credit-photo { width: calc(28px * 1.1547); height: 28px; flex: none; object-fit: cover; clip-path: var(--vc-hex); background: var(--vc-surface); }
 
 .drawer-body {
   height: 0;
@@ -90,14 +90,18 @@
    width: Inter runs wider than the former Barlow, and the four cards still fit a 1080p drawer. */
 .option-card.vc-card { overflow: visible; }
 .option-top > .vc-tag { position: absolute; top: -14px; right: 12px; }
+/* The option's letter in a hexagon cell: merlot's soft tint, solid merlot on the recommended option,
+   an outlined cell on doing nothing. */
 .option-letter {
+  position: relative; isolation: isolate;
   font: 700 1.05rem / 1 var(--vc-font-text);
-  width: 30px; height: 30px; flex: none;
+  width: calc(30px * 1.1547); height: 30px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 8px; background: var(--vc-accent-soft); color: var(--vc-on-accent-soft);
+  clip-path: var(--vc-hex); background: var(--vc-accent-soft); color: var(--vc-on-accent-soft);
 }
 .option-card[data-recommended="true"] .option-letter { background: var(--vc-accent); color: var(--vc-on-accent); }
-.option-card[data-kind="baseline"] .option-letter { background: transparent; border: 1px dashed var(--vc-border-strong); color: var(--vc-text-muted); }
+.option-card[data-kind="baseline"] .option-letter { background: var(--vc-border-strong); color: var(--vc-text-muted); }
+.option-card[data-kind="baseline"] .option-letter::before { content: ""; position: absolute; inset: 1px 1.1547px; z-index: -1; clip-path: var(--vc-hex); background: var(--vc-bg-subtle); }
 .option-title { margin: 3px 0 0; font-size: var(--vc-font-size-md); font-weight: 700; line-height: 1.25; color: var(--vc-text); }
 .option-desc { margin: 0 0 6px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); line-height: 1.4; }
 .option-figures { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 2px 0 6px; font-size: var(--vc-font-size-sm); line-height: 1.4; }
@@ -142,7 +146,7 @@
 /* Outbox ------------------------------------------------------------------------------------------ */
 .outbox-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .outbox-safety { display: inline-flex; align-items: center; gap: 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
-.outbox-safety .icon { color: var(--vc-success-solid); }
+.outbox-safety .vc-icon { color: var(--vc-success-solid); }
 .outbox-list { display: grid; gap: 10px; }
 /* Each draft is Vici's card; its type in a neutral hexagon cell. */
 .action-card.vc-card {
@@ -213,4 +217,11 @@
   .action-buttons { flex-direction: row; }
   .drawer[data-open="true"] .drawer-body { height: auto; max-height: none; }
   .drawer-note { display: none; }
+}
+
+/* Forced colours: the option letters keep their hexagon (a solid cell with the letter cut out). */
+@media (forced-colors: active) {
+  .option-letter { forced-color-adjust: none; background-color: CanvasText; color: Canvas; }
+  .option-card[data-kind="baseline"] .option-letter::before { background-color: Canvas; }
+  .option-card[data-kind="baseline"] .option-letter { color: CanvasText; }
 }

@@ -57,7 +57,8 @@ export function createDrawer(root, { onToggle } = {}) {
       h("img", { class: "credit-photo", src: AUTHOR.photo, alt: "", width: "28", height: "28", decoding: "async" }),
       h("span", { class: "credit-name" }, AUTHOR.name)),
     h("a", { class: "credit-linkedin", href: AUTHOR.linkedin, target: "_blank", rel: "noopener", "aria-label": `${AUTHOR.name} on LinkedIn (opens in a new tab)` },
-      icon("linkedin", 18)));
+      // LinkedIn's own logo, as LinkedIn publishes it (Vici's copy; .vc-platform-mark turns it white in the dark theme).
+      h("img", { class: "vc-platform-mark", src: "vici/assets/marks/linkedin.png", alt: "", width: "840", height: "779" })));
   tabBar.append(
     tabList,
     credit,

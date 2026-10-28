@@ -1,7 +1,10 @@
 /* Navigator — map panel, markers, legend and popovers (Leaflet overrides).
  * A quiet basemap so the network at rest (Vici's neutral) and the states (danger, warning, success)
  * carry the story. Every colour is one of Vici's semantic tokens; js/map.js reads the same tokens
- * for the lines and markers Leaflet draws. Our plants are client entities: ink, never merlot. */
+ * for the lines Leaflet draws. Everything that was round is a flat-top hexagon (Vici's hexagon rule):
+ * the suppliers, hubs and alternatives are hexagon cells of the same area (js/map_cells.js), the
+ * legend's swatches are the same cells, its toggles hex capsules. Our plants are client entities:
+ * ink, never merlot. */
 
 #map { position: absolute; inset: 0; background: var(--vc-bg-sunken); }
 .leaflet-container { background: var(--vc-bg-sunken); font-family: var(--vc-font-text); font-size: var(--vc-font-size-sm); }
@@ -20,16 +23,13 @@
 }
 #map .leaflet-control-attribution a { color: var(--vc-text-muted); }
 
-#map .leaflet-bar a, #map .leaflet-bar a:hover {
-  width: 40px; height: 40px; line-height: 40px;
-  background: var(--vc-surface); color: var(--vc-text); border-bottom-color: var(--vc-border-subtle);
-}
-#map .leaflet-bar { border: 1px solid var(--vc-border-strong); box-shadow: var(--vc-shadow-md); }
-#map .leaflet-bar a:hover { background: var(--vc-surface-hover); }
-#map .leaflet-bar a.leaflet-disabled { background: var(--vc-bg); color: var(--vc-text-disabled); }
-/* Projector-sized zoom buttons (all interactive elements are at least 40 px). */
-.leaflet-touch .leaflet-control-zoom a, .leaflet-control-zoom a {
-  width: 40px; height: 40px; line-height: 40px; font-size: 22px;
+/* Zoom: Vici's icon buttons (44 px hexagon cells with tooltips) on the map's surface, a soft shadow
+   following the hexagon. */
+.map-zoom { display: grid; gap: 4px; }
+.map-zoom .vc-icon-button {
+  --_fill: var(--vc-surface);
+  --_fill-hover: var(--vc-surface-hover);
+  filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--vc-shadow-color) 40%, transparent));
 }
 
 /* Map toolbar ------------------------------------------------------------------------------ */
@@ -52,47 +52,104 @@
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: 24px; text-align: center; color: var(--vc-text-muted); background: var(--vc-bg);
 }
-.map-fallback .icon { color: var(--vc-warning-text); }
+.map-fallback .vc-icon { color: var(--vc-warning-text); }
 
-/* Plants: our own sites, in ink with a strong neutral outline; a state shows in its outline. ---- */
+/* ---- hexagon cells: suppliers, hubs, alternatives, corridor badges, legend swatches ---------------- */
+/* Drawn in SVG (js/map_cells.js), so an outline can be dashed: a halo and a gap ring behind the body,
+   and the state's mark inside. Strokes keep their width in pixels at any size; the marks grow with
+   the cell. A cell sits centred on its point and only its hexagon takes the pointer. */
+.hex-icon { background: none; border: 0; }
+.hex-marker {
+  position: absolute; left: 0; top: 0;
+  width: calc(var(--cell, 12px) * 1.1547); height: var(--cell, 12px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: width 0.3s ease, height 0.3s ease;
+}
+.hex-cell { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.hex-cell polygon { vector-effect: non-scaling-stroke; stroke-linejoin: miter; }
+.hex-halo { fill: none; stroke: none; stroke-width: 12px; }
+.hex-gap { fill: none; stroke: none; stroke-width: 4px; }
+.hex-body { fill: var(--vc-surface); stroke: var(--vc-neutral-solid); stroke-width: 1.5px; transition: fill 0.4s ease, stroke 0.4s ease; }
+.hex-marker:not([data-kind="badge"]) .hex-body { pointer-events: all; }
+.hex-mark { display: none; fill: none; stroke-width: 0.17; stroke-linecap: round; stroke-linejoin: round; }
+.hex-dot { display: none; stroke: none; }
+/* The suppliers' fills step from strong to faint by tier, darker = closer to our plants. */
+:is(.hex-marker[data-tier="1"], .legend-swatch[data-kind="tier1"]) .hex-body { fill: var(--vc-border-strong); }
+:is(.hex-marker[data-tier="2"], .legend-swatch[data-kind="tier2"]) .hex-body { fill: var(--vc-border); }
+/* A qualified alternative not in use: a dashed outline on a light fill. */
+.hex-marker[data-kind="alternative"][data-state="neutral"] .hex-body { fill: color-mix(in oklab, var(--vc-surface) 85%, transparent); stroke-dasharray: 2 3; }
+/* The states: outline and fill in the state's tone, a halo, and the state's own mark (a cross, a
+   bar and dot, a tick). */
+:is(.hex-marker[data-state="affected"], .legend-swatch[data-kind="affected"]) .hex-body { fill: var(--vc-danger-border); stroke: var(--vc-danger-solid); stroke-width: 2.5px; }
+:is(.hex-marker[data-state="at_risk"], .legend-swatch[data-kind="at_risk"]) .hex-body { fill: var(--vc-warning-border); stroke: var(--vc-warning-text); stroke-width: 2.5px; }
+:is(.hex-marker[data-state="resolved"], .legend-swatch[data-kind="resolved"]) .hex-body { fill: var(--vc-success-border); stroke: var(--vc-success-solid); stroke-width: 2.5px; }
+:is(.hex-marker[data-state="affected"], .legend-swatch[data-kind="affected"]) .mark-affected { display: inline; stroke: var(--vc-danger-text); }
+:is(.hex-marker[data-state="at_risk"], .legend-swatch[data-kind="at_risk"]) path.mark-at_risk { display: inline; stroke: var(--vc-warning-text); }
+:is(.hex-marker[data-state="at_risk"], .legend-swatch[data-kind="at_risk"]) polygon.mark-at_risk { display: inline; fill: var(--vc-warning-text); }
+:is(.hex-marker[data-state="resolved"], .legend-swatch[data-kind="resolved"]) .mark-resolved { display: inline; stroke: var(--vc-success-text); }
+.hex-marker:not([data-state="neutral"]) .hex-gap { stroke: color-mix(in oklab, var(--vc-surface) 90%, transparent); }
+.hex-marker[data-state="affected"] .hex-halo { stroke: color-mix(in srgb, var(--vc-danger-solid) 30%, transparent); }
+.hex-marker[data-state="at_risk"] .hex-halo { stroke: color-mix(in srgb, var(--vc-warning-text) 26%, transparent); }
+.hex-marker[data-state="resolved"] .hex-halo { stroke: color-mix(in srgb, var(--vc-success-solid) 26%, transparent); }
+/* A change of state flashes the cell once (not with reduced motion: js/map.js). */
+.hex-marker.flash .hex-cell { animation: cellFlash 1.4s ease-out 1; }
+@keyframes cellFlash { 0% { transform: scale(1.6); } 100% { transform: scale(1); } }
+
+/* Plants: our own sites, in ink. A hexagon cell with a strong neutral outline and the factory icon;
+   a state shows as the cell's outline in its tone and as a tag with its icon and word beside the name. */
 .plant-icon { background: none; border: 0; }
+.plant-icon:focus-visible { outline: none; }
 .plant-marker {
+  position: absolute; left: 0; top: 0;
   display: inline-flex; align-items: center; gap: 8px;
-  transform: translate(-21px, -21px);
+  transform: translate(calc(42px * -0.57735), -50%);
   white-space: nowrap;
   pointer-events: auto;
 }
 .plant-glyph {
-  width: 42px; height: 42px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--vc-radius-lg);
-  background: var(--vc-surface);
+  position: relative; flex: none;
+  width: calc(42px * 1.1547); height: 42px;
+  display: inline-grid; place-items: center;
   color: var(--vc-text);
-  border: 2px solid var(--vc-border-strong);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), var(--vc-shadow-md);
 }
+/* Leaflet lifts every svg in its map pane to z-index 200; the factory icon stays above its cell. */
+.plant-glyph > .hex-cell { position: absolute; inset: 0; z-index: 0; }
+.plant-glyph > .vc-icon { position: relative; z-index: 1; }
+.plant-glyph .hex-body { fill: var(--vc-surface); stroke: var(--vc-border-strong); stroke-width: 2px; }
+.plant-glyph .hex-gap { stroke: color-mix(in oklab, var(--vc-surface) 90%, transparent); stroke-width: 6px; }
+.plant-glyph .hex-mark, .plant-glyph .hex-dot { display: none; }
+.plant-marker[data-state="affected"] .plant-glyph .hex-body { stroke: var(--vc-danger-solid); stroke-width: 3px; }
+.plant-marker[data-state="at_risk"] .plant-glyph .hex-body { stroke: var(--vc-warning-text); stroke-width: 3px; }
+.plant-marker[data-state="resolved"] .plant-glyph .hex-body { stroke: var(--vc-success-solid); stroke-width: 3px; }
+.plant-marker[data-state="affected"] .plant-glyph .hex-halo { stroke: color-mix(in srgb, var(--vc-danger-solid) 20%, transparent); stroke-width: 22px; }
+.plant-marker[data-state="at_risk"] .plant-glyph .hex-halo { stroke: color-mix(in srgb, var(--vc-warning-text) 18%, transparent); stroke-width: 22px; }
+.plant-marker[data-state="resolved"] .plant-glyph .hex-halo { stroke: color-mix(in srgb, var(--vc-success-solid) 18%, transparent); stroke-width: 22px; }
 .plant-label {
   font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: 1.15rem;
   letter-spacing: var(--vc-tracking-heading);
   color: var(--vc-text);
   text-shadow: 0 0 2px var(--vc-surface), 0 0 4px var(--vc-surface), 0 0 8px var(--vc-surface);
 }
-.plant-marker[data-state="affected"] .plant-glyph {
-  border-color: var(--vc-danger-solid);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), 0 0 0 9px color-mix(in srgb, var(--vc-danger-solid) 20%, transparent), var(--vc-shadow-md);
+.plant-state.vc-tag { --_h: 24px; font-size: var(--fs-xs); }
+/* Vici's hexagonal focus ring on the plant's cell: 2 px of the focus colour, 2 px outside it. */
+.plant-glyph::after {
+  content: ""; position: absolute; pointer-events: none;
+  inset: -4px -4.6188px;
+  background: var(--vc-focus);
+  opacity: 0;
+  clip-path: polygon(evenodd,
+    25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%, 25% 0%,
+    calc(25% + 1.1547px) 2px, 2.3094px 50%, calc(25% + 1.1547px) calc(100% - 2px),
+    calc(75% - 1.1547px) calc(100% - 2px), calc(100% - 2.3094px) 50%,
+    calc(75% - 1.1547px) 2px, calc(25% + 1.1547px) 2px);
 }
-.plant-marker[data-state="at_risk"] .plant-glyph {
-  border-color: var(--vc-warning-text);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), 0 0 0 9px color-mix(in srgb, var(--vc-warning-text) 18%, transparent), var(--vc-shadow-md);
-}
-.plant-marker[data-state="resolved"] .plant-glyph {
-  border-color: var(--vc-success-solid);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), 0 0 0 9px color-mix(in srgb, var(--vc-success-solid) 18%, transparent), var(--vc-shadow-md);
-}
+.plant-icon:focus-visible .plant-glyph::after { opacity: 1; }
 
 /* Purchase orders in transit (small container blocks) ----------------------------------- */
 .po-icon { background: none; border: 0; }
 .po-marker {
+  position: absolute; left: 0; top: 0;
   width: 11px; height: 7px;
   transform: translate(-5px, -3px);
   background: var(--vc-surface);
@@ -123,7 +180,8 @@
 .leaflet-tooltip-left.hover-label::before { border-left-color: var(--vc-surface-inverse); }
 .leaflet-tooltip-right.hover-label::before { border-right-color: var(--vc-surface-inverse); }
 
-/* State emphasis on SVG paths ---------------------------------------------------------------- */
+/* State emphasis on the corridors (SVG paths): a heavier line in the state's tone (js/map.js), a soft
+   glow, and the state's cell at the corridor's middle. */
 .leaflet-interactive.state-affected { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-danger-solid) 45%, transparent)); }
 .leaflet-interactive.state-at_risk { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-warning-text) 40%, transparent)); }
 .leaflet-interactive.state-resolved { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-success-solid) 40%, transparent)); }
@@ -133,7 +191,7 @@
 /* Legend ------------------------------------------------------------------------------------ */
 .legend {
   position: absolute; left: 12px; bottom: 26px; z-index: 800;
-  width: 248px;
+  width: 272px;
   max-height: calc(100% - 92px);
   display: flex; flex-direction: column;
   background: color-mix(in oklab, var(--vc-surface) 96%, transparent);
@@ -150,38 +208,61 @@
 .legend-group { display: grid; gap: 4px; }
 .legend-group h4 { margin: 0 0 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--vc-text-subtle); }
 .legend-row { display: flex; align-items: center; gap: 10px; color: var(--vc-text-muted); }
-/* The swatches take their colours from the tokens here (data-kind), as the map's own marks do. */
-.legend-swatch-dot { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--vc-neutral-solid); flex: none; }
-.legend-swatch-dot[data-kind="tier1"] { background: var(--vc-border-strong); }
-.legend-swatch-dot[data-kind="tier2"] { background: var(--vc-border); }
-.legend-swatch-dot[data-kind="tier3"] { background: var(--vc-surface); }
-.legend-swatch-line { width: 28px; height: 0; border-top: 3px solid var(--vc-neutral-solid); flex: none; }
-.legend-swatch-line[data-kind="sea"] { border-top-style: dotted; }
-.legend-swatch-line[data-kind="barge"] { border-top-style: dashed; }
-.legend-swatch-line[data-kind="affected"] { border-top-color: var(--vc-danger-solid); }
-.legend-swatch-line[data-kind="at_risk"] { border-top-color: var(--vc-warning-text); }
-.legend-swatch-line[data-kind="resolved"] { border-top-color: var(--vc-success-solid); }
-.legend-toggle {
-  display: flex; align-items: center; gap: 10px;
-  min-height: 40px; width: 100%;
-  padding: 0 6px; margin: 0 -6px;
-  border: 0; border-radius: var(--vc-radius-sm);
-  background: transparent; color: var(--vc-text);
-  font: 500 var(--vc-font-size-sm) / 1 var(--vc-font-text);
-  cursor: pointer; text-align: left;
+/* The swatches are the map's own hexagon cells, with their outlines and marks, and its lines. */
+.legend-swatch { display: inline-flex; flex: none; width: calc(15px * 1.1547); height: 15px; }
+.legend-swatch .hex-gap, .legend-swatch .hex-halo { display: none; }
+.legend-swatch .hex-body { stroke-width: 1.5px; }
+.legend-swatch-line { width: 28px; height: 3px; flex: none; background: var(--vc-neutral-solid); }
+/* The corridors' patterns with square ends, as the map draws them. */
+.legend-swatch-line[data-kind="sea"] { background: repeating-linear-gradient(90deg, var(--vc-neutral-solid) 0 3px, transparent 3px 7px); }
+.legend-swatch-line[data-kind="barge"] { background: repeating-linear-gradient(90deg, var(--vc-neutral-solid) 0 8px, transparent 8px 12px); }
+/* The toggles: hex capsules on a quiet fill (the map owns them: aria-pressed), with Vici's
+   hexagonal focus ring. */
+.legend-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.legend-chip {
+  --_h: 40px;
+  --_p: calc(var(--_h) * 0.28868);
+  position: relative; isolation: isolate;
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: var(--_h); padding: 0 calc(var(--_p) + 3px);
+  border: 0; background: none; color: var(--vc-text);
+  font: 600 var(--fs-xs) / 1 var(--vc-font-text); cursor: pointer; white-space: nowrap;
 }
-.legend-toggle:hover { background: var(--vc-surface-hover); }
-.legend-toggle .box {
-  width: 18px; height: 18px; border-radius: var(--vc-radius-sm); border: 1.5px solid var(--vc-border-strong);
+.legend-chip::before, .legend-chip::after { content: ""; position: absolute; pointer-events: none; }
+.legend-chip::before {
+  inset: 0; z-index: -1;
+  background: var(--vc-bg-subtle);
+  clip-path: polygon(var(--_p) 0%, calc(100% - var(--_p)) 0%, 100% 50%, calc(100% - var(--_p)) 100%, var(--_p) 100%, 0% 50%);
+}
+.legend-chip:hover::before { background: var(--vc-surface-hover); }
+.legend-chip::after {
+  --_q: calc((var(--_h) + 8px) * 0.28868);
+  inset: -4px -4.6188px;
+  background: var(--vc-focus);
+  opacity: 0;
+  clip-path: polygon(evenodd,
+    var(--_q) 0%, calc(100% - var(--_q)) 0%, 100% 50%, calc(100% - var(--_q)) 100%, var(--_q) 100%, 0% 50%, var(--_q) 0%,
+    calc(var(--_q) + 1.1547px) 2px, 2.3094px 50%, calc(var(--_q) + 1.1547px) calc(100% - 2px),
+    calc(100% - var(--_q) - 1.1547px) calc(100% - 2px), calc(100% - 2.3094px) 50%,
+    calc(100% - var(--_q) - 1.1547px) 2px, calc(var(--_q) + 1.1547px) 2px);
+}
+.legend-chip:focus-visible { outline: none; }
+.legend-chip:focus-visible::after { opacity: 1; }
+.legend-chip .box {
+  width: 16px; height: 16px; border-radius: var(--vc-radius-sm); border: 1.5px solid var(--vc-border-strong);
   display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--vc-surface);
   background: var(--vc-surface);
 }
+.legend-chip .box .vc-icon { opacity: 0; }
 /* Ticked in ink: merlot stays out of the map's state colours. */
-.legend-toggle[aria-pressed="true"] .box { background: var(--vc-text); border-color: var(--vc-text); }
+.legend-chip[aria-pressed="true"] .box { background: var(--vc-text); border-color: var(--vc-text); color: var(--vc-surface); }
+.legend-chip[aria-pressed="true"] .box .vc-icon { opacity: 1; }
 
 /* Popovers ------------------------------------------------------------------------------------ */
-/* In Vici's popover look: the raised surface, a quiet border, the large shadow. */
+/* In Vici's popover look: the raised surface, a quiet border, the large shadow; closed by Vici's
+   icon button (Leaflet's own × is left out). */
 #map .leaflet-popup-content-wrapper {
+  position: relative;
   background: var(--vc-surface-raised);
   color: var(--vc-text);
   border: 1px solid var(--vc-border-subtle);
@@ -190,12 +271,9 @@
 }
 #map .leaflet-popup-tip { background: var(--vc-surface-raised); border: 1px solid var(--vc-border-subtle); box-shadow: none; }
 #map .leaflet-popup-content { margin: 14px 16px; font-size: var(--vc-font-size-sm); line-height: 1.4; min-width: 260px; }
-#map a.leaflet-popup-close-button {
-  width: 40px; height: 40px; font-size: 22px; line-height: 40px; color: var(--vc-text-muted); top: 2px; right: 2px;
-}
-#map a.leaflet-popup-close-button:hover { color: var(--vc-text); }
+.leaflet-popup-content .pop-close-anchor { position: absolute; top: 2px; right: 2px; z-index: 1; }
 
-.pop-title { font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); font-size: 1.2rem; line-height: 1.15; margin-right: 26px; color: var(--vc-text); }
+.pop-title { font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); font-size: 1.2rem; line-height: 1.15; margin-right: 40px; color: var(--vc-text); }
 .pop-sub { color: var(--vc-text-muted); margin-top: 2px; }
 .pop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
 .pop-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin-top: 10px; }
@@ -208,3 +286,19 @@
 .pop-note { margin-top: 10px; color: var(--vc-text-muted); font-size: var(--fs-xs); }
 .cover-bad { color: var(--vc-danger-text); font-weight: 600; }
 .cover-low { color: var(--vc-warning-text); font-weight: 600; }
+
+/* ---- forced colours (Windows contrast themes): the map's hexagons keep their outlines --------------- */
+/* The browser drops background colours and may repaint SVG: the cells and the capsules are drawn
+   again in system colours, the focus rings in Highlight (as Vici does for its own). */
+@media (forced-colors: active) {
+  .hex-cell polygon, .hex-cell path { forced-color-adjust: none; }
+  .hex-cell .hex-body { fill: Canvas !important; stroke: CanvasText !important; }
+  .hex-cell .hex-halo, .hex-cell .hex-gap { fill: none !important; stroke: none !important; }
+  .hex-cell .hex-mark { stroke: CanvasText !important; }
+  .hex-cell .hex-dot { fill: CanvasText !important; }
+  .plant-glyph::after, .legend-chip::after { forced-color-adjust: none; background-color: Highlight; }
+  .legend-chip { outline: 1px solid CanvasText; outline-offset: -1px; }
+  .legend-chip:focus-visible { outline: 2px solid Highlight; }
+  .legend-swatch-line { forced-color-adjust: none; background-color: CanvasText; }
+  .po-marker { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
+}

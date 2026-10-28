@@ -201,8 +201,8 @@
   cursor: pointer; text-align: left;
 }
 .result-toggle:hover { background: var(--vc-surface-hover); color: var(--vc-text); }
-.result-toggle .icon { transition: transform 0.15s ease; }
-.result[data-open="true"] .result-toggle .icon { transform: rotate(90deg); }
+.result-toggle .vc-icon { transition: transform 0.15s ease; }
+.result[data-open="true"] .result-toggle .vc-icon { transform: rotate(90deg); }
 .result-summary[data-ok="false"] { color: var(--vc-danger-text); }
 .result-body {
   display: none;
@@ -257,7 +257,7 @@
 }
 .reasoning summary::-webkit-details-marker { display: none; }
 .reasoning summary:hover { color: var(--vc-text-muted); }
-.reasoning[open] summary .icon { transform: rotate(90deg); }
+.reasoning[open] summary .vc-icon { transform: rotate(90deg); }
 .reasoning .reasoning-text { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); white-space: pre-wrap; max-width: 72ch; padding: 2px 0 6px 10px; border-left: 2px solid var(--vc-feature-border); }
 
 /* Report card: Vici's card with the AI label in its corner --------------------------------------- */

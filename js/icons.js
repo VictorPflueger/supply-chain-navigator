@@ -1,54 +1,70 @@
-// Static inline SVG icons (24×24, stroke-based). Only these constant strings are ever injected as markup.
+// Icons: Vici's icon set, and the app's own drawings for the few things Vici has no icon for yet.
+// An icon is a <span class="vc-icon"> that Vici's stylesheet paints as a mask in the current text
+// colour, hidden from screen readers. A drawing of the app's own is set as the span's --_icon with
+// element.style.setProperty(), which the content security policy allows (no style attribute in the
+// markup). The drawings follow Vici's grid: 24 × 24 with 2 px to spare, 1.75 px strokes with round
+// caps and joins, no fills but small dots, hexagons where a shape would be round, chamfered corners;
+// DESIGN.md lists them as icons to propose for Vici.
 
-const P = {
-  play: '<path d="M7 5v14l11-7z"/>',
-  stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/>',
-  reset: '<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>',
-  radar: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/>',
-  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>',
-  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.5 3.9 5.3 3.9 8.5s-1.3 6-3.9 8.5c-2.6-2.5-3.9-5.3-3.9-8.5s1.3-6 3.9-8.5z"/>',
-  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
-  x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
-  alert: '<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
-  info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.7v.3"/>',
-  question: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.5M12 16.7v.3"/>',
-  revise: '<path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 7.5l3 3"/>',
-  user: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
-  mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="1.5"/><path d="M4 7l8 6 8-6"/>',
-  truck: '<path d="M3 6.5h11v9H3zM14 9.5h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
-  calendar: '<rect x="4" y="5.5" width="16" height="14" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
-  download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
-  copy: '<rect x="8.5" y="8.5" width="11" height="11" rx="1.5"/><path d="M15.5 8.5V5.5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3"/>',
-  chevronDown: '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>',
-  chevronUp: '<path d="M6.5 14.5L12 9l5.5 5.5"/>',
-  chevronRight: '<path d="M9.5 6.5l5.5 5.5-5.5 5.5"/>',
-  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l8.5-8.5M16.5 6.5l2.5 2.5M14 9l2 2"/>',
-  eye: '<path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
-  eyeOff: '<path d="M4 4l16 16M10.2 6a9.6 9.6 0 0 1 1.8-.2c6 0 9.5 6.2 9.5 6.2a16 16 0 0 1-2.6 3.4M6.6 7.4C4 9.2 2.5 12 2.5 12s3.5 6.5 9.5 6.5c1.6 0 3-.4 4.2-1"/>',
-  pulse: '<path d="M3 12h4l2-5 4 10 2-5h6"/>',
-  factory: '<path d="M3 20V10l5 3V10l5 3V6h3l1 4h4v10z"/>',
-  ship: '<path d="M4 15l1.5 4.5h13L20 15H4zM6 15V9h12v6M12 4.5V9"/><path d="M3 20.5c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1"/>',
-  layers: '<path d="M12 4l9 4.5-9 4.5-9-4.5z"/><path d="M3 12.5l9 4.5 9-4.5M3 16.5l9 4.5 9-4.5"/>',
-  linkedin: '<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 10.5v6M8 7.6v.3M11.5 16.5v-6M11.5 13.2c0-1.7 1-2.7 2.4-2.7s2.1 1 2.1 2.7v3.3"/>',
-  external: '<path d="M14 4.5h5.5V10M19.5 4.5L11 13M17 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h5"/>',
-  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  spark: '<path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8z"/><path d="M18.5 15.5l.8 2 2 .7-2 .8-.8 2-.7-2-2-.8 2-.7z"/>',
-  list: '<path d="M8.5 7h11M8.5 12h11M8.5 17h11"/><circle cx="4.8" cy="7" r=".9"/><circle cx="4.8" cy="12" r=".9"/><circle cx="4.8" cy="17" r=".9"/>',
-  shield: '<path d="M12 3.5l7.5 3v5.5c0 4.5-3.2 7.6-7.5 8.5-4.3-.9-7.5-4-7.5-8.5V6.5z"/>',
-  speed: '<path d="M4.5 16.5a8 8 0 1 1 15 0"/><path d="M12 13l4-4"/>',
-  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8"/>'
+/** The app's names for Vici's icons. */
+const VICI = {
+  play: "play", reset: "refresh", gear: "settings", globe: "globe-hex", check: "check", x: "close",
+  alert: "warning", info: "info", user: "user", mail: "mail", calendar: "calendar", download: "download", copy: "copy",
+  chevronDown: "chevron-down", chevronUp: "chevron-up", chevronRight: "chevron-right", eye: "eye",
+  external: "external", spark: "sparkle", target: "pin",
+  // The map's zoom buttons.
+  plus: "plus", minus: "minus",
+  // The states on the map (a plant's state tag): Vici's state icons.
+  error: "error", warning: "warning", success: "success"
 };
 
-/** Returns SVG markup for an icon name (static, trusted). */
-export function iconSvg(name, size = 20) {
-  const body = P[name] || P.info;
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
+/** The app's own drawings (static, trusted strings; never built from data). */
+const DRAWN = {
+  // A square with chamfered corners.
+  stop: "<path d='M7.6 6 H16.4 L18 7.6 V16.4 L16.4 18 H7.6 L6 16.4 V7.6 Z'/>",
+  // Two nested hexagons with a sweep line (the live scan for disruptions).
+  radar: "<path d='M21 12 L16.5 19.79 L7.5 19.79 L3 12 L7.5 4.21 L16.5 4.21 Z'/><path d='M16.5 12 L14.25 15.9 L9.75 15.9 L7.5 12 L9.75 8.1 L14.25 8.1 Z'/><path d='M12 12 L16 5.07'/>",
+  // A key with a hexagonal bow (the API key).
+  key: "<path d='M12 12 L9.75 15.9 L5.25 15.9 L3 12 L5.25 8.1 L9.75 8.1 Z'/><path d='M12 12 H21 M18 12 V15 M21 12 V14.5'/>",
+  // Vici's eye, struck through (hide the key).
+  eyeOff: "<path d='M2 13 L7 8.5 H17 L22 13 L17 17.5 H7 Z'/><path d='M14.7 13 L13.35 15.34 L10.65 15.34 L9.3 13 L10.65 10.66 L13.35 10.66 Z' fill='black' stroke='none'/><path d='M12 3.5 V5.75 M18.25 4.75 L17.1 6.6'/><path d='M3.5 5 L20.5 21'/>",
+  // A heartbeat line with sharp turns (Diagnostics).
+  pulse: "<path d='M2.5 12.5 H7 L9.5 6 L14 19 L16.5 12.5 H21.5'/>",
+  // Three lines with hexagon dots (the options ready for a decision).
+  list: "<path d='M9 7 H20.5 M9 12 H20.5 M9 17 H20.5'/><path d='M6.05 7 L5.4 8.13 L4.1 8.13 L3.45 7 L4.1 5.87 L5.4 5.87 Z M6.05 12 L5.4 13.13 L4.1 13.13 L3.45 12 L4.1 10.87 L5.4 10.87 Z M6.05 17 L5.4 18.13 L4.1 18.13 L3.45 17 L4.1 15.87 L5.4 15.87 Z' fill='black' stroke='none'/>",
+  // A shield with chamfered shoulders (drafts only, nothing is sent).
+  shield: "<path d='M8 3.5 H16 L19.5 6.5 V12 L16 17.5 L12 20.5 L8 17.5 L4.5 12 V6.5 Z'/>",
+  // A lorry with hexagon wheels (a freight booking in the outbox).
+  truck: "<path d='M14 15.5 V5 H2.5 V15.5 M14 8.5 H18 L21.5 12 V15.5'/><path d='M2.5 15.5 H4.85 M9.15 15.5 H14.85 M19.15 15.5 H21.5'/><path d='M9.15 17.25 L8.08 19.11 L5.93 19.11 L4.85 17.25 L5.93 15.39 L8.08 15.39 Z M19.15 17.25 L18.08 19.11 L15.93 19.11 L14.85 17.25 L15.93 15.39 L18.08 15.39 Z'/>",
+  // A factory: three sawtooth sheds, a chimney, three windows on the ground line (our plants).
+  factory: "<path d='M4 20.5 V12 L8.5 9 V12 L13 9 V12 L17 9 V4 H20 V20.5'/><path d='M2.5 20.5 H21.5'/><path d='M7 16 H9 M11 16 H13 M15 16 H17'/>"
+};
+
+const masks = new Map();
+/** A drawing as the CSS value Vici's .vc-icon masks with: black strokes on a 24 × 24 grid. */
+function maskOf(name) {
+  if (!masks.has(name)) {
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'>${DRAWN[name]}</svg>`;
+    masks.set(name, `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+  }
+  return masks.get(name);
 }
 
-/** A <span class="icon"> element containing the icon. */
+/** The names icon() knows: Vici's and the app's own. */
+export const ICON_NAMES = [...Object.keys(VICI), ...Object.keys(DRAWN)];
+
+/**
+ * A Vici icon, <span class="vc-icon vc-icon--NAME" aria-hidden="true">, or one of the app's own
+ * drawings in the same form. size (px) sets its size where no Vici component sizes it (in a button,
+ * a tag, an alert or a cell, Vici sizes the icon to the text). An unknown name draws "info".
+ */
 export function icon(name, size = 20, cls = "") {
   const span = document.createElement("span");
-  span.className = `icon ${cls}`.trim();
-  span.innerHTML = iconSvg(name, size);
+  const own = Object.hasOwn(DRAWN, name);
+  const vici = own ? null : VICI[name] || "info";
+  span.className = ["vc-icon", vici ? `vc-icon--${vici}` : "app-icon", cls].filter(Boolean).join(" ");
+  span.setAttribute("aria-hidden", "true");
+  if (own) span.style.setProperty("--_icon", maskOf(name));
+  if (size) span.style.setProperty("--vc-icon-size", `${size}px`);
   return span;
 }

@@ -3,24 +3,26 @@
 
 import { getModel, legPath, poLatLng, flowEndpoints } from "./world.js";
 import { BASEMAP, UI } from "./config.js";
-import { h, escapeHtml, prefersReducedMotion, withTooltip, setTooltip } from "./dom.js";
-import { icon, iconSvg } from "./icons.js";
+import { h, escapeHtml, prefersReducedMotion, withTooltip, setTooltip, setDisabled, isDisabled } from "./dom.js";
+import { icon } from "./icons.js";
+import { cellMarker, setCellHeight, plantMarker, setPlantState, hexCell, HEX_PER_RADIUS } from "./map_cells.js";
 import { supplierPopover, plantPopover, routePopover, nodePopover, poPopover, alternativePopover } from "./popovers.js";
 
-// Map colours are Vici's semantic tokens (vici/dist/vici.min.css), read from the page when the map is
-// created; css/map.css uses the same tokens for what it draws:
+// Map colours are Vici's semantic tokens (vici/dist/vici.min.css). What Leaflet draws as lines (the
+// corridors, the supply links, the offline coastline map) takes them from the page here; everything
+// drawn as an element (the hexagon cells, our plants, the orders, the legend) takes them from
+// css/map.css:
 //   - the supply network at rest (corridors, supply links, hubs, suppliers' outlines) is Vici's neutral
 //     solid; the suppliers' fills step from strong to faint by tier, darker = closer to our plants, so
 //     the network recedes behind the states that matter;
 //   - states take Vici's danger, warning and success tones: the solid tone for a line or an outline, the
-//     mid tone for a fill, and a larger marker or a heavier line than the network, so a state stands out
-//     without relying on hue alone (the popover names it in words; tests/tokens.mjs checks the pairs);
+//     mid tone for a fill, and a larger cell or a heavier line than the network. A state never relies on
+//     hue alone: a cell carries the state's mark (a cross, a bar and dot, a tick), a corridor carries the
+//     same cell at its middle, and the popover names it in words (tests/tokens.mjs checks the pairs);
 //   - our plants are client entities: ink with a strong neutral outline (css/map.css), never merlot,
 //     which belongs to the person in charge.
+// Everything that was round is a flat-top hexagon of the same area (Vici's hexagon rule).
 let COLOR = {};
-let STATE_FILL = {};
-let TIER = {};
-let TIER_LINE = {};
 const ROUTE_OPACITY = 0.75;
 
 function readMapColors() {
@@ -28,13 +30,11 @@ function readMapColors() {
   const v = (name) => cs.getPropertyValue(name).trim();
   COLOR = {
     affected: v("--vc-danger-solid"), at_risk: v("--vc-warning-text"), resolved: v("--vc-success-solid"),
-    route: v("--vc-neutral-solid"), spoke: v("--vc-neutral-solid"), node: v("--vc-neutral-solid"), nodeFill: v("--vc-surface"),
-    alternative: v("--vc-neutral-solid"), land: v("--vc-surface"), coast: v("--vc-border"), border: v("--vc-border-subtle")
+    route: v("--vc-neutral-solid"), spoke: v("--vc-neutral-solid"),
+    land: v("--vc-surface"), coast: v("--vc-border"), border: v("--vc-border-subtle")
   };
-  STATE_FILL = { affected: v("--vc-danger-border"), at_risk: v("--vc-warning-border"), resolved: v("--vc-success-border") };
-  TIER = { 1: v("--vc-border-strong"), 2: v("--vc-border"), 3: v("--vc-surface") };
-  TIER_LINE = { 1: v("--vc-neutral-solid"), 2: v("--vc-neutral-solid"), 3: v("--vc-neutral-solid") };
 }
+// The corridors keep their dash pattern by mode; square caps keep the sea's dots square.
 const LEG = {
   sea: { weight: 2, dash: "1 6" },
   barge: { weight: 3, dash: "8 5" },
@@ -43,6 +43,7 @@ const LEG = {
   road: { weight: 2.5, dash: null },
   ferry: { weight: 2, dash: "4 6" }
 };
+const LINE = { lineCap: "square", lineJoin: "miter" };
 const NODE_LABELS = {
   "N-RTM": "Rotterdam", "N-HAM": "Hamburg", "N-DUI": "Duisburg", "N-KAU": "Kaub", "N-SUZ": "Suez",
   "N-BAB": "Bab-el-Mandeb", "N-GIB": "Gibraltar", "N-SIN": "Singapore", "N-KOP": "Koper", "N-TME": "Tanger Med",
@@ -52,6 +53,10 @@ const NODE_LABELS = {
 const NODE_LABEL_SIDE = { "N-GIB": "top", "N-TME": "right", "N-ANR": "left" };
 const LABEL_OFFSET = { right: [8, 0], left: [-8, 0], top: [0, -6], bottom: [0, 6] };
 const ALT_PATHS = ["ALT-CAPE", "ALT-MIDDLE", "ALT-TAUERN"];
+// The radius each round marker had (px); a cell keeps that area (map_cells.js, HEX_PER_RADIUS).
+const RADIUS = { tier: { 1: 7, 2: 5.5, 3: 5 }, node: 5, nodeSmall: 3.5, nodeStated: 7, alternative: 6 };
+// The cell a corridor in a state carries at its middle, with the state's mark (px high).
+const BADGE = 17;
 
 /**
  * Creates the map inside `container`. Returns an API object; if Leaflet failed to load,
@@ -68,7 +73,7 @@ export function createMap(container, { onStatus } = {}) {
     minZoom: 2, maxZoom: 11, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 110,
     worldCopyJump: false, maxBounds: [[-80, -190], [85, 210]], maxBoundsViscosity: 0.7
   });
-  L.control.zoom({ position: "bottomright" }).addTo(map);
+  addZoomControl(L, map);
   map.attributionControl.setPrefix(false);
 
   // The last view the app asked for (a fit, a focus or an overview). When the map is resized, for
@@ -80,11 +85,12 @@ export function createMap(container, { onStatus } = {}) {
   for (const type of ["wheel", "dblclick", "keydown"]) container.addEventListener(type, userTookOver, { passive: true });
   container.addEventListener("click", (e) => { if (e.target.closest?.(".leaflet-control-zoom")) userTookOver(); });
 
-  const panes = { offline: 150, spokes: 360, routes: 380, alt: 385, nodes: 410, pos: 420, suppliers: 440, plants: 620 };
+  // A corridor's state badge sits above the orders in transit on it, below the suppliers and hubs.
+  const panes = { offline: 150, spokes: 360, routes: 380, alt: 385, nodes: 410, pos: 420, badges: 430, suppliers: 440, plants: 620 };
   for (const [name, z] of Object.entries(panes)) {
     const pane = map.createPane(name);
     pane.style.zIndex = String(z);
-    if (name === "offline") pane.style.pointerEvents = "none";
+    if (name === "offline" || name === "badges") pane.style.pointerEvents = "none";
   }
 
   // ---- basemap ------------------------------------------------------------------------------
@@ -128,6 +134,7 @@ export function createMap(container, { onStatus } = {}) {
     spokes: L.layerGroup().addTo(map),
     routes: L.layerGroup().addTo(map),
     alt: L.layerGroup().addTo(map),
+    badges: L.layerGroup().addTo(map),
     nodes: L.layerGroup().addTo(map),
     pos: L.layerGroup().addTo(map),
     suppliers: L.layerGroup().addTo(map),
@@ -137,18 +144,36 @@ export function createMap(container, { onStatus } = {}) {
   const reg = {
     routes: new Map(), spokesByFlow: new Map(), spokesBySupplier: new Map(),
     suppliers: new Map(), alternatives: new Map(), nodes: new Map(), pos: new Map(), posByRoute: new Map(),
-    plants: new Map(), altPaths: new Map()
+    plants: new Map(), altPaths: new Map(), badges: new Map()
   };
   const states = new Map();
   const getState = (key) => states.get(key) || "neutral";
 
-  const popupOpts = { maxWidth: 440, minWidth: 280, autoPanPadding: [48, 48], className: "nav-popup" };
+  // Popovers close with their own Vici icon button (Leaflet's × is left out) or with Escape.
+  const popupOpts = { maxWidth: 440, minWidth: 280, autoPanPadding: [48, 48], className: "nav-popup", closeButton: false };
+  const withClose = (content) => {
+    const close = h("button", { class: "vc-icon-button pop-close", type: "button", on: { click: () => map.closePopup() } }, icon("x", 18));
+    const anchor = withTooltip(close, "Close details", { below: true });
+    anchor.classList.add("pop-close-anchor");
+    content.prepend(anchor);
+    return content;
+  };
+
+  // A marker that draws a hexagon cell: no tab stop (the popover opens on a click, and its contents
+  // are reached through the agent's console and the drawer), a hover label, and a popover.
+  const cellAt = (latlng, pane, cell, label, popover) => {
+    const m = L.marker(latlng, { pane, keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
+    m.cell = cell;
+    m.bindTooltip(escapeHtml(label), { className: "hover-label", direction: "top", offset: [0, -8] });
+    m.bindPopup(() => withClose(popover()), popupOpts);
+    return m;
+  };
 
   // Supply links (thin spokes) ------------------------------------------------------------------
   for (const f of model.flows) {
     const { segments } = flowEndpoints(model, f);
     const lines = segments.filter((s) => s[0] && s[1]).map((seg) =>
-      L.polyline(seg, { pane: "spokes", color: COLOR.spoke, weight: 1, opacity: 0.7, interactive: false }).addTo(layers.spokes));
+      L.polyline(seg, { pane: "spokes", color: COLOR.spoke, weight: 1, opacity: 0.7, interactive: false, ...LINE }).addTo(layers.spokes));
     reg.spokesByFlow.set(f.id, lines);
     if (!reg.spokesBySupplier.has(f.from)) reg.spokesBySupplier.set(f.from, []);
     reg.spokesBySupplier.get(f.from).push(...lines);
@@ -166,24 +191,26 @@ export function createMap(container, { onStatus } = {}) {
       const st = LEG[leg.mode] || LEG.road;
       const line = L.polyline(pts, {
         pane: "routes", color: COLOR.route, weight: st.weight, opacity: ROUTE_OPACITY,
-        dashArray: st.dash, lineCap: "round", lineJoin: "round", smoothFactor: 1.2
+        dashArray: st.dash, smoothFactor: 1.2, ...LINE
       });
       line.legMode = leg.mode;
       line.bindTooltip(escapeHtml(r.name), { sticky: true, className: "hover-label", direction: "top", offset: [0, -6] });
-      line.bindPopup(() => routePopover(model, r.id, getState(`route:${r.id}`)), popupOpts);
+      line.bindPopup(() => withClose(routePopover(model, r.id, getState(`route:${r.id}`))), popupOpts);
       line.addTo(layers.routes);
       lines.push(line);
     });
     reg.routes.set(r.id, lines);
+    if (lines.length) reg.badges.set(`route:${r.id}`, badgeAt(L, midpoint(L, lines)));
   }
 
   // Alternative corridor paths (shown only when an option uses them) ----------------------------
   for (const altId of ALT_PATHS) {
     const def = findAlternativeRoute(model, altId);
     if (!def?.via) continue;
-    const line = L.polyline(def.via, { pane: "alt", color: COLOR.resolved, weight: 3, opacity: 0.95, dashArray: "6 6", lineCap: "round" });
+    const line = L.polyline(def.via, { pane: "alt", color: COLOR.resolved, weight: 3, opacity: 0.95, dashArray: "6 6", ...LINE });
     line.bindTooltip(escapeHtml(def.name), { sticky: true, className: "hover-label" });
     reg.altPaths.set(altId, line);
+    reg.badges.set(`alt:${altId}`, badgeAt(L, midpoint(L, [line])));
   }
 
   // Logistics nodes ------------------------------------------------------------------------------
@@ -191,16 +218,17 @@ export function createMap(container, { onStatus } = {}) {
     const routesHere = model.routesByNode.get(n.id) || [];
     if (!routesHere.some((rid) => model.routes.get(rid)?.display !== false) && n.id !== "N-CPT") continue;
     const big = ["chokepoint", "waterway", "port"].includes(n.type);
-    const m = L.circleMarker([n.lat, n.lon], {
-      pane: "nodes", radius: big ? 5 : 3.5, color: COLOR.node, weight: 1.5, fillColor: COLOR.nodeFill, fillOpacity: 1
-    });
+    const cell = cellMarker("node", { id: n.id, height: (big ? RADIUS.node : RADIUS.nodeSmall) * HEX_PER_RADIUS });
+    const m = L.marker([n.lat, n.lon], { pane: "nodes", keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
+    m.cell = cell;
+    m.baseRadius = big ? RADIUS.node : RADIUS.nodeSmall;
     if (NODE_LABELS[n.id]) {
       const side = NODE_LABEL_SIDE[n.id] || "right";
       m.bindTooltip(escapeHtml(NODE_LABELS[n.id]), { permanent: true, direction: side, offset: LABEL_OFFSET[side], className: "node-label" });
     } else {
       m.bindTooltip(escapeHtml(n.name), { className: "hover-label", direction: "top", offset: [0, -6] });
     }
-    m.bindPopup(() => nodePopover(model, n.id, getState(`node:${n.id}`)), popupOpts);
+    m.bindPopup(() => withClose(nodePopover(model, n.id, getState(`node:${n.id}`))), popupOpts);
     m.addTo(layers.nodes);
     reg.nodes.set(n.id, m);
   }
@@ -209,12 +237,14 @@ export function createMap(container, { onStatus } = {}) {
   for (const po of model.purchaseOrders.values()) {
     const ll = poLatLng(model, po);
     if (!ll) continue;
+    const block = h("span", { class: "po-marker", dataset: { state: "neutral" } });
     const m = L.marker(ll, {
       pane: "pos", keyboard: false,
-      icon: L.divIcon({ className: "po-icon", html: '<div class="po-marker" data-state="neutral"></div>', iconSize: [0, 0] })
+      icon: L.divIcon({ className: "po-icon", html: block, iconSize: [0, 0] })
     });
+    m.block = block;
     m.bindTooltip(escapeHtml(`Order ${po.id}: ${po.item}`), { className: "hover-label", direction: "top", offset: [0, -6] });
-    m.bindPopup(() => poPopover(model, po, getState(`po:${po.id}`)), popupOpts);
+    m.bindPopup(() => withClose(poPopover(model, po, getState(`po:${po.id}`))), popupOpts);
     m.addTo(layers.pos);
     reg.pos.set(po.id, m);
     if (!reg.posByRoute.has(po.route)) reg.posByRoute.set(po.route, []);
@@ -223,38 +253,31 @@ export function createMap(container, { onStatus } = {}) {
 
   // Suppliers --------------------------------------------------------------------------------------
   for (const s of model.world.suppliers) {
-    const base = s.tier === 1 ? 7 : s.tier === 2 ? 5.5 : 5;
-    const m = L.circleMarker([s.lat, s.lon], {
-      pane: "suppliers", radius: base, color: TIER_LINE[s.tier], weight: 1.5, fillColor: TIER[s.tier], fillOpacity: 1
-    });
+    const base = RADIUS.tier[s.tier] || RADIUS.tier[3];
+    const cell = cellMarker("supplier", { id: s.id, tier: s.tier, height: base * HEX_PER_RADIUS });
+    const m = cellAt([s.lat, s.lon], "suppliers", cell, `${s.name} — ${s.city}`, () => supplierPopover(model, s.id, getState(`sup:${s.id}`)));
     m.baseRadius = base;
-    m.bindTooltip(escapeHtml(`${s.name} — ${s.city}`), { className: "hover-label", direction: "top", offset: [0, -8] });
-    m.bindPopup(() => supplierPopover(model, s.id, getState(`sup:${s.id}`)), popupOpts);
     m.addTo(layers.suppliers);
     reg.suppliers.set(s.id, m);
   }
 
-  // Qualified alternatives (hidden by default) ------------------------------------------------------
+  // Qualified alternatives (hidden by default; a dashed outline until an option uses one) -----------
   for (const a of model.world.alternatives) {
-    const m = L.circleMarker([a.lat, a.lon], {
-      pane: "suppliers", radius: 6, color: COLOR.alternative, weight: 1.5, dashArray: "2 3", fillColor: COLOR.nodeFill, fillOpacity: 0.85
-    });
-    m.bindTooltip(escapeHtml(`${a.name} (alternative)`), { className: "hover-label", direction: "top", offset: [0, -8] });
-    m.bindPopup(() => alternativePopover(model, a), popupOpts);
+    const cell = cellMarker("alternative", { id: a.id, height: RADIUS.alternative * HEX_PER_RADIUS });
+    const m = cellAt([a.lat, a.lon], "suppliers", cell, `${a.name} (alternative)`, () => alternativePopover(model, a));
     m.addTo(layers.alternatives);
     reg.alternatives.set(a.id, m);
   }
 
   // Plants -----------------------------------------------------------------------------------------
   for (const p of model.world.plants) {
+    const marker = plantMarker(p.short);
     const m = L.marker([p.lat, p.lon], {
       pane: "plants", riseOnHover: true, keyboard: true, title: p.name, alt: p.name,
-      icon: L.divIcon({
-        className: "plant-icon", iconSize: [0, 0],
-        html: `<div class="plant-marker" data-state="neutral"><span class="plant-glyph">${iconSvg("factory", 22)}</span><span class="plant-label">${escapeHtml(p.short)}</span></div>`
-      })
+      icon: L.divIcon({ className: "plant-icon", iconSize: [0, 0], html: marker })
     });
-    m.bindPopup(() => plantPopover(model, p.id, getState(`plant:${p.id}`)), popupOpts);
+    m.plant = marker;
+    m.bindPopup(() => withClose(plantPopover(model, p.id, getState(`plant:${p.id}`))), popupOpts);
     m.addTo(layers.plants);
     reg.plants.set(p.id, m);
   }
@@ -288,31 +311,40 @@ export function createMap(container, { onStatus } = {}) {
   syncZoomClass();
 
   // ---- state styling ------------------------------------------------------------------------------
+  const flashEl = (el) => {
+    if (!el || prefersReducedMotion()) return;
+    el.classList.remove("flash");
+    void el.getBoundingClientRect();
+    el.classList.add("flash");
+  };
   const pathClass = (layer, st, flash) => {
     const el = layer.getElement?.();
     if (!el) return;
     el.classList.remove("state-affected", "state-at_risk", "state-resolved");
     if (st !== "neutral") el.classList.add(`state-${st}`);
-    if (flash && !prefersReducedMotion()) {
-      el.classList.remove("flash");
-      void el.getBoundingClientRect();
-      el.classList.add("flash");
-    }
+    if (flash) flashEl(el);
+  };
+  // A cell in a state: its colours and mark (css/map.css), a larger size and a place on top.
+  const cellState = (m, st, radius) => {
+    m.cell.dataset.state = st;
+    setCellHeight(m.cell, radius * HEX_PER_RADIUS);
+    m.setZIndexOffset(st === "neutral" ? 0 : 1000);
+  };
+  // A corridor in a state carries a cell with the state's mark at its middle.
+  const showBadge = (key, st) => {
+    const b = reg.badges.get(key);
+    if (!b) return;
+    b.cell.dataset.state = st;
+    if (st === "neutral") layers.badges.removeLayer(b);
+    else b.addTo(layers.badges);
   };
 
   function styleSupplier(id, flash) {
     const m = reg.suppliers.get(id);
     if (!m) return;
     const st = getState(`sup:${id}`);
-    const tier = model.suppliers.get(id).tier;
-    m.setStyle({
-      fillColor: st === "neutral" ? TIER[tier] : STATE_FILL[st],
-      color: st === "neutral" ? TIER_LINE[tier] : COLOR[st],
-      weight: st === "neutral" ? 1.5 : 2.5
-    });
-    m.setRadius(m.baseRadius + (st === "affected" ? 3 : st === "neutral" ? 0 : 2));
-    if (st !== "neutral") m.bringToFront();
-    pathClass(m, st, flash);
+    cellState(m, st, m.baseRadius + (st === "affected" ? 3 : st === "neutral" ? 0 : 2));
+    if (flash) flashEl(m.cell);
     for (const line of reg.spokesBySupplier.get(id) || []) {
       line.setStyle(st === "neutral" ? { color: COLOR.spoke, weight: 1, opacity: 0.7 } : { color: COLOR[st], weight: 1.8, opacity: 0.85 });
     }
@@ -328,21 +360,25 @@ export function createMap(container, { onStatus } = {}) {
       if (st !== "neutral") line.bringToFront();
       pathClass(line, st, flash);
     }
+    showBadge(`route:${id}`, st);
   }
 
   function styleNode(id, flash) {
     const m = reg.nodes.get(id);
     if (!m) return;
     const st = getState(`node:${id}`);
-    m.setStyle({ color: st === "neutral" ? COLOR.node : COLOR[st], weight: st === "neutral" ? 1.5 : 3, fillColor: st === "neutral" ? COLOR.nodeFill : STATE_FILL[st] });
-    m.setRadius(st === "neutral" ? (m.options.radius > 4 ? 5 : 3.5) : 7);
-    pathClass(m, st, flash);
+    cellState(m, st, st === "neutral" ? m.baseRadius : RADIUS.nodeStated);
+    if (flash) flashEl(m.cell);
   }
 
-  function styleDiv(markerReg, key, id, selector) {
-    const m = markerReg.get(id);
-    const el = m?.getElement()?.querySelector(selector);
-    if (el) el.dataset.state = getState(`${key}:${id}`);
+  function stylePlant(id) {
+    const m = reg.plants.get(id);
+    if (m) setPlantState(m.plant, getState(`plant:${id}`));
+  }
+
+  function stylePo(id) {
+    const m = reg.pos.get(id);
+    if (m) m.block.dataset.state = getState(`po:${id}`);
   }
 
   function styleAltPath(id) {
@@ -354,19 +390,17 @@ export function createMap(container, { onStatus } = {}) {
       line.setStyle({ color: COLOR[st] || COLOR.resolved });
       line.addTo(layers.alt);
     }
+    showBadge(`alt:${id}`, st);
   }
 
   function styleAlternative(id) {
     const m = reg.alternatives.get(id);
     if (!m) return;
     const st = getState(`alt-sup:${id}`);
+    cellState(m, st, RADIUS.alternative);
     if (st === "neutral") {
-      m.setStyle({ color: COLOR.alternative, dashArray: "2 3", fillColor: COLOR.nodeFill });
       if (!map.hasLayer(layers.alternatives)) map.removeLayer(m);
-    } else {
-      m.setStyle({ color: COLOR[st], dashArray: null, fillColor: STATE_FILL[st] });
-      if (!map.hasLayer(m)) m.addTo(map);
-    }
+    } else if (!map.hasLayer(m)) m.addTo(map);
   }
 
   /** Apply a state to entities. ids may include ALT-* corridors and A-* alternative suppliers. */
@@ -374,7 +408,7 @@ export function createMap(container, { onStatus } = {}) {
     const st = ["affected", "at_risk", "resolved", "neutral"].includes(state) ? state : "affected";
     for (const id of supplier_ids || []) {
       if (String(id).startsWith("A-")) { states.set(`alt-sup:${id}`, st); styleAlternative(id); continue; }
-      if (model.plants.has(id)) { states.set(`plant:${id}`, st); styleDiv(reg.plants, "plant", id, ".plant-marker"); continue; }
+      if (model.plants.has(id)) { states.set(`plant:${id}`, st); stylePlant(id); continue; }
       states.set(`sup:${id}`, st);
       styleSupplier(id, st === "affected");
     }
@@ -385,12 +419,12 @@ export function createMap(container, { onStatus } = {}) {
       styleRoute(id, st === "affected");
       for (const poId of reg.posByRoute.get(id) || []) {
         states.set(`po:${poId}`, st === "neutral" ? "neutral" : st);
-        styleDiv(reg.pos, "po", poId, ".po-marker");
+        stylePo(poId);
       }
     }
     for (const id of node_ids || []) { states.set(`node:${id}`, st); styleNode(id, st === "affected"); }
-    for (const id of plant_ids || []) { states.set(`plant:${id}`, st); styleDiv(reg.plants, "plant", id, ".plant-marker"); }
-    for (const id of po_ids || []) { states.set(`po:${id}`, st); styleDiv(reg.pos, "po", id, ".po-marker"); }
+    for (const id of plant_ids || []) { states.set(`plant:${id}`, st); stylePlant(id); }
+    for (const id of po_ids || []) { states.set(`po:${id}`, st); stylePo(id); }
   }
 
   function clearStates() {
@@ -402,8 +436,8 @@ export function createMap(container, { onStatus } = {}) {
       if (kind === "sup") styleSupplier(id);
       else if (kind === "route") styleRoute(id);
       else if (kind === "node") styleNode(id);
-      else if (kind === "plant") styleDiv(reg.plants, "plant", id, ".plant-marker");
-      else if (kind === "po") styleDiv(reg.pos, "po", id, ".po-marker");
+      else if (kind === "plant") stylePlant(id);
+      else if (kind === "po") stylePo(id);
       else if (kind === "alt") styleAltPath(id);
       else if (kind === "alt-sup") styleAlternative(id);
     }
@@ -454,6 +488,61 @@ export function createMap(container, { onStatus } = {}) {
 
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * The zoom buttons: Vici's icon buttons (plus and minus, 44 px hexagon cells with tooltips) in a
+ * Leaflet control with Leaflet's zoom class, so a click on them counts as the presenter's own move.
+ */
+function addZoomControl(L, map) {
+  const Zoom = L.Control.extend({
+    options: { position: "bottomright" },
+    onAdd() {
+      const bar = h("div", { class: "leaflet-control-zoom map-zoom", role: "group", "aria-label": "Zoom" });
+      const button = (name, label, zoom) => {
+        const b = h("button", { class: "vc-icon-button", type: "button" }, icon(name, 20));
+        b.addEventListener("click", (e) => { if (!isDisabled(b)) zoom(map.options.zoomDelta * (e.shiftKey ? 3 : 1)); });
+        bar.appendChild(withTooltip(b, label));
+        return b;
+      };
+      const zoomIn = button("plus", "Zoom in", (d) => map.zoomIn(d));
+      const zoomOut = button("minus", "Zoom out", (d) => map.zoomOut(d));
+      const sync = () => {
+        setDisabled(zoomIn, map.getZoom() >= map.getMaxZoom(), "Already at the closest zoom.");
+        setDisabled(zoomOut, map.getZoom() <= map.getMinZoom(), "Already at the widest zoom.");
+      };
+      map.on("zoomend zoomlevelschange", sync);
+      sync();
+      L.DomEvent.disableClickPropagation(bar);
+      L.DomEvent.disableScrollPropagation(bar);
+      return bar;
+    }
+  });
+  new Zoom().addTo(map);
+}
+
+/** A corridor's state badge: a hexagon cell with the state's mark, not interactive, no tab stop. */
+function badgeAt(L, latlng) {
+  const cell = cellMarker("badge", { height: BADGE });
+  const m = L.marker(latlng, { pane: "badges", interactive: false, keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
+  m.cell = cell;
+  return m;
+}
+
+/** The point halfway along a corridor's lines (their points in order, by distance on the ground). */
+function midpoint(L, lines) {
+  const pts = lines.flatMap((l) => l.getLatLngs());
+  if (pts.length < 2) return pts[0];
+  const steps = pts.slice(1).map((p, i) => pts[i].distanceTo(p));
+  let left = steps.reduce((a, b) => a + b, 0) / 2;
+  for (const [i, d] of steps.entries()) {
+    if (left <= d && d > 0) {
+      const f = left / d;
+      return L.latLng(pts[i].lat + (pts[i + 1].lat - pts[i].lat) * f, pts[i].lng + (pts[i + 1].lng - pts[i].lng) * f);
+    }
+    left -= d;
+  }
+  return pts[pts.length - 1];
+}
+
 function makeTileLayer(L, kind) {
   if (kind === "carto") {
     return L.tileLayer(BASEMAP.carto.url.replace("{key}", encodeURIComponent(BASEMAP.cartoKey)), {
@@ -476,8 +565,9 @@ function addOfflineBasemap(L, map) {
 }
 
 function buildLegend(map, layers) {
+  // The toggles: hex capsules the map owns (aria-pressed), ticked in ink.
   const toggle = (label, layer, on) => {
-    const btn = h("button", { class: "legend-toggle", type: "button", "aria-pressed": on ? "true" : "false" },
+    const btn = h("button", { class: "legend-chip", type: "button", "aria-pressed": on ? "true" : "false" },
       h("span", { class: "box" }, icon("check", 14)), label);
     btn.addEventListener("click", () => {
       const now = btn.getAttribute("aria-pressed") !== "true";
@@ -486,8 +576,8 @@ function buildLegend(map, layers) {
     });
     return btn;
   };
-  // The swatches take their colours from css/map.css (data-kind), as the map's own marks do.
-  const dot = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-dot", dataset: { kind } }), label);
+  // The swatches are the map's own cells and lines; their colours come from css/map.css (data-kind).
+  const cell = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch", dataset: { kind } }, hexCell()), label);
   const line = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-line", dataset: { kind } }), label);
   const legend = h("section", { class: "legend", "aria-label": "Map legend", dataset: { collapsed: "false" } });
   const collapseBtn = h("button", { class: "vc-icon-button", type: "button", "aria-expanded": "true" }, icon("chevronDown", 18));
@@ -513,12 +603,12 @@ function buildLegend(map, layers) {
     h("div", { class: "legend-head" }, h("strong", {}, "Legend"), collapseTip),
     h("div", { class: "legend-body" },
       h("div", { class: "legend-group" }, h("h4", {}, "Suppliers"),
-        dot("tier1", "Tier 1 (delivers to our plants)"), dot("tier2", "Tier 2 (delivers to tier 1)"), dot("tier3", "Tier 3")),
+        cell("tier1", "Tier 1 (delivers to our plants)"), cell("tier2", "Tier 2 (delivers to tier 1)"), cell("tier3", "Tier 3")),
       h("div", { class: "legend-group" }, h("h4", {}, "Status"),
-        line("affected", "Affected"), line("at_risk", "At risk"), line("resolved", "Resolved or mitigation")),
+        cell("affected", "Affected"), cell("at_risk", "At risk"), cell("resolved", "Resolved or mitigation")),
       h("div", { class: "legend-group" }, h("h4", {}, "Corridors"),
         line("sea", "Sea"), line("barge", "Rhine barge, rail, ferry"), line("road", "Road")),
-      h("div", { class: "legend-group" },
+      h("div", { class: "legend-toggles", role: "group", "aria-label": "Show on the map" },
         toggle("Supply links", layers.spokes, true),
         toggle("Orders in transit", layers.pos, true),
         toggle("Qualified alternatives", layers.alternatives, false))
