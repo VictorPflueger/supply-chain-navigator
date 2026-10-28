@@ -57,14 +57,9 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   min-height: 84px;
 }
 
+/* The page icon: the prototype's card on Victor's website, Vici's globe-hex icon in a lilac hexagon cell
+   (Vici's cell at its default size, 2rem high). */
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.brand-mark { width: 34px; height: 34px; flex: none; }
-/* The mark is drawn from the tokens: a merlot tile, a route and a ring at the goal. */
-.brand-mark .mark-tile { fill: var(--vc-accent); }
-.brand-mark .mark-line { fill: none; stroke: var(--vc-on-accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.brand-mark .mark-start { fill: var(--vc-on-accent); }
-.brand-mark .mark-node { fill: var(--vc-accent); stroke: var(--vc-on-accent); stroke-width: 1.8; }
-.brand-mark .mark-ring { fill: none; stroke: var(--vc-accent-soft-hover); stroke-width: 2; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
 .brand-name {
   font-family: var(--vc-font-display);
@@ -212,8 +207,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 }
 .boot[data-state="done"] { opacity: 0; pointer-events: none; }
 .boot-card { width: min(640px, 100%); }
-.boot-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
-.boot-brand .brand-mark { width: 46px; height: 46px; }
+.boot-brand { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
 .boot-brand .brand-name { font-size: 2.1rem; }
 .boot-status { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: var(--fs-lg); }
 .boot[data-state="failed"] .boot-status .vc-spinner { display: none; }

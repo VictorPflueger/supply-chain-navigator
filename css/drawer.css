@@ -6,9 +6,9 @@
   display: flex; flex-direction: column;
   min-height: 0;
 }
-/* The bar holds three groups: the tabs, the author's credit and, at the end, the note and the toggle.
-   The two sides share the width equally, which puts the credit in the middle of the bar; a side that
-   needs more room keeps its content's width, and the credit moves over instead of covering it. */
+/* The bar holds three groups: the tabs, Vici's byline and, at the end, the note and the toggle.
+   The two sides share the width equally, which puts the byline in the middle of the bar; a side that
+   needs more room keeps its content's width, and the byline moves over instead of covering it. */
 .drawer-tabs {
   display: grid;
   grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
@@ -33,23 +33,10 @@
 .drawer-note { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
 .drawer-note .vc-icon { color: var(--vc-success-solid); }
 
-/* The author's credit: quiet ink like the tabs, so it never competes with a decision. Both links are 44 px. */
-.drawer-credit {
-  display: flex; align-items: center; gap: 2px;
-  margin: 0;
-  color: var(--vc-text-muted); font-size: var(--vc-font-size-sm);
-  white-space: nowrap;
-}
-.credit-label { margin-right: 4px; }
-.credit-person, .credit-linkedin {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: var(--hit); min-width: var(--hit);
-  border-radius: var(--vc-radius-lg);
-  color: var(--vc-text-muted); font-weight: 600; text-decoration: none;
-}
-.credit-person { padding: 0 10px 0 6px; }
-.credit-person:hover, .credit-linkedin:hover { background: var(--vc-surface-hover); color: var(--vc-text); }
-.credit-photo { width: calc(28px * 1.1547); height: 28px; flex: none; object-fit: cover; clip-path: var(--vc-hex); background: var(--vc-surface); }
+/* Vici's byline: quiet ink like the tabs, so it never competes with a decision. Its two profile links
+   are 44 px targets here (Vici's are 24 px), as the credit's links were. */
+.drawer-tabs .vc-byline { flex-wrap: nowrap; white-space: nowrap; }
+.drawer-tabs .vc-byline__icon { min-width: var(--hit); min-height: var(--hit); }
 
 .drawer-body {
   height: 0;
@@ -201,15 +188,15 @@
 @media (max-width: 1400px) {
   .options-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-/* Narrower screens keep the credit in full on a second row of the bar, centred under the tabs. The
+/* Narrower screens keep the byline in full on a second row of the bar, centred under the tabs. The
    label goes first, where the bar is one row but tight. */
 @media (max-width: 1180px) {
-  .credit-label { display: none; }
+  .drawer-tabs .vc-byline__label { display: none; }
 }
 @media (max-width: 1100px) {
   .drawer-tabs { grid-template-columns: minmax(max-content, 1fr) auto; gap: 0 4px; padding-block: 4px; }
-  .drawer-credit { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
-  .credit-label { display: inline; }
+  .drawer-tabs .vc-byline { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+  .drawer-tabs .vc-byline__label { display: inline; }
 }
 @media (max-width: 860px) {
   .options-grid { grid-template-columns: 1fr; }
