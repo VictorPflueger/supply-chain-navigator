@@ -2,7 +2,7 @@
 
 A live, agentic AI demo for supply chain risk. Navigator watches a fictional German EV maker, Nordwerk Automotive (final assembly in Leipzig, e-drive plant in Győr, 57 suppliers in real industry clusters), and answers the question every operations board asks after a disruption: *which factory stops when, what does it cost, and what is the cheapest way to keep it running?*
 
-**Version 1.1.0.** Static website, no backend, no build step. Runs on GitHub Pages or any static host.
+**Version 1.2.0.** Static website, no backend, no build step. Runs on GitHub Pages or any static host. It looks like the rest of Victor Pflüger's work: it is built on his design system Vici, in a light and a dark theme.
 
 ---
 
@@ -46,7 +46,7 @@ For clients, the point is not the fictional company but the pattern: agentic AI 
 - **Two producers, one interface.** The live agent and the simulation player emit the same run events, so the interface behaves the same in both modes. Only the mode badge, the console watermark and the audit export differ.
 - **Synthetic world.** `data/world.js` holds the company, plants, suppliers, parts, stock, purchase orders, routes and qualified alternatives. It ships as a script (`window.WORLD = …`), so nothing is fetched.
 - **Guardrails in code, not only in the prompt.** Every option figure comes from the engine. An alert marked "verified" needs two sources. Drafts only follow an approved option. The report waits until every draft is decided. Each run is capped at 40 model calls and €3.
-- **Browser-enforced boundaries.** The page's Content Security Policy only lets it connect to api.anthropic.com and the four open-data APIs. The key lives in this tab's session storage only.
+- **Browser-enforced boundaries.** The page's Content Security Policy only lets it connect to api.anthropic.com and the four open-data APIs. Beyond map tiles and the Leaflet CDN (with a local copy in `vendor/`), it loads nothing from outside: scripts, styles and fonts ship with the page (the design system Vici is copied into `vici/`). The key lives in this tab's session storage only.
 
 ## Deploy in five minutes (GitHub Pages)
 
@@ -54,7 +54,7 @@ You need a free GitHub account. The repository must be public for Pages on a fre
 
 1. **Create the repository.** On github.com, open the **+** menu (top right) and choose **New repository**. Name it `supply-chain-navigator`, choose **Public**, and click **Create repository**.
 2. **Upload the files.** On the empty repository page, click **uploading an existing file**. Drag in the *contents* of the Navigator folder (the files and folders, not the folder itself), then click **Commit changes**.
-   - GitHub takes **at most 100 files per upload**. Navigator has about 120, so upload in two goes: first everything except `fonts/` and `vendor/`, then those two folders (**Add file → Upload files**).
+   - GitHub takes **at most 100 files per upload**. Navigator has about 110, so upload in two goes: first everything except `js/`, then that folder (**Add file → Upload files**).
    - Include the hidden file **`.nojekyll`**. It stops GitHub from running Jekyll over the Markdown files. On a Mac, press **Cmd + Shift + .** in Finder to show hidden files. If it is missing, use **Add file → Create new file**, name it `.nojekyll`, type any text, and commit.
 3. **Turn on Pages.** Go to **Settings → Pages**. Under **Build and deployment → Source**, choose **Deploy from a branch**. Set the branch to **main** and the folder to **/ (root)**, then click **Save**.
 4. **Open the site.** After a minute or two, reload the Pages settings page. It shows **Your site is live at `https://<your-user>.github.io/supply-chain-navigator/`**. Progress is visible under the **Actions** tab ("pages build and deployment").
@@ -80,12 +80,16 @@ On a first visit, a short window explains what Navigator does, how it works (spo
 
 ## Reading the screen
 
-- **Burgundy is you.** Approve buttons are burgundy, and so is the step of the progress rail that waits for you: *Your decision* for the options, then *Your approval* for the drafts.
-- **Violet is the AI.** The options, drafts and summary the agent wrote carry an **AI** label. Click it to see who wrote them and where the figures come from.
-- **Red, amber and green are the supply chain:** affected, at risk, resolved. A word or an icon always says the same thing.
+- **Merlot is you.** Approve buttons are merlot, Vici's deep wine red, and so is the step of the progress rail that waits for you: *Your decision* for the options, then *Your approval* for the drafts.
+- **Lilac is the AI.** The options, drafts and summary the agent wrote carry an **AI** label. Click it to see who wrote them and where the figures come from.
+- **Red, honey and green are the supply chain** (Vici's coral, honey and sage): affected, at risk, resolved. A word, an icon or a mark always says the same thing, so no state relies on colour alone: on the map an affected hexagon holds a cross, an at-risk one a bar and dot, a resolved one a tick.
+- **Hexagons, not circles.** As everywhere in Vici, what would be round is a hexagon: the suppliers, ports and hubs on the map, the rail's steps, the status pips.
+- **The map.** Our two plants are the large hexagons with a factory in ink; when one is affected, at risk or resolved, its outline takes the state's colour and a tag beside its name says so. Suppliers are cells shaded by tier, the stronger the closer they are to our plants. Supply links are thin grey lines; corridors keep a pattern per transport mode (sea and air dotted, barge, rail and ferry dashed, road solid), and a corridor in trouble gets a heavier line, a hexagon with the state's mark at its middle and the words in its details. Qualified alternatives are dashed. Click any cell, plant or corridor for its details.
 - **The progress rail** above the console shows the agent's plan in five steps and where it is now.
 
-Every colour is generated from the one burgundy and checked for contrast and colour blindness. `DESIGN.md` explains the system, the methods behind it and how to change it.
+**Light or dark.** The page opens in the light theme, made for projectors in lit rooms. The moon in the header switches to the dark theme, the map's tiles included, and every page of Victor's site remembers the choice.
+
+Every colour comes from Vici's tokens and is checked for contrast in both themes and for colour blindness. `DESIGN.md` explains the system, which Navigator shares with its sister prototypes, Rebate Hunter, the Timetable Translator and Repack Pilot.
 
 ## The two modes
 
@@ -98,7 +102,7 @@ Clicking **Start agent** first asks how the agent should run.
 | Figures | Calculated by the impact engine at playback | Calculated by the impact engine |
 | Key and cost | None | Your Anthropic API key; a few tens of euro cents per run |
 | Network | None beyond map tiles; works fully offline | api.anthropic.com and the open-data APIs |
-| Labelling | SIMULATION badge, hazard-tape watermark in the console, "Simulated run" in the summary, `"mode": "simulation"` in the audit export | LIVE badge, `"mode": "live"` |
+| Labelling | SIMULATION badge with a striped tape, the tape and the word SIMULATION in the console, "Simulated run" in the summary, `"mode": "simulation"` in the audit export | LIVE badge, `"mode": "live"` |
 
 - **Use Live for the real demo.** If the agent finds nothing, it says so. If an injected scenario cannot be confirmed, it labels the analysis a *what-if*.
 - **Use Simulation** for rehearsal, as the fallback on stage, and for anyone exploring without a key. Replay speed ×1, ×2 or ×4 is set in the control bar.
@@ -146,7 +150,7 @@ A Live scan can add up to €0.05 for extra searches. Diagnostics' optional web-
 | "Spend limit reached" or "no credit" | Raise the workspace's spend limit or add credit in the Console, or switch to Simulation. |
 | Banner "Web search is switched off for this API key" | An organisation admin has disabled Claude's web search in the Console's organisation settings. Navigator keeps going with the open-data tools; preset scenarios and Simulation work, Live scan is disabled. Ask the admin to enable web search, or use a key from another organisation. |
 | An open-data row fails in Diagnostics | That provider is blocked or down from this network. Nothing to fix: the agent skips it, says so in the console and verifies through web search instead. |
-| Map shows only grey land and coastlines | Tile servers are blocked; the offline coastline map takes over. Markers, routes and colours still work. |
+| Map shows only plain land and coastlines | Tile servers are blocked; the offline coastline map takes over, in the light or the dark theme. Markers, routes and colours still work. |
 | "The API is busy right now" | Anthropic returned overloaded or rate-limit errors after two automatic retries. Wait a minute, or switch to Haiku, or run the Simulation. |
 | Run ends as **Stopped** | The model ended its turn twice without finishing; Navigator does not invent the rest. Start again, or switch to the Simulation of the same scenario. |
 | Text too small on the projector | Use **Larger text** in the console header. The layout is tested at 1920×1080 and down to 1280×720. |
@@ -170,7 +174,7 @@ Navigator is designed along the transparency and human-oversight lines of the EU
 
 - The **run facts** line at the end of every run states agent time (excluding time spent waiting for your decisions), tool calls by kind, visible verification steps, revisions and cost. The same facts are in the audit export.
 - `node tools/check_world.mjs` checks the synthetic world, the scenarios, the reference cases and all six simulation scripts. It needs Node.js only.
-- `node tools/palette.mjs --check` checks the colour system: contrast for every text and state pairing, and that the state colours stay apart for colour-blind viewers. It needs Node.js only.
+- `node tests/tokens.mjs` checks the colour system on Vici's values in both themes: contrast for every text and state pairing, and how far the state colours stay apart for colour-blind viewers. `node tests/hexagon.mjs` checks that nothing in the app is round, `node tests/page-icon.mjs` that the page icon matches the prototype's card on Victor's website, and `node tests/vici-files.mjs` that `vici/` holds exactly Vici's files. All but the hexagon suite's rendered part need Node.js only.
 - `tests/` contains the browser test suites used for the acceptance checklist (Playwright; optional). See `tests/README.md`.
 - `TECH_NOTES.md` §11 lists each acceptance item with its evidence. §10 is the verification log.
 
@@ -179,22 +183,21 @@ Navigator is designed along the transparency and human-oversight lines of the EU
 | Path | Contents |
 |---|---|
 | `index.html` | The single page, its security policy and the boot screen |
-| `css/` | Styles: layout, components, console, drawer, map, dialogs, fonts |
-| `css/tokens.css`, `design/tokens.json` | The colour tokens, generated by `tools/palette.mjs`; do not edit by hand |
-| `js/` | ES modules, one responsibility each (see below) |
+| `vici/` | Victor's design system Vici (stylesheet, script, tokens, fonts, the byline's portrait and LinkedIn's logo), copied unchanged; `vici/README.md` lists the files, their release and their licences |
+| `css/` | The app's styles on top of Vici: layout, components, console, drawer, map, dialogs (shared with the sister prototypes except `map.css`) |
+| `js/` | ES modules, one responsibility each (see below), and `theme.js`, which sets the theme before the page is drawn |
+| `favicon.svg` | The page icon: Vici's globe-hex icon in a lilac hexagon, as on the prototype's card on Victor's website |
 | `data/world.js` | The synthetic company: plants, suppliers, parts, BOM, stock, orders, nodes, corridors, alternatives |
 | `data/scenarios.js`, `data/reference_cases.js` | The six preset scenarios and their engine reference cases |
 | `data/sim_runs.js` | The six simulation scripts |
 | `data/basemap_offline.js` | Natural Earth land polygons for the offline map |
-| `fonts/`, `vendor/leaflet-1.9.4/` | Self-hosted fonts and the fallback copy of Leaflet, with licences |
-| `images/author.jpg` | The author's photo for the credit in the drawer bar |
+| `vendor/leaflet-1.9.4/` | The fallback copy of Leaflet, with its licence |
 | `tools/check_world.mjs` | Static integrity checks (Node.js) |
-| `tools/palette.mjs` | The colour generator and its checks (Node.js) |
 | `tests/` | Optional browser test suites |
 | `README.md`, `DEMO_SCRIPT.md`, `DATA_SOURCES.md`, `TECH_NOTES.md`, `DESIGN.md` | This guide, the 8-minute stage script, every data source, verified API facts and decisions, the design system |
 
-Main modules: `agent.js` (live tool-use loop), `anthropic.js` (streaming client, retries), `prompt.js` (system prompt), `tools.js` (tool definitions and guardrails), `erp.js` (ERP queries), `impact.js` (impact engine), `geo.js` (open-data tools), `simulation.js` (replay), `recorder.js` (Save run as simulation), `events.js` (run-event bus), `ui.js` (orchestration), `intro.js` (the How it works window), `progress.js` (the progress rail), `handover.js` (names the step that waits for you), `ai_label.js` (AI labels), `map.js`, `console.js`, `kpi.js`, `options_panel.js`, `outbox.js`, `audit.js`, `diagnostics.js`, `keystore.js` (session-only key), `cost.js`, `run_facts.js`.
+Main modules: `agent.js` (live tool-use loop), `anthropic.js` (streaming client, retries), `prompt.js` (system prompt), `tools.js` (tool definitions and guardrails), `erp.js` (ERP queries), `impact.js` (impact engine), `geo.js` (open-data tools), `simulation.js` (replay), `recorder.js` (Save run as simulation), `events.js` (run-event bus), `ui.js` (orchestration), `intro.js` (the How it works window), `progress.js` (the progress rail), `handover.js` (names the step that waits for you), `ai_label.js` (AI labels), `map.js` with `map_cells.js` (the map's hexagon cells and plant markers), `icons.js` (Vici's icons by name, and the nine drawn in Vici's style), `console.js`, `kpi.js`, `options_panel.js`, `outbox.js`, `audit.js`, `diagnostics.js`, `keystore.js` (session-only key), `cost.js`, `run_facts.js`.
 
 ## Credits and licences
 
-Leaflet 1.9.4 (BSD-2-Clause). Map data © OpenStreetMap contributors (ODbL). Natural Earth land polygons (public domain). Fonts: Barlow, Barlow Semi Condensed and IBM Plex Mono (SIL Open Font License 1.1). Live data: Open-Meteo (CC BY 4.0; the free API is for non-commercial use), USGS (public domain), NASA EONET, PEGELONLINE (DL-DE→Zero-2.0). Claude and its web search are services of Anthropic, billed to your own key. Details are in `DATA_SOURCES.md`.
+Leaflet 1.9.4 (BSD-2-Clause). Map data © OpenStreetMap contributors (ODbL). Natural Earth land polygons (public domain). Design system: Vici by Victor Pflüger (MIT for its code; `vici/LICENSE`), with its fonts Bricolage Grotesque, Inter and JetBrains Mono (SIL Open Font License 1.1); Victor's portrait is his own, LinkedIn's logo LinkedIn's. Live data: Open-Meteo (CC BY 4.0; the free API is for non-commercial use), USGS (public domain), NASA EONET, PEGELONLINE (DL-DE→Zero-2.0). Claude and its web search are services of Anthropic, billed to your own key. Details are in `DATA_SOURCES.md`.

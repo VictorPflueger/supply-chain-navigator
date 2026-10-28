@@ -31,6 +31,8 @@ export const COLOUR_PAIRS = [
   ["Map: plant names, on the sea", "text", "bg-sunken", "text"],
   ["Map: hub and port names, on land", "text-muted", "surface", "text"],
   ["Map: hub and port names, on the sea", "text-muted", "bg-sunken", "text"],
+  // The legend's toggles: hex capsules on a quiet fill, their box outlined until it is ticked in ink.
+  ["Map legend: a toggle's box at rest (its border), on the toggle's quiet fill", "border-strong", "bg-subtle", "mark"],
   // The popups (Vici's popover look on the raised surface).
   ["Map popups: a plant's cover below what the line needs (danger)", "danger-text", "surface-raised", "text"],
   ["Map popups: a plant's cover running low (warning)", "warning-text", "surface-raised", "text"],
@@ -66,7 +68,8 @@ export async function hexagonTour(page, visit) {
   await page.keyboard.press("Escape");
   await page.waitForSelector(".intro-modal", { state: "detached", timeout: 5000 });
   await visit("idle map, Europe network");
-  // The legend opened (if the map folded it), a supplier's details, and the global view before a run.
+  // The legend opened (if the map folded it), a supplier's and a plant's details, and the global view
+  // before a run.
   const fold = await page.$('.legend[data-collapsed="true"] .legend-head button');
   if (fold && (await fold.isVisible())) {
     await fold.click();
@@ -75,6 +78,12 @@ export async function hexagonTour(page, visit) {
   await page.$eval('.hex-marker[data-id="S-DEB-CELL"]', (el) => el.closest(".leaflet-marker-icon").click());
   await page.waitForSelector(".leaflet-popup .pop-title", { timeout: 5000 });
   await visit("details of a supplier");
+  await page.click(".leaflet-popup .pop-close");
+  await page.waitForSelector(".leaflet-popup", { state: "detached", timeout: 5000 });
+  // A plant's details: its tags and its table of cover.
+  await page.$eval(".plant-icon", (el) => el.click());
+  await page.waitForSelector(".leaflet-popup .pop-table", { timeout: 5000 });
+  await visit("details of a plant");
   await page.click(".leaflet-popup .pop-close");
   await page.waitForSelector(".leaflet-popup", { state: "detached", timeout: 5000 });
   await page.click('.map-tools button:has-text("Global view")');

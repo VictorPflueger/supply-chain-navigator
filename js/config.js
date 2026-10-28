@@ -3,8 +3,8 @@
 export const APP = {
   name: "Navigator",
   fullName: "Supply Chain Disruption Navigator",
-  version: "1.1.0",
-  milestone: "1.1 — design system: OKLCH tokens, colour grammar, progress rail, AI labels"
+  version: "1.2.0",
+  milestone: "1.2 — on Vici: its tokens, fonts, components, icons and hexagons, in a light and a dark theme"
 };
 
 export const ANTHROPIC = {

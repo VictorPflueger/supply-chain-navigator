@@ -13,7 +13,7 @@ import { supplierPopover, plantPopover, routePopover, nodePopover, poPopover, al
 // drawn as an element (the hexagon cells, our plants, the orders, the legend) takes them from
 // css/map.css:
 //   - the supply network at rest (corridors, supply links, hubs, suppliers' outlines) is Vici's neutral
-//     solid; the suppliers' fills step from strong to faint by tier, darker = closer to our plants, so
+//     solid; the suppliers' fills step from strong to faint by tier, stronger = closer to our plants, so
 //     the network recedes behind the states that matter;
 //   - states take Vici's danger, warning and success tones: the solid tone for a line or an outline, the
 //     mid tone for a fill, and a larger cell or a heavier line than the network. A state never relies on
@@ -87,8 +87,9 @@ export function createMap(container, { onStatus } = {}) {
   for (const type of ["wheel", "dblclick", "keydown"]) container.addEventListener(type, userTookOver, { passive: true });
   container.addEventListener("click", (e) => { if (e.target.closest?.(".leaflet-control-zoom")) userTookOver(); });
 
-  // A corridor's state badge sits above the orders in transit on it, below the suppliers and hubs.
-  const panes = { offline: 150, spokes: 360, routes: 380, alt: 385, nodes: 410, pos: 420, badges: 430, suppliers: 440, plants: 620 };
+  // A corridor's state badge sits above the orders in transit on it and below the hubs and suppliers,
+  // so a hub's own state (a chokepoint in the middle of its corridors) is never hidden by a badge.
+  const panes = { offline: 150, spokes: 360, routes: 380, alt: 385, pos: 395, badges: 405, nodes: 410, suppliers: 440, plants: 620 };
   for (const [name, z] of Object.entries(panes)) {
     const pane = map.createPane(name);
     pane.style.zIndex = String(z);
@@ -154,11 +155,22 @@ export function createMap(container, { onStatus } = {}) {
   const states = new Map();
   const getState = (key) => states.get(key) || "neutral";
 
+  // The cells replace circle markers, whose popover a second click opened again: Leaflet's markers
+  // would close it instead, so a cell opens its popover on every click, as the circles did.
+  const CellMarker = L.Marker.extend({
+    _openPopup(e) {
+      if (!this._popup || !this._map) return;
+      L.DomEvent.stop(e);
+      this._popup._source = e.layer || e.target;
+      this.openPopup(e.latlng);
+    }
+  });
+
   // Popovers close with their own Vici icon button (Leaflet's × is left out) or with Escape.
   const popupOpts = { maxWidth: 440, minWidth: 280, autoPanPadding: [48, 48], className: "nav-popup", closeButton: false };
   const withClose = (content) => {
     const close = h("button", { class: "vc-icon-button pop-close", type: "button", on: { click: () => map.closePopup() } }, icon("x", 18));
-    const anchor = withTooltip(close, "Close details", { below: true });
+    const anchor = withTooltip(close, "Close popup", { below: true });
     anchor.classList.add("pop-close-anchor");
     content.prepend(anchor);
     return content;
@@ -167,7 +179,7 @@ export function createMap(container, { onStatus } = {}) {
   // A marker that draws a hexagon cell: no tab stop (the popover opens on a click, and its contents
   // are reached through the agent's console and the drawer), a hover label, and a popover.
   const cellAt = (latlng, pane, cell, label, popover) => {
-    const m = L.marker(latlng, { pane, keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
+    const m = new CellMarker(latlng, { pane, keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
     m.cell = cell;
     m.bindTooltip(escapeHtml(label), { className: "hover-label", direction: "top", offset: [0, -8] });
     m.bindPopup(() => withClose(popover()), popupOpts);
@@ -224,7 +236,7 @@ export function createMap(container, { onStatus } = {}) {
     if (!routesHere.some((rid) => model.routes.get(rid)?.display !== false) && n.id !== "N-CPT") continue;
     const big = ["chokepoint", "waterway", "port"].includes(n.type);
     const cell = cellMarker("node", { id: n.id, height: (big ? RADIUS.node : RADIUS.nodeSmall) * HEX_PER_RADIUS });
-    const m = L.marker([n.lat, n.lon], { pane: "nodes", keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
+    const m = new CellMarker([n.lat, n.lon], { pane: "nodes", keyboard: false, icon: L.divIcon({ className: "hex-icon", html: cell, iconSize: [0, 0] }) });
     m.cell = cell;
     m.baseRadius = big ? RADIUS.node : RADIUS.nodeSmall;
     if (NODE_LABELS[n.id]) {
@@ -300,6 +312,14 @@ export function createMap(container, { onStatus } = {}) {
   );
   container.parentElement.appendChild(tools);
 
+  // A popover's close button moves with the map, but its tooltip stays where vici.js placed it: hide it
+  // while the map moves.
+  map.on("movestart zoomstart", () => {
+    for (const tip of container.querySelectorAll(".leaflet-popup .vc-tooltip")) {
+      try { if (tip.matches(":popover-open")) tip.hidePopover(); } catch { /* no popover support */ }
+    }
+  });
+
   const syncZoomClass = () => container.classList.toggle("zoom-low", map.getZoom() < 4);
   map.on("zoomend", syncZoomClass);
 
@@ -316,11 +336,14 @@ export function createMap(container, { onStatus } = {}) {
   syncZoomClass();
 
   // ---- state styling ------------------------------------------------------------------------------
+  // A change of state flashes once: the class goes when the animation ends, so a redraw (a corridor
+  // brought to the front again on a theme change) does not replay it.
   const flashEl = (el) => {
     if (!el || prefersReducedMotion()) return;
     el.classList.remove("flash");
     void el.getBoundingClientRect();
     el.classList.add("flash");
+    el.addEventListener("animationend", () => el.classList.remove("flash"), { once: true });
   };
   const pathClass = (layer, st, flash) => {
     const el = layer.getElement?.();
@@ -526,17 +549,20 @@ function addZoomControl(L, map) {
     options: { position: "bottomright" },
     onAdd() {
       const bar = h("div", { class: "leaflet-control-zoom map-zoom", role: "group", "aria-label": "Zoom" });
-      const button = (name, label, zoom) => {
-        const b = h("button", { class: "vc-icon-button", type: "button" }, icon(name, 20));
+      const button = (glyph, label, zoom) => {
+        const b = h("button", { class: "vc-icon-button", type: "button" }, glyph);
         b.addEventListener("click", (e) => { if (!isDisabled(b)) zoom(map.options.zoomDelta * (e.shiftKey ? 3 : 1)); });
+        // After a click with the mouse the focus goes back to the map, as with Leaflet's own control,
+        // so the arrow keys and + and − work at once.
+        L.DomEvent.on(b, "click", this._refocusOnMap, this);
         bar.appendChild(withTooltip(b, label));
         return b;
       };
-      const zoomIn = button("plus", "Zoom in", (d) => map.zoomIn(d));
-      const zoomOut = button("minus", "Zoom out", (d) => map.zoomOut(d));
+      const zoomIn = button(icon("plus", 20), "Zoom in", (d) => map.zoomIn(d));
+      const zoomOut = button(icon("minus", 20), "Zoom out", (d) => map.zoomOut(d));
       const sync = () => {
-        setDisabled(zoomIn, map.getZoom() >= map.getMaxZoom(), "Already at the closest zoom.");
-        setDisabled(zoomOut, map.getZoom() <= map.getMinZoom(), "Already at the widest zoom.");
+        setDisabled(zoomIn, map.getZoom() >= map.getMaxZoom());
+        setDisabled(zoomOut, map.getZoom() <= map.getMinZoom());
       };
       map.on("zoomend zoomlevelschange", sync);
       sync();

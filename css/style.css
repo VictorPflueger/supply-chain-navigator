@@ -39,7 +39,8 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
-.app-shell, .app-shell * { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
+/* Thin scrollbars on the app's own scrolling panels (Vici's components keep theirs). */
+:is(.app-shell, .log, .result-body, .md-table, .drawer-body, .race, .portfolio, .legend-body, .pop-body, .kpis) { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
 
 
 /* ------------------------------------------------------------------------------------------ */
@@ -216,7 +217,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 .boot[data-state="failed"] .boot-status .vc-spinner { display: none; }
 .boot-detail { margin: 0 0 14px; }
 .boot-help { color: var(--vc-text-muted); opacity: 0; visibility: hidden; animation: bootReveal 0.3s ease 6s forwards; }
-.boot-help p { margin: 0 0 10px; max-width: 68ch; }
+.boot-help p { margin: 0 0 10px; max-width: var(--vc-container-prose); }
 .boot[data-state="failed"] .boot-help { animation: none; opacity: 1; visibility: visible; }
 @keyframes bootReveal { to { opacity: 1; visibility: visible; } }
 
@@ -227,7 +228,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 @media (max-width: 1700px) {
   .kpi.vc-stat { min-width: 132px; max-width: 210px; padding: 6px 12px 7px; }
   .brand-sub { display: none; }
-  /* Inter and Bricolage run wider than the former Barlow: a tile's second line wraps (two lines at
+  /* Inter and Bricolage run wider than the former fonts: a tile's second line wraps (two lines at
      most) instead of widening the tile, and the figures step down to 1.875rem, so the header keeps
      its height and the badges keep their room (DESIGN.md, deviations). */
   .kpi-sub.vc-stat__note { contain: inline-size; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-overflow: clip; }
@@ -236,7 +237,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 
 /* Laptop widths, including 1536 px (a 1080p screen at 125 % scaling): keep the control bar on one row. */
 @media (max-width: 1600px) {
-  /* Inter runs wider than the former Barlow: tighter gaps and paddings keep the bar on one row. */
+  /* Inter runs wider than the former font: tighter gaps and paddings keep the bar on one row. */
   .controls { gap: 6px; padding: 10px 12px; }
   .controls .vc-button { --_px: var(--vc-space-3); }
   .controls .status-pill { padding-inline: 14px; gap: var(--vc-space-2); }
@@ -272,5 +273,5 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 
 /* Forced colours: the status and live pips keep their hexagons. */
 @media (forced-colors: active) {
-  .status-pill .dot, .mode-badge[data-mode="live"] .mode-dot { forced-color-adjust: none; background-color: CanvasText; }
+  .status-pill[data-tone] .dot, .status-pill .dot, .mode-badge[data-mode="live"] .mode-dot { forced-color-adjust: none; background-color: CanvasText; }
 }

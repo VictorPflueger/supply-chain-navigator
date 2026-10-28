@@ -9,8 +9,10 @@
 .vc-dialog.dialog-intro { --vc-dialog-width: 1000px; }
 .vc-dialog__header { padding: 18px 20px 6px 24px; }
 .vc-dialog__title { font-size: 1.6rem; line-height: 1.15; color: var(--vc-text); }
-.dialog-lead { margin: 6px 0 0; color: var(--vc-text-muted); max-width: 70ch; }
+.dialog-lead { margin: 6px 0 0; color: var(--vc-text-muted); max-width: var(--vc-container-prose); }
 .vc-dialog__body { padding: 14px 24px 20px; color: var(--vc-text); }
+/* Reading text in a dialog runs at Vici's prose measure (50ch, about 65 characters of Inter). */
+.vc-dialog__body > p { max-width: var(--vc-container-prose); }
 .vc-dialog__footer { align-items: center; gap: 10px; padding: 14px 24px 18px; }
 .dialog-note { margin-right: auto; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 
@@ -67,12 +69,10 @@
 .diag-status { gap: 6px; }
 .diag-section { margin-top: 18px; }
 .diag-section h3 { margin: 0 0 6px; font-family: var(--vc-font-text); font-size: var(--vc-font-size-md); font-weight: var(--vc-weight-semibold); letter-spacing: 0; color: var(--vc-text); }
-.diag-section p { margin: 0 0 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); max-width: 80ch; }
+.diag-section p { margin: 0 0 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); max-width: var(--vc-container-prose); }
 .world-checks { columns: 2; column-gap: 28px; font-size: var(--vc-font-size-sm); padding: 0; margin: 8px 0 0; list-style: none; }
-.world-checks li { break-inside: avoid; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; margin: 0 0 6px; color: var(--vc-text-muted); }
+.world-checks li { break-inside: avoid; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; margin: 0 0 6px; color: var(--vc-text-muted); }
 .world-checks li::before { display: none; }
-.world-mark.pass { color: var(--vc-success-solid); }
-.world-mark.fail { color: var(--vc-danger-solid); }
 
 /* Report ------------------------------------------------------------------------------------- */
 .report-modal .vc-dialog__body { font-size: 1.05rem; }
@@ -83,15 +83,18 @@
 }
 
 /* Intro: what Navigator does, how it works, why it pays off ------------------------------------ */
-.intro-modal .dialog-lead { font-size: var(--fs-lg); line-height: 1.4; color: var(--vc-text); max-width: 64ch; }
-.intro-modal .vc-dialog__body h3 { margin: 6px 0 14px; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: 1.25rem; line-height: 1.2; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
+.intro-modal .dialog-lead { font-size: var(--fs-lg); line-height: 1.4; color: var(--vc-text); max-width: var(--vc-container-prose); }
+/* The lead and the note run at the prose measure, so the sections sit a little closer: the whole
+   window still fits a 1280 × 720 projector without scrolling. */
+.intro-modal .vc-dialog__body { padding-bottom: 16px; }
+.intro-modal .vc-dialog__body h3 { margin: 2px 0 10px; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: 1.25rem; line-height: 1.2; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 
 /* Five steps on Vici's stepper; each step's hexagon takes the tone the app uses for that moment of a
    run: danger for a finding, fjord for checking, warning for risk, ink for your decision (merlot never
    sits among the state colours), success for a resolved state. */
-.intro-steps.vc-stepper { --_m: 42px; margin: 0 0 26px; padding: 0; }
+.intro-steps.vc-stepper { --_m: 42px; margin: 0 0 18px; padding: 0; }
 /* Flush left, as before: the hints run to five lines, which read better flush left than centred. */
-.intro-steps .vc-step { gap: 6px; align-items: flex-start; text-align: start; padding-right: 20px; }
+.intro-steps .vc-step { gap: 6px; align-items: flex-start; text-align: start; padding-right: 12px; }
 .intro-steps .vc-step:not(:last-child)::after { left: calc(var(--_m) * 1.1547 + var(--vc-space-2)); right: var(--vc-space-2); }
 .intro-steps .vc-step__marker { font-size: 1.25rem; font-weight: 700; }
 .intro-steps .vc-step__marker::before { clip-path: var(--vc-hex); }
@@ -107,6 +110,12 @@
 .intro-step[data-tone="prepare"] .vc-step__marker::before { background: var(--vc-success-bg); }
 .intro-step-title.vc-step__label { font-family: var(--vc-font-display); font-size: 1.2rem; font-weight: var(--vc-weight-semibold); line-height: 1.2; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 .intro-step-text.vc-step__hint { color: var(--vc-text-muted); font-size: var(--vc-font-size-md); line-height: 1.4; }
+/* Forced colours: the steps' hexagons in CanvasText with their numbers in Canvas (the tones above would
+   otherwise stay, and the ink one vanish on a dark contrast theme). */
+@media (forced-colors: active) {
+  .intro-steps .intro-step .vc-step__marker { forced-color-adjust: none; color: Canvas; }
+  .intro-steps .intro-step .vc-step__marker::before { forced-color-adjust: none; background: CanvasText; }
+}
 
 .intro-value {
   list-style: none; margin: 0; padding: 0;
@@ -116,7 +125,7 @@
 .intro-value li::before { display: none; }
 .intro-value strong { font-family: var(--vc-font-display); font-size: 1.35rem; font-weight: var(--vc-weight-semibold); line-height: 1.15; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 .intro-value span { color: var(--vc-text-muted); line-height: 1.4; }
-.intro-note { margin: 22px 0 0; color: var(--vc-text-subtle); font-size: var(--vc-font-size-sm); }
+.intro-note { margin: 14px 0 0; color: var(--vc-text-subtle); font-size: var(--vc-font-size-sm); max-width: var(--vc-container-prose); }
 
 @media (max-width: 760px) {
   .intro-steps.vc-stepper { flex-direction: column; gap: 14px; }

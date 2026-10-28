@@ -26,13 +26,15 @@
 }
 #map .leaflet-control-attribution a { color: var(--vc-text-muted); }
 
-/* Zoom: Vici's icon buttons (44 px hexagon cells with tooltips) on the map's surface, a soft shadow
-   following the hexagon. */
+/* Zoom: Vici's icon buttons (44 px hexagon cells with tooltips) on the map's surface. A hexagon cut
+   by clip-path takes no border, so two tight drop shadows draw a hairline in the strong border tone
+   around it (the buttons keep their shape on the dark map too), and a third a soft shadow. */
 .map-zoom { display: grid; gap: 4px; }
 .map-zoom .vc-icon-button {
   --_fill: var(--vc-surface);
   --_fill-hover: var(--vc-surface-hover);
-  filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--vc-shadow-color) 40%, transparent));
+  filter: drop-shadow(0 0 0.6px var(--vc-border-strong)) drop-shadow(0 0 0.6px var(--vc-border-strong))
+    drop-shadow(0 1px 2px color-mix(in oklab, var(--vc-shadow-color) 40%, transparent));
 }
 
 /* Map toolbar ------------------------------------------------------------------------------ */
@@ -40,13 +42,14 @@
    a shadow; Vici's focus ring sits outside them, clear of the shadow. */
 .map-tools { position: absolute; top: 12px; right: 12px; z-index: 800; display: flex; gap: 8px; }
 .map-tools .vc-button { --_bg: var(--vc-surface); box-shadow: var(--vc-shadow-md); }
-/* The map's own notice (tiles unavailable): Vici's neutral alert, compact, floating on the map. */
+/* The map's own notice (tiles unavailable): Vici's neutral alert, compact, floating on the map, at the
+   size it had; on a narrow map it wraps rather than run under the map's tools. */
 .map-status {
   position: absolute; top: 12px; left: 12px; z-index: 800;
   max-width: calc(100% - 340px);
   align-items: center; gap: 8px;
   padding: 6px 12px;
-  font-size: var(--fs-xs); line-height: 1.3;
+  font-size: var(--vc-font-size-sm); line-height: 1.3;
   box-shadow: var(--vc-shadow-md);
 }
 
@@ -77,7 +80,8 @@
 .hex-marker:not([data-kind="badge"]) .hex-body { pointer-events: all; }
 .hex-mark { display: none; fill: none; stroke-width: 0.17; stroke-linecap: round; stroke-linejoin: round; }
 .hex-dot { display: none; stroke: none; }
-/* The suppliers' fills step from strong to faint by tier, darker = closer to our plants. */
+/* The suppliers' fills step from strong to faint by tier: the closer to our plants, the stronger
+   (darker in the light theme, lighter in the dark one). */
 :is(.hex-marker[data-tier="1"], .legend-swatch[data-kind="tier1"]) .hex-body { fill: var(--vc-border-strong); }
 :is(.hex-marker[data-tier="2"], .legend-swatch[data-kind="tier2"]) .hex-body { fill: var(--vc-border); }
 /* A qualified alternative not in use: a dashed outline on a light fill. */
@@ -229,7 +233,7 @@
   display: inline-flex; align-items: center; gap: 7px;
   min-height: var(--_h); padding: 0 calc(var(--_p) + 3px);
   border: 0; background: none; color: var(--vc-text);
-  font: 600 var(--fs-xs) / 1 var(--vc-font-text); cursor: pointer; white-space: nowrap;
+  font: 600 var(--vc-font-size-sm) / 1 var(--vc-font-text); cursor: pointer; white-space: nowrap;   /* the size the toggles had */
 }
 .legend-chip::before, .legend-chip::after { content: ""; position: absolute; pointer-events: none; }
 .legend-chip::before {
@@ -285,7 +289,11 @@
 .pop-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .pop-table th { text-align: left; color: var(--vc-text-subtle); font-weight: 600; font-size: var(--fs-xs); padding: 2px 6px 4px 0; border-bottom: 1px solid var(--vc-border-subtle); }
 .pop-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid var(--vc-border-subtle); vertical-align: top; }
-.pop-table td.r, .pop-table th.r { text-align: right; }
+.pop-table td.r, .pop-table th.r { text-align: right; white-space: nowrap; }
+/* Vici's table header sticks to the top of the nearest scroll container. Inside a Leaflet popup, whose
+   panes move by transforms, the browser would put it at the table's foot, over the last row; a popover
+   never scrolls, so the header stays where it is. */
+#map .pop-table thead th { position: static; }
 .pop-note { margin-top: 10px; color: var(--vc-text-muted); font-size: var(--fs-xs); }
 .cover-bad { color: var(--vc-danger-text); font-weight: 600; }
 .cover-low { color: var(--vc-warning-text); font-weight: 600; }

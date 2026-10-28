@@ -39,7 +39,8 @@
 .rail .vc-step__marker { flex: none; font: 700 0.9rem / 1 var(--vc-font-text); font-variant-numeric: tabular-nums; color: var(--vc-text-subtle); }
 .rail .vc-step__label { font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); color: var(--vc-text-subtle); white-space: nowrap; }
 .rail .rail-turn { --_h: 22px; flex: none; font-weight: var(--vc-weight-bold); }
-/* done: Vici's tick, in ink */
+/* done: Vici's tick, in ink (the step's number hides behind it, as in Vici's stepper) */
+.rail .vc-step--done .vc-step__marker { color: transparent; }
 .rail .vc-step--done .vc-step__marker::before { background: var(--vc-neutral-solid); }
 .rail .vc-step--done .vc-step__marker::after { background: var(--vc-neutral-on-solid); }
 .rail .vc-step--done .vc-step__label { color: var(--vc-text-muted); }
@@ -78,6 +79,20 @@
 /* skipped: a dashed hexagon */
 .rail-step[data-state="skipped"] .vc-step__marker::before { background: repeating-conic-gradient(var(--vc-border-strong) 0 12deg, transparent 12deg 24deg); }
 @keyframes railPulse { 0%, 100% { scale: 1; opacity: 1; } 50% { scale: 1.12; opacity: 0.55; } }
+/* Forced colours (Windows contrast themes): the rules above beat Vici's layered ones, so the rail says
+   again what Vici's stepper does there: hexagons in CanvasText, the done steps and your turn filled
+   in Highlight, the active step a Highlight ring, no halos. */
+@media (forced-colors: active) {
+  .rail .vc-step__marker::before { forced-color-adjust: none; background: CanvasText; }
+  .rail .vc-step--done .vc-step__marker::before { background: Highlight; }
+  .rail .vc-step--done .vc-step__marker::after { forced-color-adjust: none; background: HighlightText; }
+  .rail-step[data-state="active"] .vc-step__marker::before { background: Highlight; }
+  .rail-step[data-state="yours"] .vc-step__marker { forced-color-adjust: none; color: HighlightText; }
+  .rail-step[data-state="yours"] .vc-step__marker::before { background: Highlight; }
+  .rail-step[data-state="active"] .vc-step__marker::after, .rail-step[data-state="yours"] .vc-step__marker::after { display: none; }
+  .rail-step[data-state="stopped"] .vc-step__marker::before { background: CanvasText; }
+  .rail-step[data-state="skipped"] .vc-step__marker::before { background: repeating-conic-gradient(CanvasText 0 12deg, transparent 12deg 24deg); }
+}
 /* Narrow consoles (small laptops): only the current step keeps its label. */
 @container console (max-width: 600px) {
   .rail.vc-stepper { padding: 8px 14px; }
@@ -138,7 +153,10 @@
 }
 .entry-mark { color: var(--vc-text-subtle); padding-top: 0.05em; }
 .entry-body { min-width: 0; overflow-wrap: anywhere; }
-.entry-body p { margin: 0 0 6px; max-width: 72ch; }
+.entry-body p { margin: 0 0 6px; }
+/* Reading text runs at most 75 characters per line: entries take Vici's prose measure (50ch, about 65
+   characters of Inter); tool calls and their raw results keep the console's width. */
+.entry:not([data-type="tool_call"]) .entry-body { max-width: var(--vc-container-prose); }
 .entry-body p:last-child { margin-bottom: 0; }
 
 /* Narration paragraphs by kind (prefix labels written by the agent). The colour says how sure the
@@ -199,6 +217,7 @@
   background: transparent; color: var(--vc-text-muted);
   font: 500 var(--vc-font-size-sm) / 1.2 var(--vc-font-text);
   cursor: pointer; text-align: left;
+  max-width: var(--vc-container-prose);   /* the summary is a sentence: Vici's prose measure */
 }
 .result-toggle:hover { background: var(--vc-surface-hover); color: var(--vc-text); }
 .result-toggle .vc-icon { transition: transform 0.15s ease; }
@@ -217,7 +236,7 @@
   white-space: pre-wrap;
 }
 .result[data-open="true"] .result-body { display: block; }
-.result-sources { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 2px; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
+.result-sources { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 2px; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); max-width: var(--vc-container-prose); }
 .result-sources a { color: var(--vc-info-text); text-decoration: none; }
 .result-sources a:hover { color: var(--vc-info-text); text-decoration: underline; }
 
@@ -258,7 +277,7 @@
 .reasoning summary::-webkit-details-marker { display: none; }
 .reasoning summary:hover { color: var(--vc-text-muted); }
 .reasoning[open] summary .vc-icon { transform: rotate(90deg); }
-.reasoning .reasoning-text { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); white-space: pre-wrap; max-width: 72ch; padding: 2px 0 6px 10px; border-left: 2px solid var(--vc-feature-border); }
+.reasoning .reasoning-text { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); white-space: pre-wrap; max-width: var(--vc-container-prose); padding: 2px 0 6px 10px; border-left: 2px solid var(--vc-feature-border); }
 
 /* Report card: Vici's card with the AI label in its corner --------------------------------------- */
 .report-card.vc-card { padding: 12px 14px; box-shadow: var(--vc-shadow-md); overflow: visible; }
@@ -267,13 +286,13 @@
 .report-card .report-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
 /* Markdown: Vici's prose, a little tighter in the console --------------------------------------- */
-.md.vc-prose { line-height: 1.5; max-width: none; }
+.md.vc-prose { line-height: 1.5; }
 .md h2, .md h3 { margin: 12px 0 6px; line-height: 1.2; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 .md h4 { margin: 12px 0 6px; line-height: 1.2; font-family: var(--vc-font-text); font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
 .md h2 { font-size: 1.35rem; }
 .md h3 { font-size: 1.15rem; }
 .md h4 { font-size: 1rem; }
-.md p { margin: 0 0 8px; max-width: 75ch; }
+.md p { margin: 0 0 8px; }
 .md ul, .md ol { margin: 0 0 8px; padding-left: 22px; }
 .md li { margin: 2px 0; }
 .md hr { margin: 12px 0; }
@@ -283,7 +302,7 @@
 .md th { color: var(--vc-text-muted); font-weight: 600; }
 
 /* Empty state ------------------------------------------------------------------------------------ */
-.log-empty { padding: 26px 22px; color: var(--vc-text-muted); max-width: 60ch; }
+.log-empty { padding: 26px 22px; color: var(--vc-text-muted); max-width: calc(var(--vc-container-prose) + 44px); }
 .log-empty h3 { margin: 0 0 8px; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); color: var(--vc-text); font-size: var(--fs-lg); letter-spacing: var(--vc-tracking-heading); }
 .log-empty p { margin: 0 0 10px; }
 

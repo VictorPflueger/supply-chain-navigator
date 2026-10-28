@@ -276,7 +276,9 @@ export function createSimulationPlayer({ getSpeed }) {
     setImpactVars(run, name, res);
     bus.emit("tool_result", { call_id, name: "sim_impact", ok: true, summary: summarizeToolResult("sim_impact", res), result: compactForModel(res), server: false });
     const b = res.baseline;
-    const label = (!isRef && def.label) || (name === "hypothesis" ? "initial estimate" : name === "disruption" ? "after verification" : "latest estimate");
+    // The label is the second line of the Value-at-risk tile: "verified" (it was "after verification",
+    // which Inter, wider than the former font, cut at 1920 px; DESIGN.md §7, "Words").
+    const label = (!isRef && def.label) || (name === "hypothesis" ? "initial estimate" : name === "disruption" ? "verified" : "latest estimate");
     bus.emit("kpi_update", {
       value_at_risk_eur: b.value_at_risk_eur, horizon_days: res.horizon_days,
       first_stop_day: b.first_stop_day, first_stop_plant: b.first_stop_plant,

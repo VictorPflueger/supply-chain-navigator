@@ -11,13 +11,13 @@
 ## Pre-flight (30 minutes before, on the presentation laptop and network)
 
 1. Open the site in Chrome or Edge and hard-reload (**Ctrl + Shift + R**). On a browser's first visit the **How Navigator works** window opens by itself; close it. Close other tabs and silence notifications. Plug in the power and disable sleep.
-2. Click **Diagnostics → Run all tests**. Check that every row passes and that the footer shows **Navigator 1.1.0**.
+2. Click **Diagnostics → Run all tests**. Check that every row passes and that the footer shows **Navigator 1.2.0**.
    - The PEGELONLINE row shows today's Kaub reading. **If Kaub is above about 150 cm**, the Rhine is not low today and the live run will become a labelled what-if. That is honest, but for the main demo choose **Live scan** (if the news has a real disruption near the network) or Scenario 6, **Tangier harness fire**, and present it as a what-if.
    - A failed open-data row is fine: the agent says so on screen and verifies through web search.
    - Optional: **Test web search on my key** (≈ €0.0001) confirms that your organisation allows web search.
 3. Do one full **Live** rehearsal of the scenario. It enters your key (Start agent → Live agent → paste → Check key and continue) and confirms timing and cost: the console's last line shows the **Run facts**. Then click **Reset**. **Keep this tab open.** The key lives only in this tab.
 4. Run the **Simulation** of the same scenario once at ×4 to refresh the flow in your head. Click **Reset**.
-5. Set the stage: Scenario menu → **Rhine low water**, Model → **Sonnet 5.5**, console **Larger text** on, browser full screen (**F11**). The status pill reads **Idle**.
+5. Set the stage: Scenario menu → **Rhine low water**, Model → **Sonnet 5.5**, console **Larger text** on, browser full screen (**F11**). The page is in the light theme, which projectors in lit rooms show best (the sun in the header switches back from dark). The status pill reads **Idle**.
 6. Have a phone hotspot ready. Never paste the key on the projector, in chat or in slides.
 
 ## The eight minutes at a glance
@@ -34,13 +34,13 @@
 
 ## 1. Hook (0:00–0:30)
 
-On screen: the idle map. Leipzig and Győr are the two plants; dots are suppliers in real industry clusters; lines are real corridors. If the room needs a picture of the flow first, click **How it works** in the header: its five steps (spot, check, calculate, propose, prepare) are the run you are about to show, and its **Start agent** button leads straight into segment 2.
+On screen: the idle map. Leipzig and Győr are the two plants, the large hexagons with a factory; the small hexagons are suppliers in real industry clusters; lines are real corridors. If the room needs a picture of the flow first, click **How it works** in the header: its five steps (spot, check, calculate, propose, prepare) are the run you are about to show, and its **Start agent** button leads straight into segment 2.
 
 > "This is Nordwerk, a fictional German EV maker with real geography: two plants, 57 suppliers, real ports and real rivers. When a disruption hits, a supply chain team needs a day or two to answer three questions: are we exposed, which plant stops when, and what does it cost to prevent it? Let's watch an AI agent do it in about four minutes, and ask for permission before it does anything."
 
 Point at the five steps above the console, the agent's plan. One sentence on the colours, if the room is new to the screen:
 
-> "Burgundy is you, violet is the AI, red, amber and green are the supply chain. When a step turns burgundy, it's our turn."
+> "Merlot is you, lilac is the AI, red, honey and green are the supply chain. When a step turns merlot, it's our turn."
 
 ## 2. Mode choice and key (0:30–1:00)
 
@@ -62,10 +62,10 @@ Narrate what the console shows; do not read it out. The left column says what to
 | **Hypothesis:** a first guess at the exposure, followed by ERP tool calls (`erp_list_suppliers`, `erp_get_routes`…) | "First question: are we exposed at all? It queries our ERP, synthetic here, for every flow that passes Kaub." |
 | **Check:** with `geo_rhine_level` (federal waterways gauge, live) and `web_search` results with sources | "Now it refuses to trust a single source. It reads the official gauge, live, right now, and checks the news." |
 | **Confirmed:** or **Revised: … → …** | If revised: "Watch this: the signal said 78 cm, the gauge says otherwise, and it corrects itself in public." If confirmed: "Two independent sources agree, so now it raises the alert." |
-| **Alert card**; corridors and the Kaub node turn red on the map | "Only now, with two sources, does it raise a verified alert." |
+| **Alert card**; corridors and the Kaub node turn red on the map, each marked with a cross | "Only now, with two sources, does it raise a verified alert." |
 | **Finding:** or **Revised:** the exposure that matters is battery electrolyte from the tier-2 plant in Ludwigshafen (the Simulation always shows this; live, it appears once the agent has traced the routes through Kaub) | "Here's the insight a planner usually finds days later: the Rhine reaches our battery line through a tier-2 chemical plant that supplies all three of our cell makers." If the live agent stays with tyres or brakes, say: "It has found the direct flows; the battery chain sits one tier deeper." |
 | **Phase: Simulating**; `sim_impact` calls; **Value at risk** and **First line stop in** tiles fill | "These numbers do not come from the language model. A deterministic engine calculates them from the bill of materials, stock and open orders. The agent can only choose between scenarios the engine has costed." |
-| **Phase: Options**, **Review options**; the drawer opens with three options, *Do nothing* and the comparison bars; the rail's **Propose** step turns burgundy: **Your decision** | "Exactly three costed options next to doing nothing. The bars show response cost plus the exposure that remains. It recommends the lowest expected total, and the step has turned burgundy: nothing happens until a human decides." |
+| **Phase: Options**, **Review options**; the drawer opens with three options, *Do nothing* and the comparison bars; the rail's **Propose** step turns merlot: **Your decision** | "Exactly three costed options next to doing nothing. The bars show response cost plus the exposure that remains. It recommends the lowest expected total, and the step has turned merlot: nothing happens until a human decides." |
 
 If the run reaches the options before 5:00, use the spare time on the map (click a red corridor) or open a **Reasoning** entry in the console to show the model's summarised thinking.
 
@@ -73,13 +73,13 @@ If the run reaches the options before 5:00, use the spare time on the map (click
 
 Click **Approve** on the recommended option.
 
-> "I approve the recommendation. Look at the tiles: value at risk now shows what is left with this option, and the exposed plant turns green on the map, or amber if some risk remains."
+> "I approve the recommendation. Look at the tiles: value at risk now shows what is left with this option, and the exposed plant turns green on the map with a tick and the word Resolved, or honey with At risk if some risk remains."
 
 The agent drafts the actions. The **Outbox** opens with emails and mock bookings, each **Pending approval**.
 
 > "It drafts the supplier emails and the rail bookings. Every draft carries the AI footer, and none of them is sent: this outbox has no connection to anything. Each one needs its own approval."
 
-If there is time, click the violet **AI** label on a draft: it says who wrote the draft and that approving sends nothing.
+If there is time, click the lilac **AI** label on a draft: it says who wrote the draft and that approving sends nothing.
 
 Approve all drafts but one, and **Reject** that one to show the control. The agent finishes; click **Open management summary** and read its first two sentences.
 
@@ -135,7 +135,7 @@ Then run Scenario 2 or 6.
 | "What about the EU AI Act?" | "It discloses that you're dealing with an AI system, keeps a human in charge of every outbound action, and logs everything for export. Nothing is sent automatically." |
 | "Could it run on our data?" | "Yes. The agent talks to the company through a handful of tools: suppliers, parts, stock, orders. Point those at your ERP and planning data, and the guardrails stay the same." |
 | "Which model is this?" | "Claude Sonnet 5.5 by default; Haiku for speed and cost, Opus for depth. It's a dropdown." |
-| "Why these colours?" | "Each colour means one thing: burgundy is a person deciding, violet is the AI, red, amber and green are the network. The whole palette is generated from one burgundy and tested for contrast and for colour blindness." |
+| "Why these colours?" | "Each colour means one thing: merlot is a person deciding, lilac is the AI, red, honey and green are the network, and every state also has its own mark, so nobody needs the colours to read it. They come from Vici, the design system behind all our prototypes, tested for contrast in a light and a dark theme and for colour blindness; our Rebate Hunter uses the same. And nothing is round: the shapes are hexagons, Vici's signature." |
 | "Is my data safe in the browser?" | "There's no server. The key stays in this tab and only goes to Anthropic. The browser blocks the page from connecting to any other host, and Diagnostics checks that." |
 
 ## After the demo

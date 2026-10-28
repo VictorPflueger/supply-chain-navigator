@@ -8,9 +8,9 @@ import { nameOf, openPOs, routesThroughNode } from "./world.js";
 const TIER_TEXT = { 1: "Tier-1 supplier", 2: "Tier-2 supplier", 3: "Tier-3 supplier" };
 const STATE_TEXT = { affected: "Affected", at_risk: "At risk", resolved: "Resolved" };
 
-// Tags in Vici's tones: a state in its own tone (danger, warning, success) with its word; a risk in
-// the warning tone; a plain fact as a plain tag.
-const TAG_TONE = { affected: "vc-tag--danger", at_risk: "vc-tag--warning", resolved: "vc-tag--success", risk: "vc-tag--warning", fact: "" };
+// Tags in Vici's tones, each the tone the chip had: a state in its own tone (danger, warning, success)
+// with its word; a risk in the warning tone; a directed buy in fjord (info), as it was in blue.
+const TAG_TONE = { affected: "vc-tag--danger", at_risk: "vc-tag--warning", resolved: "vc-tag--success", risk: "vc-tag--warning", info: "vc-tag--info" };
 
 function stateChip(state) {
   if (!state || state === "neutral") return null;
@@ -36,7 +36,7 @@ export function supplierPopover(model, id, state) {
     h("div", { class: "pop-sub" }, `${TIER_TEXT[s.tier] || "Supplier"} in ${s.location}`),
     h("div", { class: "pop-tags" },
       stateChip(state),
-      s.directed_buy ? tag("fact", "Directed buy") : null,
+      s.directed_buy ? tag("info", "Directed buy") : null,
       !s.dual_source ? tag("risk", "Single source") : null
     ),
     dl([

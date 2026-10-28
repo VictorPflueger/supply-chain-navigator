@@ -5,6 +5,10 @@
 //   intro        first visit opens the intro window; "How it works" reopens it; Start agent leads to the mode choice
 //   byline       Vici's byline in the drawer bar: Built by, the portrait, LinkedIn's logo and the
 //                website as 44 px links in new tabs; no link to the source code anywhere in the app
+//   once         every control does its job exactly once: the theme toggle (and the map following it),
+//                Larger text, the map's legend and a layer toggle, the zoom buttons, the replay speed, a
+//                drawer tab, a dialog's backdrop and Escape, the tooltips, Show key (vici.js acts on some
+//                controls by itself, the app on the others)
 //   cdn-down     both CDNs unreachable: Leaflet loads from vendor/
 //   no-leaflet   no Leaflet anywhere: map notice, the rest still works
 //   file         opened from file://: the page explains how to start a server
@@ -347,6 +351,139 @@ if (wanted("byline")) {
       && links.every((l) => l.target === "_blank" && l.rel === "author noopener" && /\(opens in a new tab\)$/.test(l.label || "")), "LinkedIn and the website, each in a new tab and named for screen readers"],
     [links.length === 2 && links.every((l) => l.w >= 44 && l.h >= 44), `both links are 44 px targets (${links.map((l) => `${l.w}×${l.h}`).join(", ")})`],
     [Array.isArray(checks.sourceLinks) && !checks.sourceLinks.length, `no link to the source code in the app (${checks.sourceLinks})`]
+  ]);
+}
+
+// ---- once: every control does its job exactly once ----------------------------------------------------
+// vici.js acts on some controls by itself (the theme toggle, tooltips, a dialog's backdrop, toggle
+// classes); the app owns the others. A control both act on would flip twice and look unchanged, which
+// a plain click test misses: each control is clicked once, then again, and must change exactly once.
+if (wanted("once")) {
+  const t = await newPage();
+  const { page } = t;
+  const checks = {};
+  // Each state is read in one go after two frames, so a redraw the click scheduled has happened and a
+  // second flip would show.
+  const settled = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const read = async (fn) => { await settled(); return page.evaluate(fn); };
+  try {
+    await boot(page);
+    // The theme toggle (vici.js's): light, then dark, then light, remembered under vc-theme; the map's
+    // lines are drawn again in the theme's network colour each time.
+    const theme = () => read(() => {
+      const route = [...document.querySelectorAll("#map .leaflet-routes-pane path")].find((p) => !/state-/.test(p.getAttribute("class") || ""));
+      const network = getComputedStyle(document.documentElement).getPropertyValue("--vc-neutral-solid").trim().toLowerCase();
+      return `${document.documentElement.dataset.theme}:${document.querySelector("[data-vc-theme-toggle]").getAttribute("aria-pressed")}:${localStorage.getItem("vc-theme")}:${(route?.getAttribute("stroke") || "").toLowerCase() === network}`;
+    });
+    checks.theme = [await theme()];
+    await page.click("[data-vc-theme-toggle]");
+    checks.theme.push(await theme());
+    await page.click("[data-vc-theme-toggle]");
+    checks.theme.push(await theme());
+    // Larger text (the app's): on, then off.
+    const text = () => read(() => `${document.querySelector("#console").dataset.text}:${document.querySelector("#console .text-size").getAttribute("aria-pressed")}`);
+    checks.text = [await text()];
+    await page.click("#console .text-size");
+    checks.text.push(await text());
+    await page.click("#console .text-size");
+    checks.text.push(await text());
+    // The map's legend (the map's): it folds and opens once per click, and a toggle shows and hides
+    // its layer once per click (the supply links).
+    const legend = () => read(() => document.querySelector(".legend").dataset.collapsed);
+    const fold = page.locator(".legend-head .vc-icon-button");
+    checks.legend = [await legend()];
+    await fold.click();
+    checks.legend.push(await legend());
+    await fold.click();
+    checks.legend.push(await legend());
+    if ((await legend()) === "true") await fold.click();
+    const links = () => read(() => {
+      const chip = [...document.querySelectorAll(".legend-chip")].find((b) => /Supply links/.test(b.textContent));
+      return `${chip?.getAttribute("aria-pressed")}:${document.querySelectorAll("#map .leaflet-spokes-pane path").length > 0}`;
+    });
+    checks.links = [await links()];
+    await page.click('.legend-chip:has-text("Supply links")');
+    checks.links.push(await links());
+    await page.click('.legend-chip:has-text("Supply links")');
+    checks.links.push(await links());
+    // The zoom buttons (the map's own control): one step of half a zoom level per click, so the
+    // distance between our two plants grows by √2 (it would double, had a click zoomed twice).
+    const gap = () => read(() => {
+      const [a, b] = [...document.querySelectorAll(".plant-icon")].map((e) => e.getBoundingClientRect());
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    });
+    const g0 = await gap();
+    await page.click(".map-zoom .vc-icon-button:has(.vc-icon--plus)");
+    await page.waitForTimeout(900);
+    const g1 = await gap();
+    await page.click(".map-zoom .vc-icon-button:has(.vc-icon--minus)");
+    await page.waitForTimeout(900);
+    const g2 = await gap();
+    checks.zoom = [g1 / g0, g2 / g0].map((x) => Math.round(x * 100) / 100);
+    // The replay speed (the app's group of toggle buttons): one pressed, the one clicked.
+    await page.click('button[aria-label="Replay speed ×2"]');
+    checks.speed = await read(() => [...document.querySelectorAll(".controls .segmented button")].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.textContent));
+    // A drawer tab opens the drawer; the open tab, clicked again, closes it (and is no longer selected).
+    const drawer = () => read(() => `${document.querySelector("#drawer").dataset.open}:${document.querySelector("#tab-audit").getAttribute("aria-selected")}`);
+    await page.click("#tab-audit");
+    checks.drawer = [await drawer()];
+    await page.click("#tab-audit");
+    checks.drawer.push(await drawer());
+    // A dialog is the app's, not vici.js's (data-vc-dismissable="false"): a press on its backdrop closes
+    // and removes it (had vici.js closed it, the closed dialog would stay in the page); so does Escape,
+    // which gives the focus back to the button that opened it.
+    await page.click("#btn-diagnostics");
+    await page.waitForSelector("dialog.vc-dialog[open]");
+    checks.owner = await page.$eval("dialog.vc-dialog[open]", (d) => d.dataset.vcDismissable);
+    await page.mouse.click(8, 540);
+    await page.waitForTimeout(300);
+    checks.backdrop = await read(() => document.querySelectorAll("dialog.vc-dialog").length);
+    await page.click("#btn-about");
+    await page.waitForSelector(".intro-modal[open]");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    checks.escape = await read(() => `${document.querySelectorAll("dialog.vc-dialog").length}:${document.activeElement?.id}`);
+    // Tooltips: each anchor has one tooltip, and vici.js has bound every one (it makes a bound tooltip a
+    // manual popover, and binds each only once), the app's own included; a hover opens exactly one.
+    checks.tooltips = await page.evaluate(() => {
+      const anchors = [...document.querySelectorAll(".vc-tooltip-anchor")];
+      const tips = anchors.map((a) => a.querySelectorAll(":scope > .vc-tooltip"));
+      return { anchors: anchors.length, single: tips.every((t) => t.length === 1), bound: tips.filter((t) => t[0]?.getAttribute("popover") === "manual").length };
+    });
+    await page.hover("[data-vc-theme-toggle]");
+    await page.waitForTimeout(400);
+    checks.tooltipOpen = await page.evaluate(() => [...document.querySelectorAll(".vc-tooltip")].filter((t) => t.matches(":popover-open")).map((t) => t.textContent));
+    await page.mouse.move(960, 700);
+    // The key field's Show key button (the app's): shown, then masked again.
+    await page.click("#btn-start");
+    await page.waitForSelector(".mode-card");
+    await page.click('.mode-card[data-mode="live"] .mode-cta button');
+    await page.waitForSelector("#api-key-input");
+    const field = () => read(() => document.querySelector("#api-key-input").type);
+    const show = page.locator(".input-row .vc-icon-button");
+    checks.keyField = [await field()];
+    await show.click();
+    checks.keyField.push(await field());
+    await show.click();
+    checks.keyField.push(await field());
+    await page.keyboard.press("Escape");
+  } catch (err) {
+    checks.FAILED = String(err.message).split("\n")[0];
+    await shot(page, "once-fail.png");
+  }
+  const seq = (xs, want) => JSON.stringify(xs) === JSON.stringify(want);
+  await finish("once: every control does its job exactly once", t, checks, [
+    [seq(checks.theme, ["light:false:null:true", "dark:true:dark:true", "light:false:light:true"]), `the theme toggle switches once per click, remembers it, and the map follows (${checks.theme})`],
+    [seq(checks.text, ["standard:false", "large:true", "standard:false"]), `Larger text switches once per click (${checks.text})`],
+    [checks.legend?.length === 3 && checks.legend[0] !== checks.legend[1] && checks.legend[0] === checks.legend[2], `the legend folds and opens once per click (${checks.legend})`],
+    [seq(checks.links, ["true:true", "false:false", "true:true"]), `a legend toggle switches its layer once per click (${checks.links})`],
+    [Math.abs((checks.zoom?.[0] ?? 0) - Math.SQRT2) < 0.06 && Math.abs((checks.zoom?.[1] ?? 0) - 1) < 0.04, `the zoom buttons zoom half a level per click, in and out (${checks.zoom})`],
+    [seq(checks.speed, ["×2"]), `one replay speed pressed, the one clicked (${checks.speed})`],
+    [seq(checks.drawer, ["true:true", "false:false"]), `a tab opens the drawer, the open tab closes it (${checks.drawer})`],
+    [checks.owner === "false" && checks.backdrop === 0 && checks.escape === "0:btn-about", `a dialog closes once, by the app, on its backdrop or Escape, and Escape gives the focus back (${checks.owner}, ${checks.backdrop}, ${checks.escape})`],
+    [checks.tooltips?.anchors > 0 && checks.tooltips.single && checks.tooltips.bound === checks.tooltips.anchors && seq(checks.tooltipOpen, ["Dark theme"]),
+      `every tooltip is bound, and a hover opens one (${JSON.stringify(checks.tooltips)}, ${checks.tooltipOpen})`],
+    [seq(checks.keyField, ["password", "text", "password"]), `Show key shows and hides once per click (${checks.keyField})`]
   ]);
 }
 

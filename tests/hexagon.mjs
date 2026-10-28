@@ -285,7 +285,7 @@ if (!filesOnly) {
           failures.push(`${theme}: the tour stopped: ${String(e.message || e).split("\n")[0]}`);
         }
         for (const e of errors) failures.push(`${theme}: page error: ${e}`);
-        report.push(`${failures.some((f) => f.startsWith(`${theme},`) || f.startsWith(`${theme}:`)) ? "FAIL" : "PASS"}  rendered, ${theme} theme: ${states.join(", ")}`);
+        report.push(`${failures.some((f) => f.startsWith(`${theme},`) || f.startsWith(`${theme}:`)) ? "FAIL" : "PASS"}  rendered, ${theme} theme: ${states.join("; ")}`);
         await context.close();
       }
     } finally {
