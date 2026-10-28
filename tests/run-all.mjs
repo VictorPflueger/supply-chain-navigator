@@ -6,7 +6,7 @@ import path from "node:path";
 import { APP_ROOT } from "./lib/harness.mjs";
 
 const SUITES = [
-  { id: "tokens", what: "colour system: WCAG 2.2 contrast, colour-blind separation, token files", file: "tools/palette.mjs", args: ["--check"], browser: false },
+  { id: "tokens", what: "colour system on Vici's tokens, light and dark: contrast, colour-blind separation", file: "tests/tokens.mjs", browser: false },
   { id: "world", what: "synthetic world, scenarios, reference cases, simulation scripts", file: "tools/check_world.mjs", browser: false },
   { id: "unit", what: "streaming client, retries, cost maths", file: "tests/unit.mjs", browser: false },
   { id: "smoke", what: "main flows and loading failures", file: "tests/smoke.mjs", browser: true },

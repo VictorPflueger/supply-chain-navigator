@@ -15,7 +15,7 @@ const { base: BASE, close } = await serveStatic(APP_ROOT, 8770);
 const browser = await launchBrowser();
 const results = [];
 
-// Severity 1.0 (dichromacy). The same matrices as the palette check in tools/palette.mjs.
+// Severity 1.0 (dichromacy). The same matrices as the colour check in tests/tokens.mjs.
 const CVD = {
   "Normal vision": null,
   Protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
@@ -84,7 +84,8 @@ if (wanted("states")) {
       const token = (n) => cs.getPropertyValue(n).trim().toLowerCase();
       const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`; };
       const out = { mismatches: [], counted: {} };
-      for (const [st, name] of [["affected", "--affected"], ["at_risk", "--at-risk"], ["resolved", "--resolved"]]) {
+      // The state tokens (Vici): danger, warning and success, as lines and outlines.
+      for (const [st, name] of [["affected", "--vc-danger-solid"], ["at_risk", "--vc-warning-text"], ["resolved", "--vc-success-solid"]]) {
         const want = token(name);
         const paths = [...document.querySelectorAll(`.leaflet-interactive.state-${st}`)];
         out.counted[st] = paths.length;
@@ -92,7 +93,7 @@ if (wanted("states")) {
       }
       const legend = [...document.querySelectorAll(".legend-group")].find((g) => /Status/.test(g.textContent));
       const rows = legend ? [...legend.querySelectorAll(".legend-row")] : [];
-      for (const [label, name] of [["Affected", "--affected"], ["At risk", "--at-risk"], ["Resolved", "--resolved"]]) {
+      for (const [label, name] of [["Affected", "--vc-danger-solid"], ["At risk", "--vc-warning-text"], ["Resolved", "--vc-success-solid"]]) {
         const row = rows.find((r) => r.textContent.trim().startsWith(label));
         const got = row ? getComputedStyle(row.querySelector(".legend-swatch-line")).borderTopColor : "missing";
         if (got !== rgb(token(name))) out.mismatches.push(`legend "${label}" ${got} ≠ ${rgb(token(name))}`);

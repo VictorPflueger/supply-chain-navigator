@@ -7,13 +7,16 @@ import { h, escapeHtml, prefersReducedMotion } from "./dom.js";
 import { icon, iconSvg } from "./icons.js";
 import { supplierPopover, plantPopover, routePopover, nodePopover, poPopover, alternativePopover } from "./popovers.js";
 
-// Map colours come from the design tokens (css/tokens.css), read once when the map is created:
-//   - the supply network (suppliers by tier, corridors, hubs) is a quiet slate ramp, darker = closer
-//     to our plants, so it recedes behind the states that matter;
-//   - states use the status colours: a saturated stroke for the line, a lighter fill for the shape,
-//     and a larger marker or heavier line than the network, so a state stands out without relying on
-//     hue alone (the popover names it in words; tools/palette.mjs checks the hues for colour blindness);
-//   - our plants and their supply links carry the brand burgundy.
+// Map colours are Vici's semantic tokens (vici/dist/vici.min.css), read from the page when the map is
+// created; css/map.css uses the same tokens for what it draws:
+//   - the supply network at rest (corridors, supply links, hubs, suppliers' outlines) is Vici's neutral
+//     solid; the suppliers' fills step from strong to faint by tier, darker = closer to our plants, so
+//     the network recedes behind the states that matter;
+//   - states take Vici's danger, warning and success tones: the solid tone for a line or an outline, the
+//     mid tone for a fill, and a larger marker or a heavier line than the network, so a state stands out
+//     without relying on hue alone (the popover names it in words; tests/tokens.mjs checks the pairs);
+//   - our plants are client entities: ink with a strong neutral outline (css/map.css), never merlot,
+//     which belongs to the person in charge.
 let COLOR = {};
 let STATE_FILL = {};
 let TIER = {};
@@ -22,15 +25,15 @@ const ROUTE_OPACITY = 0.75;
 
 function readMapColors() {
   const cs = getComputedStyle(document.documentElement);
-  const v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+  const v = (name) => cs.getPropertyValue(name).trim();
   COLOR = {
-    affected: v("--affected", "#c32b21"), at_risk: v("--at-risk", "#d3751a"), resolved: v("--resolved", "#36967a"),
-    route: v("--network", "#596989"), spoke: v("--wine-8", "#dca3ad"), node: v("--network", "#596989"), nodeFill: "#ffffff",
-    alternative: v("--slate-8", "#a9b5cf"), land: "#ffffff", coast: v("--slate-6", "#d2dae9"), border: v("--ink-5", "#ebe1e2")
+    affected: v("--vc-danger-solid"), at_risk: v("--vc-warning-text"), resolved: v("--vc-success-solid"),
+    route: v("--vc-neutral-solid"), spoke: v("--vc-neutral-solid"), node: v("--vc-neutral-solid"), nodeFill: v("--vc-surface"),
+    alternative: v("--vc-neutral-solid"), land: v("--vc-surface"), coast: v("--vc-border"), border: v("--vc-border-subtle")
   };
-  STATE_FILL = { affected: v("--affected-fill", "#ffb6ab"), at_risk: v("--at-risk-fill", "#f5be97"), resolved: v("--resolved-fill", "#a8d7c6") };
-  TIER = { 1: v("--slate-8", "#a9b5cf"), 2: v("--slate-6", "#d2dae9"), 3: v("--slate-4", "#e7ecf5") };
-  TIER_LINE = { 1: v("--slate-11", "#445271"), 2: v("--slate-9", "#596989"), 3: v("--slate-8", "#a9b5cf") };
+  STATE_FILL = { affected: v("--vc-danger-border"), at_risk: v("--vc-warning-border"), resolved: v("--vc-success-border") };
+  TIER = { 1: v("--vc-border-strong"), 2: v("--vc-border"), 3: v("--vc-surface") };
+  TIER_LINE = { 1: v("--vc-neutral-solid"), 2: v("--vc-neutral-solid"), 3: v("--vc-neutral-solid") };
 }
 const LEG = {
   sea: { weight: 2, dash: "1 6" },
@@ -481,8 +484,9 @@ function buildLegend(map, layers) {
     });
     return btn;
   };
-  const dot = (fill, stroke, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-dot", style: { background: fill, borderColor: stroke } }), label);
-  const line = (cls, color, label) => h("div", { class: "legend-row" }, h("span", { class: `legend-swatch-line ${cls}`, style: { borderTopColor: color } }), label);
+  // The swatches take their colours from css/map.css (data-kind), as the map's own marks do.
+  const dot = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-dot", dataset: { kind } }), label);
+  const line = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-line", dataset: { kind } }), label);
   const legend = h("section", { class: "legend", "aria-label": "Map legend", dataset: { collapsed: "false" } });
   const collapseBtn = h("button", { class: "btn btn-ghost btn-icon", type: "button", "aria-label": "Collapse legend", "aria-expanded": "true", title: "Collapse legend" }, icon("chevronDown", 18));
   const setCollapsed = (collapsed) => {
@@ -507,11 +511,11 @@ function buildLegend(map, layers) {
     h("div", { class: "legend-head" }, h("strong", {}, "Legend"), collapseBtn),
     h("div", { class: "legend-body" },
       h("div", { class: "legend-group" }, h("h4", {}, "Suppliers"),
-        dot(TIER[1], TIER_LINE[1], "Tier 1 (delivers to our plants)"), dot(TIER[2], TIER_LINE[2], "Tier 2 (delivers to tier 1)"), dot(TIER[3], TIER_LINE[3], "Tier 3")),
+        dot("tier1", "Tier 1 (delivers to our plants)"), dot("tier2", "Tier 2 (delivers to tier 1)"), dot("tier3", "Tier 3")),
       h("div", { class: "legend-group" }, h("h4", {}, "Status"),
-        line("", COLOR.affected, "Affected"), line("", COLOR.at_risk, "At risk"), line("", COLOR.resolved, "Resolved or mitigation")),
+        line("affected", "Affected"), line("at_risk", "At risk"), line("resolved", "Resolved or mitigation")),
       h("div", { class: "legend-group" }, h("h4", {}, "Corridors"),
-        line("dotted", COLOR.node, "Sea"), line("dashed", COLOR.node, "Rhine barge, rail, ferry"), line("", COLOR.node, "Road")),
+        line("sea", "Sea"), line("barge", "Rhine barge, rail, ferry"), line("road", "Road")),
       h("div", { class: "legend-group" },
         toggle("Supply links", layers.spokes, true),
         toggle("Orders in transit", layers.pos, true),

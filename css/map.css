@@ -1,30 +1,32 @@
 /* Navigator — map panel, markers, legend and popovers (Leaflet overrides).
- * A pale, quiet basemap so the pastel network and the deeper state colours carry the story. */
+ * A quiet basemap so the network at rest (Vici's neutral) and the states (danger, warning, success)
+ * carry the story. Every colour is one of Vici's semantic tokens; js/map.js reads the same tokens
+ * for the lines and markers Leaflet draws. Our plants are client entities: ink, never merlot. */
 
-#map { position: absolute; inset: 0; background: var(--sea); }
-.leaflet-container { background: var(--sea); font-family: var(--font-ui); font-size: var(--fs-sm); }
+#map { position: absolute; inset: 0; background: var(--vc-bg-sunken); }
+.leaflet-container { background: var(--vc-bg-sunken); font-family: var(--vc-font-text); font-size: var(--vc-font-size-sm); }
 /* Vici's base caps every svg and canvas at its parent's width. Leaflet lifts that cap only in its own
    overlay pane; the map's custom panes are zero-width boxes, so their layers need it lifted as well. */
 #map .leaflet-pane > svg, #map .leaflet-pane > canvas { max-width: none; max-height: none; }
 
-/* OpenStreetMap standard tiles, desaturated into a pale pastel base. CARTO Positron is light already. */
+/* OpenStreetMap standard tiles, desaturated into a pale, quiet base. CARTO Positron is light already. */
 .tiles-osm-light { filter: saturate(0.3) brightness(1.05) contrast(0.94); }
 .tiles-carto { filter: none; }
 
-.leaflet-control-attribution {
-  background: rgba(255, 255, 255, 0.86) !important;
-  color: var(--text-muted) !important;
+#map .leaflet-control-attribution {
+  background: color-mix(in oklab, var(--vc-surface) 86%, transparent);
+  color: var(--vc-text-muted);
   font-size: 0.75rem;
 }
-.leaflet-control-attribution a { color: var(--text-muted) !important; }
+#map .leaflet-control-attribution a { color: var(--vc-text-muted); }
 
-.leaflet-bar a, .leaflet-bar a:hover {
+#map .leaflet-bar a, #map .leaflet-bar a:hover {
   width: 40px; height: 40px; line-height: 40px;
-  background: var(--paper); color: var(--text); border-bottom-color: var(--line);
+  background: var(--vc-surface); color: var(--vc-text); border-bottom-color: var(--vc-border-subtle);
 }
-.leaflet-bar { border: 1px solid var(--line-strong) !important; box-shadow: var(--shadow-soft) !important; }
-.leaflet-bar a:hover { background: var(--brand-soft); color: var(--brand); }
-.leaflet-bar a.leaflet-disabled { background: var(--porcelain); color: var(--text-faint); }
+#map .leaflet-bar { border: 1px solid var(--vc-border-strong); box-shadow: var(--vc-shadow-md); }
+#map .leaflet-bar a:hover { background: var(--vc-surface-hover); }
+#map .leaflet-bar a.leaflet-disabled { background: var(--vc-bg); color: var(--vc-text-disabled); }
 /* Projector-sized zoom buttons (all interactive elements are at least 40 px). */
 .leaflet-touch .leaflet-control-zoom a, .leaflet-control-zoom a {
   width: 40px; height: 40px; line-height: 40px; font-size: 22px;
@@ -32,26 +34,26 @@
 
 /* Map toolbar ------------------------------------------------------------------------------ */
 .map-tools { position: absolute; top: 12px; right: 12px; z-index: 800; display: flex; gap: 8px; }
-.map-tools .btn { background: rgba(255, 255, 255, 0.94); box-shadow: var(--shadow-soft); }
-.map-tools .btn:hover { background: var(--brand-soft); }
+.map-tools .btn { background: var(--vc-surface); box-shadow: var(--vc-shadow-md); }
+.map-tools .btn:hover { background: var(--vc-surface-hover); }
 .map-status {
   position: absolute; top: 12px; left: 64px; z-index: 800;
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 12px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94); border: 1px solid var(--line-strong);
-  color: var(--text-muted); font-size: var(--fs-sm);
-  box-shadow: var(--shadow-soft);
+  background: var(--vc-surface); border: 1px solid var(--vc-border);
+  color: var(--vc-text-muted); font-size: var(--vc-font-size-sm);
+  box-shadow: var(--vc-shadow-md);
 }
 .map-status[hidden] { display: none; }
 
 /* Map unavailable fallback */
 .map-fallback {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  padding: 24px; text-align: center; color: var(--text-muted); background: var(--porcelain);
+  padding: 24px; text-align: center; color: var(--vc-text-muted); background: var(--vc-bg);
 }
-.map-fallback .icon { color: var(--warning-text); }
+.map-fallback .icon { color: var(--vc-warning-text); }
 
-/* Plants ------------------------------------------------------------------------------------ */
+/* Plants: our own sites, in ink with a strong neutral outline; a state shows in its outline. ---- */
 .plant-icon { background: none; border: 0; }
 .plant-marker {
   display: inline-flex; align-items: center; gap: 8px;
@@ -62,28 +64,29 @@
 .plant-glyph {
   width: 42px; height: 42px;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 10px;
-  background: var(--paper);
-  color: var(--brand);
-  border: 2px solid var(--brand);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 4px 12px rgb(67 19 32 / 0.22);
+  border-radius: var(--vc-radius-lg);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  border: 2px solid var(--vc-border-strong);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), var(--vc-shadow-md);
 }
 .plant-label {
-  font-family: var(--font-figures); font-weight: 700; font-size: 1.15rem;
-  color: var(--brand-deep);
-  text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 8px #fff;
+  font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: 1.15rem;
+  letter-spacing: var(--vc-tracking-heading);
+  color: var(--vc-text);
+  text-shadow: 0 0 2px var(--vc-surface), 0 0 4px var(--vc-surface), 0 0 8px var(--vc-surface);
 }
 .plant-marker[data-state="affected"] .plant-glyph {
-  background: var(--danger-fill); color: var(--danger-text); border-color: var(--danger-line);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 9px color-mix(in srgb, var(--affected) 20%, transparent), 0 4px 12px rgb(67 19 32 / 0.2);
+  border-color: var(--vc-danger-solid);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), 0 0 0 9px color-mix(in srgb, var(--vc-danger-solid) 20%, transparent), var(--vc-shadow-md);
 }
 .plant-marker[data-state="at_risk"] .plant-glyph {
-  background: var(--warning-fill); color: var(--warning-text); border-color: var(--warning-line);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 9px color-mix(in srgb, var(--at-risk) 18%, transparent), 0 4px 12px rgb(67 19 32 / 0.2);
+  border-color: var(--vc-warning-text);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), 0 0 0 9px color-mix(in srgb, var(--vc-warning-text) 18%, transparent), var(--vc-shadow-md);
 }
 .plant-marker[data-state="resolved"] .plant-glyph {
-  background: var(--success-fill); color: var(--success-text); border-color: var(--success-line);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 0 9px color-mix(in srgb, var(--resolved) 18%, transparent), 0 4px 12px rgb(67 19 32 / 0.2);
+  border-color: var(--vc-success-solid);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--vc-surface) 90%, transparent), 0 0 0 9px color-mix(in srgb, var(--vc-success-solid) 18%, transparent), var(--vc-shadow-md);
 }
 
 /* Purchase orders in transit (small container blocks) ----------------------------------- */
@@ -91,34 +94,38 @@
 .po-marker {
   width: 11px; height: 7px;
   transform: translate(-5px, -3px);
-  background: var(--info-fill);
-  border: 1px solid var(--slate-9);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-neutral-solid);
   border-radius: 1px;
 }
-.po-marker[data-state="affected"] { background: var(--danger-mid); border-color: var(--danger-line); }
-.po-marker[data-state="at_risk"] { background: var(--warning-mid); border-color: var(--warning-line); }
-.po-marker[data-state="resolved"] { background: var(--success-mid); border-color: var(--success-line); }
+.po-marker[data-state="affected"] { background: var(--vc-danger-border); border-color: var(--vc-danger-solid); }
+.po-marker[data-state="at_risk"] { background: var(--vc-warning-border); border-color: var(--vc-warning-text); }
+.po-marker[data-state="resolved"] { background: var(--vc-success-border); border-color: var(--vc-success-solid); }
 
 /* Labels -------------------------------------------------------------------------------------- */
 .leaflet-tooltip.node-label {
   background: transparent; border: 0; box-shadow: none;
-  color: var(--ink-11);
+  color: var(--vc-text-muted);
   font-size: 0.8rem; font-weight: 600;
-  text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 6px #fff;
+  text-shadow: 0 0 2px var(--vc-surface), 0 0 4px var(--vc-surface), 0 0 6px var(--vc-surface);
   padding: 0;
 }
 .leaflet-tooltip.node-label::before { display: none; }
 .zoom-low .leaflet-tooltip.node-label { display: none; }
+/* Hover labels in Vici's tooltip look: ink with light text. */
 .leaflet-tooltip.hover-label {
-  background: var(--paper); color: var(--text); border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm); box-shadow: var(--shadow-soft); font-size: var(--fs-sm);
+  background: var(--vc-surface-inverse); color: var(--vc-text-inverse); border: 0;
+  border-radius: var(--vc-radius-md); box-shadow: var(--vc-shadow-md); font-size: var(--vc-font-size-sm);
 }
-.leaflet-tooltip.hover-label::before { border-top-color: var(--line-strong); }
+.leaflet-tooltip-top.hover-label::before { border-top-color: var(--vc-surface-inverse); }
+.leaflet-tooltip-bottom.hover-label::before { border-bottom-color: var(--vc-surface-inverse); }
+.leaflet-tooltip-left.hover-label::before { border-left-color: var(--vc-surface-inverse); }
+.leaflet-tooltip-right.hover-label::before { border-right-color: var(--vc-surface-inverse); }
 
 /* State emphasis on SVG paths ---------------------------------------------------------------- */
-.leaflet-interactive.state-affected { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--affected) 45%, transparent)); }
-.leaflet-interactive.state-at_risk { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--at-risk) 40%, transparent)); }
-.leaflet-interactive.state-resolved { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--resolved) 40%, transparent)); }
+.leaflet-interactive.state-affected { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-danger-solid) 45%, transparent)); }
+.leaflet-interactive.state-at_risk { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-warning-text) 40%, transparent)); }
+.leaflet-interactive.state-resolved { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-success-solid) 40%, transparent)); }
 .leaflet-interactive.flash { animation: mapFlash 1.4s ease-out 1; }
 @keyframes mapFlash { 0% { stroke-opacity: 1; stroke-width: 9px; } 100% { } }
 
@@ -128,66 +135,75 @@
   width: 248px;
   max-height: calc(100% - 92px);
   display: flex; flex-direction: column;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  font-size: var(--fs-sm);
-  box-shadow: var(--shadow-soft);
+  background: color-mix(in oklab, var(--vc-surface) 96%, transparent);
+  border: 1px solid var(--vc-border-subtle);
+  border-radius: var(--vc-radius-lg);
+  font-size: var(--vc-font-size-sm);
+  box-shadow: var(--vc-shadow-md);
 }
-.legend-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 2px 12px; border-bottom: 1px solid var(--line); }
+.legend-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 2px 12px; border-bottom: 1px solid var(--vc-border-subtle); }
 .legend-head strong { font-weight: 600; }
 .legend-body { padding: 8px 12px 10px; display: grid; gap: 10px; overflow-y: auto; min-height: 0; }
 .legend[data-collapsed="true"] .legend-body { display: none; }
 .legend[data-collapsed="true"] .legend-head { border-bottom: 0; }
 .legend-group { display: grid; gap: 4px; }
-.legend-group h4 { margin: 0 0 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--text-faint); }
-.legend-row { display: flex; align-items: center; gap: 10px; color: var(--text-muted); }
-.legend-swatch-dot { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid; flex: none; }
-.legend-swatch-line { width: 28px; height: 0; border-top: 3px solid var(--line-strong); flex: none; }
-.legend-swatch-line.dotted { border-top-style: dotted; }
-.legend-swatch-line.dashed { border-top-style: dashed; }
+.legend-group h4 { margin: 0 0 2px; font-size: var(--fs-xs); font-weight: 600; color: var(--vc-text-subtle); }
+.legend-row { display: flex; align-items: center; gap: 10px; color: var(--vc-text-muted); }
+/* The swatches take their colours from the tokens here (data-kind), as the map's own marks do. */
+.legend-swatch-dot { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--vc-neutral-solid); flex: none; }
+.legend-swatch-dot[data-kind="tier1"] { background: var(--vc-border-strong); }
+.legend-swatch-dot[data-kind="tier2"] { background: var(--vc-border); }
+.legend-swatch-dot[data-kind="tier3"] { background: var(--vc-surface); }
+.legend-swatch-line { width: 28px; height: 0; border-top: 3px solid var(--vc-neutral-solid); flex: none; }
+.legend-swatch-line[data-kind="sea"] { border-top-style: dotted; }
+.legend-swatch-line[data-kind="barge"] { border-top-style: dashed; }
+.legend-swatch-line[data-kind="affected"] { border-top-color: var(--vc-danger-solid); }
+.legend-swatch-line[data-kind="at_risk"] { border-top-color: var(--vc-warning-text); }
+.legend-swatch-line[data-kind="resolved"] { border-top-color: var(--vc-success-solid); }
 .legend-toggle {
   display: flex; align-items: center; gap: 10px;
   min-height: 40px; width: 100%;
   padding: 0 6px; margin: 0 -6px;
-  border: 0; border-radius: var(--r-sm);
-  background: transparent; color: var(--text);
-  font: 500 var(--fs-sm) / 1 var(--font-ui);
+  border: 0; border-radius: var(--vc-radius-sm);
+  background: transparent; color: var(--vc-text);
+  font: 500 var(--vc-font-size-sm) / 1 var(--vc-font-text);
   cursor: pointer; text-align: left;
 }
-.legend-toggle:hover { background: var(--porcelain); }
+.legend-toggle:hover { background: var(--vc-surface-hover); }
 .legend-toggle .box {
-  width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--line-strong);
-  display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--on-brand);
-  background: var(--paper);
+  width: 18px; height: 18px; border-radius: var(--vc-radius-sm); border: 1.5px solid var(--vc-border-strong);
+  display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--vc-surface);
+  background: var(--vc-surface);
 }
-.legend-toggle[aria-pressed="true"] .box { background: var(--brand); border-color: var(--brand); }
+/* Ticked in ink: merlot stays out of the map's state colours. */
+.legend-toggle[aria-pressed="true"] .box { background: var(--vc-text); border-color: var(--vc-text); }
 
 /* Popovers ------------------------------------------------------------------------------------ */
-.leaflet-popup-content-wrapper {
-  background: var(--paper);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-pop);
+/* In Vici's popover look: the raised surface, a quiet border, the large shadow. */
+#map .leaflet-popup-content-wrapper {
+  background: var(--vc-surface-raised);
+  color: var(--vc-text);
+  border: 1px solid var(--vc-border-subtle);
+  border-radius: var(--vc-radius-lg);
+  box-shadow: var(--vc-shadow-lg);
 }
-.leaflet-popup-tip { background: var(--paper); border: 1px solid var(--line); }
-.leaflet-popup-content { margin: 14px 16px; font-size: var(--fs-sm); line-height: 1.4; min-width: 260px; }
-.leaflet-container a.leaflet-popup-close-button {
-  width: 40px; height: 40px; font-size: 22px; line-height: 40px; color: var(--text-muted); top: 2px; right: 2px;
+#map .leaflet-popup-tip { background: var(--vc-surface-raised); border: 1px solid var(--vc-border-subtle); box-shadow: none; }
+#map .leaflet-popup-content { margin: 14px 16px; font-size: var(--vc-font-size-sm); line-height: 1.4; min-width: 260px; }
+#map a.leaflet-popup-close-button {
+  width: 40px; height: 40px; font-size: 22px; line-height: 40px; color: var(--vc-text-muted); top: 2px; right: 2px;
 }
-.leaflet-container a.leaflet-popup-close-button:hover { color: var(--brand); }
+#map a.leaflet-popup-close-button:hover { color: var(--vc-text); }
 
-.pop-title { font-family: var(--font-figures); font-weight: 700; font-size: 1.2rem; line-height: 1.15; margin-right: 26px; color: var(--text); }
-.pop-sub { color: var(--text-muted); margin-top: 2px; }
+.pop-title { font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); font-size: 1.2rem; line-height: 1.15; margin-right: 26px; color: var(--vc-text); }
+.pop-sub { color: var(--vc-text-muted); margin-top: 2px; }
 .pop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
 .pop-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin-top: 10px; }
-.pop-grid dt { color: var(--text-muted); }
+.pop-grid dt { color: var(--vc-text-muted); }
 .pop-grid dd { margin: 0; font-variant-numeric: tabular-nums; }
 .pop-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-variant-numeric: tabular-nums; }
-.pop-table th { text-align: left; color: var(--text-faint); font-weight: 600; font-size: var(--fs-xs); padding: 2px 6px 4px 0; border-bottom: 1px solid var(--line); }
-.pop-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.pop-table th { text-align: left; color: var(--vc-text-subtle); font-weight: 600; font-size: var(--fs-xs); padding: 2px 6px 4px 0; border-bottom: 1px solid var(--vc-border-subtle); }
+.pop-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid var(--vc-border-subtle); vertical-align: top; }
 .pop-table td.r, .pop-table th.r { text-align: right; }
-.pop-note { margin-top: 10px; color: var(--text-muted); font-size: var(--fs-xs); }
-.cover-bad { color: var(--danger-text); font-weight: 600; }
-.cover-low { color: var(--warning-text); font-weight: 600; }
+.pop-note { margin-top: 10px; color: var(--vc-text-muted); font-size: var(--fs-xs); }
+.cover-bad { color: var(--vc-danger-text); font-weight: 600; }
+.cover-low { color: var(--vc-warning-text); font-weight: 600; }
