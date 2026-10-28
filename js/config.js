@@ -79,7 +79,8 @@ export const OPEN_DATA = {
 };
 
 export const BASEMAP = {
-  // Optional: a free CARTO basemaps key enables the light Positron raster style (TECH_NOTES §5).
+  // Optional: a free CARTO basemaps key enables CARTO's raster styles, Positron in the light theme and
+  // Dark Matter in the dark one, from the same host (TECH_NOTES §5).
   cartoKey: "",
   osm: {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -88,6 +89,7 @@ export const BASEMAP = {
   },
   carto: {
     url: "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key={key}",
+    urlDark: "https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key={key}",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
   }
 };

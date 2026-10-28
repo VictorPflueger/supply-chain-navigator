@@ -31,7 +31,7 @@ export function baselineFigures(model, b, description = "") {
 
 /**
  * Events that follow an approval: the KPI tiles show the exposure that remains, and every plant
- * that was exposed turns resolved (nothing left at risk) or amber (some exposure remains).
+ * that was exposed turns resolved (nothing left at risk) or at risk (some exposure remains).
  * Returns a list of [type, payload] pairs for the bus.
  */
 export function decisionEffects(optionsPayload, optionId) {

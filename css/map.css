@@ -15,6 +15,9 @@
 /* OpenStreetMap standard tiles, desaturated into a pale, quiet base. CARTO Positron is light already. */
 .tiles-osm-light { filter: saturate(0.3) brightness(1.05) contrast(0.94); }
 .tiles-carto { filter: none; }
+/* The dark theme: OpenStreetMap's tiles turned into a dark, quiet base (inverted, desaturated and warmed
+   towards Vici's dark neutrals); CARTO's Dark Matter is dark already (js/map.js picks it). */
+:root[data-theme="dark"] .tiles-osm-light { filter: invert(1) hue-rotate(180deg) saturate(0.25) sepia(0.3) hue-rotate(-40deg) saturate(1.4) brightness(0.72) contrast(0.95); }
 
 #map .leaflet-control-attribution {
   background: color-mix(in oklab, var(--vc-surface) 86%, transparent);

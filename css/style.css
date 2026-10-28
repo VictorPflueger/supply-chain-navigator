@@ -102,6 +102,9 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
    names it. */
 .about-btn { --_h: 40px; --_fs: var(--vc-font-size-sm); }
 
+/* The theme toggle: Vici's, 40 px like "How it works", so the badges' two rows keep the header's height. */
+.theme-toggle.vc-icon-button { --_h: 40px; }
+
 /* AI disclosure: the EU AI Act notice, in the AI's lilac (Vici's feature tag) at today's size. */
 .ai-disclosure { --_h: 36px; gap: 8px; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-medium); }
 .ai-disclosure .vc-icon { color: var(--vc-feature-solid); }

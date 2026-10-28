@@ -21,7 +21,9 @@ import { supplierPopover, plantPopover, routePopover, nodePopover, poPopover, al
 //     same cell at its middle, and the popover names it in words (tests/tokens.mjs checks the pairs);
 //   - our plants are client entities: ink with a strong neutral outline (css/map.css), never merlot,
 //     which belongs to the person in charge.
-// Everything that was round is a flat-top hexagon of the same area (Vici's hexagon rule).
+// Everything that was round is a flat-top hexagon of the same area (Vici's hexagon rule). When the
+// theme changes (vici.js fires vc:themechange), the colours are read again and the lines repainted;
+// the cells follow by themselves, and the basemap turns dark too (css/map.css, makeTileLayer).
 let COLOR = {};
 const ROUTE_OPACITY = 0.75;
 
@@ -103,14 +105,14 @@ export function createMap(container, { onStatus } = {}) {
     onStatus?.(text);
   };
 
-  addOfflineBasemap(L, map);
+  const offline = addOfflineBasemap(L, map);
   const basemap = { kind: BASEMAP.cartoKey ? "carto" : "osm", loaded: 0, errors: 0 };
-  const tiles = makeTileLayer(L, basemap.kind);
-  tiles.on("tileload", () => {
+  let tiles = makeTileLayer(L, basemap.kind);
+  const onTileLoad = () => {
     basemap.loaded++;
     if (basemap.loaded === 1) showStatus("");
-  });
-  tiles.on("tileerror", () => {
+  };
+  const onTileError = () => {
     basemap.errors++;
     if (basemap.kind === "carto" && basemap.loaded === 0 && basemap.errors >= 4) {
       map.removeLayer(tiles);
@@ -123,10 +125,13 @@ export function createMap(container, { onStatus } = {}) {
         if (basemap.loaded === 0 && basemap.errors >= 6) showStatus("Map tiles unavailable — showing the offline coastline map");
       });
       osm.addTo(map);
+      tiles = osm;
     } else if (basemap.loaded === 0 && basemap.errors >= 6) {
       showStatus("Map tiles unavailable — showing the offline coastline map");
     }
-  });
+  };
+  tiles.on("tileload", onTileLoad);
+  tiles.on("tileerror", onTileError);
   tiles.addTo(map);
 
   // ---- layers --------------------------------------------------------------------------------
@@ -339,15 +344,21 @@ export function createMap(container, { onStatus } = {}) {
     else b.addTo(layers.badges);
   };
 
+  // A supplier's links take its state: the state's tone and a heavier line; at rest thin and neutral.
+  function styleSpokes(id) {
+    const st = getState(`sup:${id}`);
+    for (const line of reg.spokesBySupplier.get(id) || []) {
+      line.setStyle(st === "neutral" ? { color: COLOR.spoke, weight: 1, opacity: 0.7 } : { color: COLOR[st], weight: 1.8, opacity: 0.85 });
+    }
+  }
+
   function styleSupplier(id, flash) {
     const m = reg.suppliers.get(id);
     if (!m) return;
     const st = getState(`sup:${id}`);
     cellState(m, st, m.baseRadius + (st === "affected" ? 3 : st === "neutral" ? 0 : 2));
     if (flash) flashEl(m.cell);
-    for (const line of reg.spokesBySupplier.get(id) || []) {
-      line.setStyle(st === "neutral" ? { color: COLOR.spoke, weight: 1, opacity: 0.7 } : { color: COLOR[st], weight: 1.8, opacity: 0.85 });
-    }
+    styleSpokes(id);
   }
 
   function styleRoute(id, flash) {
@@ -443,6 +454,24 @@ export function createMap(container, { onStatus } = {}) {
     }
     map.closePopup();
   }
+
+  // The theme changed: read the tokens again and repaint what Leaflet draws as lines (the supply links,
+  // the corridors, the offline coastline map); CARTO's tiles switch between its light and dark style.
+  document.addEventListener("vc:themechange", () => {
+    readMapColors();
+    for (const id of reg.spokesBySupplier.keys()) styleSpokes(id);
+    for (const id of reg.routes.keys()) styleRoute(id);
+    for (const id of reg.altPaths.keys()) styleAltPath(id);
+    offline.restyle();
+    if (basemap.kind === "carto") {
+      const next = makeTileLayer(L, "carto");
+      next.on("tileload", onTileLoad);
+      next.on("tileerror", onTileError);
+      map.removeLayer(tiles);
+      tiles = next;
+      next.addTo(map);
+    }
+  });
 
   function focus({ lat, lon, zoom } = {}) {
     if (typeof lat !== "number" || typeof lon !== "number") return;
@@ -543,25 +572,43 @@ function midpoint(L, lines) {
   return pts[pts.length - 1];
 }
 
+/** The theme the page shows now (js/theme.js and vici.js keep it on <html>). */
+const darkTheme = () => document.documentElement.getAttribute("data-theme") === "dark";
+
+/**
+ * The tiles: CARTO's light or dark style from the same host when a key is set; otherwise
+ * OpenStreetMap's, which css/map.css desaturates in the light theme and darkens in the dark one.
+ */
 function makeTileLayer(L, kind) {
   if (kind === "carto") {
-    return L.tileLayer(BASEMAP.carto.url.replace("{key}", encodeURIComponent(BASEMAP.cartoKey)), {
+    const url = darkTheme() ? BASEMAP.carto.urlDark : BASEMAP.carto.url;
+    return L.tileLayer(url.replace("{key}", encodeURIComponent(BASEMAP.cartoKey)), {
       attribution: BASEMAP.carto.attribution, maxZoom: 11, className: "tiles-carto", crossOrigin: false
     });
   }
   return L.tileLayer(BASEMAP.osm.url, { attribution: BASEMAP.osm.attribution, maxZoom: 11, className: "tiles-osm-light" });
 }
 
+/** The offline coastline map in the theme's land, coast and border colours; restyle() repaints it. */
 function addOfflineBasemap(L, map) {
   const data = window.OFFLINE_BASEMAP;
-  if (!data) return;
-  const renderer = L.canvas({ pane: "offline", padding: 0.5 });
-  for (const rings of data.land) {
-    L.polygon(rings, { renderer, pane: "offline", color: COLOR.coast, weight: 0.8, opacity: 1, fillColor: COLOR.land, fillOpacity: 1, interactive: false, smoothFactor: 1.5 }).addTo(map);
+  const land = [];
+  const borders = [];
+  if (data) {
+    const renderer = L.canvas({ pane: "offline", padding: 0.5 });
+    for (const rings of data.land) {
+      land.push(L.polygon(rings, { renderer, pane: "offline", color: COLOR.coast, weight: 0.8, opacity: 1, fillColor: COLOR.land, fillOpacity: 1, interactive: false, smoothFactor: 1.5 }).addTo(map));
+    }
+    for (const line of data.borders) {
+      borders.push(L.polyline(line, { renderer, pane: "offline", color: COLOR.border, weight: 1, opacity: 1, interactive: false, smoothFactor: 1.5 }).addTo(map));
+    }
   }
-  for (const line of data.borders) {
-    L.polyline(line, { renderer, pane: "offline", color: COLOR.border, weight: 1, opacity: 1, interactive: false, smoothFactor: 1.5 }).addTo(map);
-  }
+  return {
+    restyle() {
+      for (const p of land) p.setStyle({ color: COLOR.coast, fillColor: COLOR.land });
+      for (const l of borders) l.setStyle({ color: COLOR.border });
+    }
+  };
 }
 
 function buildLegend(map, layers) {
