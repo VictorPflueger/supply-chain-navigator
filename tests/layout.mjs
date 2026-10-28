@@ -46,7 +46,7 @@ async function toOptions(page) {
   await page.click("#btn-start");
   await page.waitForSelector(".mode-card");
   await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
-  await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 120000 });
+  await page.waitForSelector('.option-card[data-recommended="true"] [data-action="approve"]', { state: "visible", timeout: 120000 });
   // The longest status label ("Awaiting your decision") is the one the control bar must fit.
   await page.waitForFunction(() => document.querySelector(".status-pill .text")?.textContent.trim() === "Awaiting your decision", null, { timeout: 30000 });
   await page.waitForTimeout(300);
@@ -110,10 +110,10 @@ if (wanted("targets")) {
     await page.waitForSelector(".mode-card");
     await audit("mode dialog");
     await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
-    await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 120000 });
+    await page.waitForSelector('.option-card[data-recommended="true"] [data-action="approve"]', { state: "visible", timeout: 120000 });
     await page.waitForTimeout(500);
     await audit("options");
-    await page.click('.option-card[data-recommended="true"] .btn-approve');
+    await page.click('.option-card[data-recommended="true"] [data-action="approve"]');
     await page.waitForFunction(() => /Waiting for your approval of \d+ draft/.test(document.querySelector("#console").innerText), null, { timeout: 120000 });
     await audit("outbox");
     await page.click('button:has-text("Approve all")');

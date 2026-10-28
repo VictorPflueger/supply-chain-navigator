@@ -17,32 +17,23 @@
   min-height: 52px;
   background: var(--vc-bg);
 }
-.drawer-tablist { display: flex; align-items: center; gap: 4px; }
 .drawer-end { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-.drawer-tab {
-  display: inline-flex; align-items: center; gap: 8px;
+/* Vici's tabs at today's size (44 px, 1rem; Vici's are .875rem), on the bar without a rule under it:
+   the open drawer's edge is the line. */
+.drawer-tablist.vc-tabs__list { gap: 4px; border-bottom: 0; overflow: visible; }
+.drawer-tablist.vc-tabs__list > [role="tab"] {
   min-height: var(--hit);
   padding: 0 16px;
-  border: 0; border-radius: var(--vc-radius-lg);
-  background: transparent; color: var(--vc-text-muted);
-  font: 600 var(--vc-font-size-md) / 1 var(--vc-font-text);
-  cursor: pointer;
+  font-size: var(--vc-font-size-md);
+  font-weight: var(--vc-weight-semibold);
 }
-.drawer-tab:hover { background: var(--vc-surface-hover); color: var(--vc-text); }
-.drawer-tab[aria-selected="true"] { color: var(--vc-accent); background: var(--vc-surface); box-shadow: inset 0 -3px 0 var(--vc-accent), 0 0 0 1px var(--vc-border-subtle); }
-.drawer-tab .count {
-  min-width: 24px; height: 24px; padding: 0 7px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 999px; background: var(--vc-surface-hover); color: var(--vc-text);
-  font: 600 var(--fs-xs) / 1 var(--vc-font-text); font-variant-numeric: tabular-nums;
-}
-/* A tab that needs your decision carries the brand colour. */
-.drawer-tab .count[data-tone="attention"] { background: var(--vc-accent); color: var(--vc-on-accent); }
+/* Counts: Vici's badges at today's size; merlot when the tab needs your decision, quiet otherwise. */
+.drawer-tab .vc-badge { --_h: 24px; min-width: 28px; font-size: var(--fs-xs); font-weight: var(--vc-weight-semibold); }
+.drawer-tab .vc-badge.badge-quiet { --_bg: var(--vc-neutral-bg); --_fg: var(--vc-text); }
 .drawer-note { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
 .drawer-note .icon { color: var(--vc-success-solid); }
 
-/* The author's credit: quiet ink like the tabs, so it never competes with a decision; the photo's
-   thin burgundy ring is the colour of the person, as on the author's website. Both links are 44 px. */
+/* The author's credit: quiet ink like the tabs, so it never competes with a decision. Both links are 44 px. */
 .drawer-credit {
   display: flex; align-items: center; gap: 2px;
   margin: 0;
@@ -68,47 +59,50 @@
 .drawer[data-open="true"] .drawer-body { height: min(44vh, 460px); overflow-y: auto; border-top: 1px solid var(--vc-border-subtle); }
 .drawer-panel { padding: 12px 18px 14px; }
 .drawer-panel[hidden] { display: none; }
+/* Empty panels: Vici's empty state, a little shorter in the drawer. */
+.drawer-panel .vc-empty { padding-block: var(--vc-space-6); }
 
 /* Options ---------------------------------------------------------------------------------------- */
 /* Summary column (decision, comparison) beside the four cards, so the approval buttons fit the
    drawer without scrolling on a 1080p projector. */
 .options-layout { display: grid; grid-template-columns: minmax(260px, 21%) minmax(0, 1fr); gap: 18px; align-items: start; }
-.options-summary h3 { margin: 0 0 4px; font-size: var(--fs-lg); color: var(--vc-text); }
+.options-summary h3 { margin: 0 0 4px; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); font-size: var(--fs-lg); color: var(--vc-text); }
 .options-summary > p { margin: 0 0 12px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); max-width: 60ch; }
 
 .options-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 20px 12px; /* room for the recommended tag when the cards wrap */
 }
-.option-card {
-  display: flex; flex-direction: column;
-  border: 1px solid var(--vc-border);
-  border-radius: var(--vc-radius-xl);
-  background: var(--vc-surface);
+/* Each option is Vici's card. The recommended one: a 2 px merlot frame on the soft merlot tint. */
+.option-card.vc-card {
   padding: 12px 14px 12px;
-  min-width: 0;
+  border-color: var(--vc-border);
 }
-.option-card[data-recommended="true"] { border: 2px solid var(--vc-accent); background: var(--vc-surface-hover); box-shadow: var(--vc-shadow-md); }
+.option-card[data-recommended="true"] { border: 2px solid var(--vc-accent); background: var(--vc-accent-soft); box-shadow: var(--vc-shadow-md); }
 .options-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .options-summary-head h3 { margin: 0; }
-.option-card[data-kind="baseline"] { background: var(--vc-bg); border-style: dashed; }
+.option-card[data-kind="baseline"] { background: var(--vc-bg-subtle); border-style: dashed; border-color: var(--vc-border-strong); }
 .option-card[data-status="approved"] { border-color: var(--vc-success-solid); background: var(--vc-success-bg); box-shadow: inset 0 3px 0 var(--vc-success-solid); }
 .option-card[data-status="rejected"], .option-card[data-status="not_selected"], .option-card[data-status="expired"] { opacity: 0.55; }
-.option-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; margin-bottom: 6px; }
+.option-top { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 10px; margin-bottom: 6px; }
+/* The recommended option's tag sits on the top edge of its frame, so that its title keeps the card's
+   width: Inter runs wider than the former Barlow, and the four cards still fit a 1080p drawer. */
+.option-card.vc-card { overflow: visible; }
+.option-top > .vc-tag { position: absolute; top: -14px; right: 12px; }
 .option-letter {
   font: 700 1.05rem / 1 var(--vc-font-text);
   width: 30px; height: 30px; flex: none;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 8px; background: var(--vc-accent-soft); color: var(--vc-accent);
+  border-radius: 8px; background: var(--vc-accent-soft); color: var(--vc-on-accent-soft);
 }
 .option-card[data-recommended="true"] .option-letter { background: var(--vc-accent); color: var(--vc-on-accent); }
-.option-card[data-kind="baseline"] .option-letter { background: transparent; border: 1px dashed var(--vc-border); color: var(--vc-text-muted); }
+.option-card[data-kind="baseline"] .option-letter { background: transparent; border: 1px dashed var(--vc-border-strong); color: var(--vc-text-muted); }
 .option-title { margin: 3px 0 0; font-size: var(--vc-font-size-md); font-weight: 700; line-height: 1.25; color: var(--vc-text); }
-.option-desc { margin: 0 0 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); line-height: 1.4; }
-.option-figures { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 4px 0 8px; font-size: var(--vc-font-size-sm); }
-.option-figures dt { color: var(--vc-text-muted); }
-.option-figures dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.option-desc { margin: 0 0 6px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); line-height: 1.4; }
+.option-figures { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 2px 0 6px; font-size: var(--vc-font-size-sm); line-height: 1.4; }
+.option-figures dt { color: var(--vc-text-muted); font-weight: var(--vc-weight-regular); }
+.option-figures dd { margin: 0; color: var(--vc-text); text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .option-total {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
   padding-top: 8px; border-top: 1px solid var(--vc-border-subtle);
@@ -116,22 +110,25 @@
 .option-total .label { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .option-total .value { font: 700 1.55rem / 1 var(--vc-font-text); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--vc-text); }
 .option-card[data-kind="baseline"] .option-total .value { color: var(--vc-danger-text); }
-.option-risk { margin: 8px 0 10px; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
+.option-risk { margin: 6px 0 8px; font-size: var(--vc-font-size-sm); line-height: 1.4; color: var(--vc-text-muted); }
 .option-risk strong { color: var(--vc-text); font-weight: 600; }
 .option-actions { margin-top: auto; display: flex; gap: 8px; }
-.option-actions .btn { flex: 1 1 0; padding: 0 10px; }
-.option-status { margin-top: auto; display: flex; align-items: center; gap: 8px; min-height: var(--hit); font-weight: 600; }
+.option-actions .vc-button { flex: 1 1 0; --_px: 10px; }
+/* The decided state: a Vici tag at today's size (1rem, 32 px). */
+.option-status { margin-top: auto; display: flex; align-items: center; min-height: var(--hit); }
+.option-status .vc-tag { --_h: 32px; font-size: var(--vc-font-size-md); }
 
-/* Cost comparison bars: blue for what we choose to spend, amber for the exposure that remains,
-   red for doing nothing. Solid steps keep each bar at 3:1 or more against the track (WCAG 1.4.11). */
+/* Cost comparison bars, with square ends: fjord for what we choose to spend, the warning tone for
+   the exposure that remains, danger for doing nothing. Solid tones keep each bar at 3:1 or more
+   against the track (WCAG 1.4.11). */
 .compare { margin: 0 0 10px; display: grid; gap: 8px; }
 .compare-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 64px; align-items: center; gap: 10px; font-size: var(--vc-font-size-sm); }
 .compare-key { font: 700 var(--vc-font-size-sm) / 1 var(--vc-font-text); color: var(--vc-text-muted); text-align: center; }
 /* The recommended row in ink and heavier, not merlot: the bars beside it carry state colours. */
 .compare-row[data-recommended="true"] .compare-key,
 .compare-row[data-recommended="true"] .compare-value { color: var(--vc-text); font-weight: 800; }
-.compare-track { height: 14px; background: var(--vc-surface-hover); border-radius: 4px; position: relative; overflow: hidden; }
-.compare-bar { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--vc-border); }
+.compare-track { height: 14px; background: var(--vc-bg-subtle); border-radius: var(--vc-radius-xs); position: relative; overflow: hidden; }
+.compare-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--vc-border); }
 .compare-bar.mitigation { background: var(--vc-info-solid); }
 .compare-bar.residual { background: var(--vc-warning-text); }
 .compare-bar.baseline { background: var(--vc-danger-solid); }
@@ -147,19 +144,21 @@
 .outbox-safety { display: inline-flex; align-items: center; gap: 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .outbox-safety .icon { color: var(--vc-success-solid); }
 .outbox-list { display: grid; gap: 10px; }
-.action-card {
-  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: start;
-  border: 1px solid var(--vc-border); border-radius: var(--vc-radius-xl);
-  background: var(--vc-surface); padding: 12px 14px;
+/* Each draft is Vici's card; its type in a neutral hexagon cell. */
+.action-card.vc-card {
+  display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 12px; align-items: start;
+  border-color: var(--vc-border);
+  padding: 12px 14px;
 }
 .action-card[data-status="approved"] { border-color: var(--vc-success-border); background: var(--vc-success-bg); }
 .action-card[data-status="rejected"], .action-card[data-status="expired"] { opacity: 0.6; }
-.action-type { width: 40px; height: 40px; border-radius: 10px; background: var(--vc-bg); display: inline-flex; align-items: center; justify-content: center; color: var(--vc-text-muted); }
+.action-type.vc-cell { --_s: 40px; background: var(--vc-bg-subtle); color: var(--vc-text-muted); }
 .action-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .action-subject { font-weight: 700; margin: 2px 0 6px; color: var(--vc-text); }
 .action-body {
-  margin: 0; white-space: pre-wrap; font: 400 var(--vc-font-size-sm) / 1.5 var(--vc-font-text); color: var(--vc-text-muted);
-  max-height: 9em; overflow: hidden; position: relative;   /* six lines */
+  margin: 0; padding: 10px 14px;
+  white-space: pre-wrap; font: 400 var(--vc-font-size-sm) / 1.5 var(--vc-font-text); color: var(--vc-text-muted);
+  max-height: calc(9em + 20px); overflow: hidden; position: relative;   /* six lines */
 }
 .action-card[data-clipped="true"]:not([data-expanded="true"]) .action-body {
   /* a mask: only the gradient's opacity counts, not its colour */
@@ -167,29 +166,24 @@
   mask-image: linear-gradient(to bottom, var(--vc-text) calc(100% - 1.5em), transparent);
 }
 .action-card[data-expanded="true"] .action-body { max-height: none; }
-.action-more { min-height: 40px; }
 .action-buttons { display: flex; flex-direction: column; gap: 8px; min-width: 132px; }
 
 /* Audit --------------------------------------------------------------------------------------------- */
 .audit-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .audit-filters { display: flex; gap: 6px; flex-wrap: wrap; }
-.audit-filters button { min-height: 40px; }
-.audit-filters button[aria-pressed="true"] { border-color: var(--vc-accent-soft-hover); color: var(--vc-accent); background: var(--vc-accent-soft); }
-.audit-table { width: 100%; border-collapse: collapse; font-size: var(--vc-font-size-sm); font-variant-numeric: tabular-nums; }
-.audit-table th { position: sticky; top: 0; background: var(--vc-surface); text-align: left; color: var(--vc-text-subtle); font-weight: 600; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--vc-border); }
-.audit-table td { padding: 6px 10px 6px 0; border-bottom: 1px solid var(--vc-border-subtle); vertical-align: top; }
-.audit-table td.t { color: var(--vc-text-subtle); white-space: nowrap; }
+.audit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.audit-status { margin: 0 0 10px; }
+/* Vici's table; its wrapper clips without scrolling, so the header row sticks to the drawer as it scrolls. */
+.audit-wrap.vc-table-wrap { overflow: clip; }
+.audit-table td { vertical-align: top; }
+.audit-table td.t { color: var(--vc-text-subtle); font-family: var(--vc-font-mono); font-size: var(--fs-xs); white-space: nowrap; }
 .audit-table td.k { white-space: nowrap; }
-/* Event names in ink; model calls in violet (the AI); human decisions in burgundy. */
+/* Event names in ink; model calls in lilac (the AI); human decisions in merlot. */
 .audit-kind { font-family: var(--vc-font-mono); font-size: 0.8rem; color: var(--vc-text-muted); }
 .audit-table tr[data-type="option_decision"] .audit-kind, .audit-table tr[data-type="action_decision"] .audit-kind { color: var(--vc-accent-text); font-weight: 600; }
 .audit-table td.s { color: var(--vc-text-muted); overflow-wrap: anywhere; }
 .audit-table tr[data-type="model_call"] td.s { color: var(--vc-text); }
 .audit-table tr[data-type="model_call"] .audit-kind { color: var(--vc-feature-text); font-weight: 600; }
-.audit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.audit-actions .btn { min-height: 40px; }
-.audit-status { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; font-size: var(--vc-font-size-sm); border: 1px solid var(--vc-success-border); background: var(--vc-success-bg); color: var(--vc-success-text); }
-.audit-status[data-tone="error"] { border-color: var(--vc-danger-border); background: var(--vc-danger-bg); color: var(--vc-danger-text); }
 
 @media (max-width: 1500px) {
   .options-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 14px; }
@@ -215,7 +209,7 @@
 }
 @media (max-width: 860px) {
   .options-grid { grid-template-columns: 1fr; }
-  .action-card { grid-template-columns: 1fr; }
+  .action-card.vc-card { grid-template-columns: 1fr; }
   .action-buttons { flex-direction: row; }
   .drawer[data-open="true"] .drawer-body { height: auto; max-height: none; }
   .drawer-note { display: none; }

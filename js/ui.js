@@ -20,7 +20,7 @@ import { createSimulationPlayer } from "./simulation.js";
 import { createLiveAgent } from "./agent.js";
 import { hasKey, forgetKey } from "./keystore.js";
 import { MODELS } from "./config.js";
-import { h } from "./dom.js";
+import { h, withTooltip } from "./dom.js";
 import { icon } from "./icons.js";
 import { dateWithYear } from "./format.js";
 
@@ -102,12 +102,13 @@ export function initUI() {
 
   // ---- intro window: "How it works" in the header, and once by itself on a first visit -----------
   const aboutBtn = h("button", {
-    class: "about-btn", type: "button", id: "btn-about",
-    "aria-label": "How it works", title: "What Navigator does, how it works and why it pays off"
+    class: "vc-button vc-button--secondary about-btn", type: "button", id: "btn-about",
+    title: "What Navigator does, how it works and why it pays off"
   }, icon("info", 18), h("span", { class: "btn-text" }, "How it works"));
   aboutBtn.addEventListener("click", () => showIntro());
-  // Beside the mode badge, so the badges need two rows at most next to the KPI tiles.
-  badge.after(aboutBtn);
+  // Beside the mode badge, so the badges need two rows at most next to the KPI tiles; on small
+  // laptops it keeps only its icon, and its tooltip names it.
+  badge.after(withTooltip(aboutBtn, "How it works", { below: true }));
 
   function showIntro() {
     const s = getState();
@@ -123,6 +124,8 @@ export function initUI() {
   const render = (s) => {
     controls.update(s, { scenarioLabel: byId(s.scenarioId)?.short || "Choose" });
     badge.dataset.mode = s.mode || "none";
+    // A Vici tag: LIVE solid merlot with a pulsing hexagon, SIMULATION on its neutral tape.
+    badge.className = s.mode === "live" ? "vc-tag vc-tag--solid mode-badge" : "vc-tag mode-badge";
     badge.replaceChildren(...(s.mode === "live"
       ? [h("span", { class: "mode-dot", "aria-hidden": "true" }), "LIVE"]
       : s.mode === "simulation" ? ["SIMULATION"] : ["No run active"]));
@@ -248,7 +251,7 @@ export function initUI() {
 
   /** Opens the intro once per browser: called by main.js after the boot screen is gone. */
   function introOnFirstVisit() {
-    if (!introSeen() && !document.querySelector(".modal-backdrop")) showIntro();
+    if (!introSeen() && !document.querySelector("dialog[open]")) showIntro();
   }
 
   return { map, start, resetWorkspace, showIntro, introOnFirstVisit };
@@ -258,11 +261,13 @@ export function initUI() {
 export function showBanner({ level = "info", title = "", text = "", timeout = 0 } = {}) {
   const stack = document.getElementById("banners");
   if (!stack) return null;
-  const close = h("button", { class: "btn btn-ghost btn-icon", type: "button", "aria-label": "Dismiss" }, icon("x", 18));
-  const el = h("div", { class: "banner", dataset: { level }, role: level === "error" ? "alert" : "status" },
+  // A Vici alert in the tone of its level, with its icon and a dismiss button that names itself.
+  const close = h("button", { class: "vc-icon-button", type: "button" }, icon("x", 18));
+  const tone = level === "error" ? "vc-alert--danger" : level === "warn" ? "vc-alert--warning" : "";
+  const el = h("div", { class: ["vc-alert", tone, "banner"], dataset: { level }, role: level === "error" ? "alert" : "status" },
     icon(level === "info" ? "info" : "alert", 22),
-    h("div", { class: "banner-text" }, title ? h("strong", {}, title) : null, text),
-    close);
+    h("div", { class: "vc-alert__body banner-text" }, title ? h("p", { class: "vc-alert__title" }, title) : null, h("p", {}, text)),
+    withTooltip(close, "Dismiss", { below: true }));
   close.addEventListener("click", () => el.remove());
   stack.appendChild(el);
   if (timeout) setTimeout(() => el.remove(), timeout);

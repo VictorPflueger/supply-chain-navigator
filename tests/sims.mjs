@@ -65,7 +65,7 @@ async function playScenario(id, plan) {
     await page.click('button[aria-label="Replay speed ×4"]');
     // pick the scenario
     await page.click("#dd-scenario");
-    await page.click(`.menu-item[data-id="${id}"]`);
+    await page.click(`.vc-menu__item[data-id="${id}"]`);
     await page.click("#btn-start");
     await page.waitForSelector(".mode-card", { timeout: 5000 });
     await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
@@ -73,7 +73,7 @@ async function playScenario(id, plan) {
     checks.badge = (await page.textContent("#mode-badge")).trim();
     checks.watermark = await page.isVisible(".sim-watermark");
     const t0 = Date.now();
-    await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 240000 });
+    await page.waitForSelector('.option-card[data-recommended="true"] [data-action="approve"]', { state: "visible", timeout: 240000 });
     checks.secondsToOptions = Math.round((Date.now() - t0) / 1000);
     await page.waitForTimeout(700);
     await page.screenshot({ path: path.join(OUT, `${short}-1-options.png`) });
@@ -82,14 +82,14 @@ async function playScenario(id, plan) {
     const letterOf = (v) => ({ V1: "A", V2: "B", V3: "C" }[v]);
     for (const v of plan.reject) {
       const n0 = await page.$$eval(".entry", (els) => els.length);
-      await page.click(`.option-card[aria-label^="Option ${letterOf(v)}:"] .btn-reject`);
+      await page.click(`.option-card[aria-label^="Option ${letterOf(v)}:"] [data-action="reject"]`);
       await page.waitForFunction((n) => document.querySelectorAll(".entry").length > n + 1, n0, { timeout: 30000 });
       await page.waitForTimeout(400);
     }
     if (plan.approve === "baseline") {
-      await page.click('.option-card[data-kind="baseline"] .option-actions .btn');
+      await page.click('.option-card[data-kind="baseline"] .option-actions button');
     } else {
-      await page.click(`.option-card[aria-label^="Option ${letterOf(plan.approve)}:"] .btn-approve`);
+      await page.click(`.option-card[aria-label^="Option ${letterOf(plan.approve)}:"] [data-action="approve"]`);
     }
     await page.waitForTimeout(1500);
     checks.kpiAfter = await page.$$eval(".kpi", (els) => els.slice(0, 3).map((e) => `${e.dataset.tone}|${e.innerText.replace(/\s+/g, " ").trim()}`));
@@ -103,7 +103,7 @@ async function playScenario(id, plan) {
     for (let i = 0; i < pending.length; i++) {
       const cards = await page.$$(".action-card[data-status='pending']");
       const last = i === pending.length - 1;
-      const btn = await cards[0].$(plan.drafts === "reject-last" && last && pending.length > 1 ? ".btn-reject" : ".btn-approve");
+      const btn = await cards[0].$(plan.drafts === "reject-last" && last && pending.length > 1 ? "[data-action='reject']" : "[data-action='approve']");
       await btn.click();
       await page.waitForTimeout(150);
     }

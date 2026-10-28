@@ -1,7 +1,8 @@
-// Progress rail: the agent's plan as five steps (the same five as the intro window), shown above
-// the console. Before a run it previews the plan; during a run it shows where the agent is; when
-// the agent hands over to the human, the step turns burgundy with "Your decision" (choose an
-// option) or "Your approval" (clear the drafts).
+// Progress rail: the agent's plan as five steps (the same five as the intro window), on Vici's
+// stepper, shown above the console. Before a run it previews the plan; during a run it shows where
+// the agent is (ink, its hexagon pulsing); when the agent hands over to the human, the step turns
+// merlot with "Your decision" (choose an option) or "Your approval" (clear the drafts). A tick marks
+// a step done, a stop mark where a run ended early, a dashed hexagon a step the run did not need.
 //
 // Run states map onto steps monotonically: once the agent has reached a step, a later return to an
 // earlier phase (it often maps exposure again after verifying) does not move the rail backwards.
@@ -25,7 +26,7 @@ const STATE_TEXT = {
 };
 
 export function createProgressRail() {
-  const el = h("ol", { class: "rail", "aria-label": "Agent progress" });
+  const el = h("ol", { class: "vc-stepper rail", "aria-label": "Agent progress" });
   let reached = -1;     // furthest step reached in this run
   let ended = null;     // null while running; otherwise the run_end status
   let lastState = null; // the run state last shown
@@ -53,19 +54,19 @@ export function createProgressRail() {
         else if (i === reached) state = turnOf(runState) ? "yours" : "active";
       }
       const current = !ended && reached >= 0 && i === reached;
-      const mark = state === "done" ? icon("check", 16)
-        : state === "yours" ? icon("user", 16)
-          : state === "stopped" ? icon("stop", 14)
-            : h("span", { class: "rail-num" }, String(i + 1));
+      // A done step shows Vici's tick (drawn by the stepper), so its marker keeps just the number.
+      const mark = state === "yours" ? icon("user", 16)
+        : state === "stopped" ? icon("stop", 14)
+          : h("span", { class: "rail-num" }, String(i + 1));
       el.appendChild(h("li", {
-        class: "rail-step",
+        class: ["vc-step", "rail-step", state === "done" ? "vc-step--done" : "", current ? "vc-step--current" : ""],
         dataset: { state, step: step.id },
         ...(current ? { "aria-current": "step" } : {})
       },
-      h("span", { class: "rail-dot", "aria-hidden": "true" }, mark),
-      h("span", { class: "rail-label" }, step.label),
-      state === "yours" ? h("span", { class: "rail-turn" }, turnOf(runState)) : null,
-      h("span", { class: "visually-hidden" }, `: ${state === "yours" ? `${turnOf(runState).toLowerCase()} needed` : STATE_TEXT[state]}`)));
+      h("span", { class: "vc-step__marker rail-dot", "aria-hidden": "true" }, mark),
+      h("span", { class: "vc-step__label rail-label" }, step.label),
+      state === "yours" ? h("span", { class: "vc-tag vc-tag--solid rail-turn" }, turnOf(runState)) : null,
+      h("span", { class: "vc-visually-hidden" }, `: ${state === "yours" ? `${turnOf(runState).toLowerCase()} needed` : STATE_TEXT[state]}`)));
     });
   }
 

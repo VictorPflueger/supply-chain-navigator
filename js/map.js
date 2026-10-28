@@ -3,7 +3,7 @@
 
 import { getModel, legPath, poLatLng, flowEndpoints } from "./world.js";
 import { BASEMAP, UI } from "./config.js";
-import { h, escapeHtml, prefersReducedMotion } from "./dom.js";
+import { h, escapeHtml, prefersReducedMotion, withTooltip, setTooltip } from "./dom.js";
 import { icon, iconSvg } from "./icons.js";
 import { supplierPopover, plantPopover, routePopover, nodePopover, poPopover, alternativePopover } from "./popovers.js";
 
@@ -88,7 +88,8 @@ export function createMap(container, { onStatus } = {}) {
   }
 
   // ---- basemap ------------------------------------------------------------------------------
-  const statusEl = h("div", { class: "map-status", hidden: true, role: "status" }, icon("info", 16), h("span", {}));
+  // The map's own notice (tiles unavailable): Vici's alert in its neutral tone, floating on the map.
+  const statusEl = h("div", { class: "vc-alert vc-alert--neutral map-status", hidden: true, role: "status" }, icon("info", 16), h("span", { class: "vc-alert__body" }));
   container.parentElement.appendChild(statusEl);
   const showStatus = (text) => {
     statusEl.lastChild.textContent = text;
@@ -264,9 +265,10 @@ export function createMap(container, { onStatus } = {}) {
   if (typeof ResizeObserver === "function") {
     new ResizeObserver((entries) => legend.fitToHeight(entries[0].contentRect.height)).observe(container);
   }
+  // Two actions that move the view (not toggles): Vici's compact buttons, floating on the map.
   const tools = h("div", { class: "map-tools" },
-    h("button", { class: "btn btn-sm", type: "button", on: { click: () => showNetwork() } }, icon("target", 18), "Europe network"),
-    h("button", { class: "btn btn-sm", type: "button", on: { click: () => showWorld() } }, icon("globe", 18), "Global view")
+    h("button", { class: "vc-button vc-button--outline button-compact", type: "button", on: { click: () => showNetwork() } }, icon("target", 18), "Europe network"),
+    h("button", { class: "vc-button vc-button--outline button-compact", type: "button", on: { click: () => showWorld() } }, icon("globe", 18), "Global view")
   );
   container.parentElement.appendChild(tools);
 
@@ -488,13 +490,13 @@ function buildLegend(map, layers) {
   const dot = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-dot", dataset: { kind } }), label);
   const line = (kind, label) => h("div", { class: "legend-row" }, h("span", { class: "legend-swatch-line", dataset: { kind } }), label);
   const legend = h("section", { class: "legend", "aria-label": "Map legend", dataset: { collapsed: "false" } });
-  const collapseBtn = h("button", { class: "btn btn-ghost btn-icon", type: "button", "aria-label": "Collapse legend", "aria-expanded": "true", title: "Collapse legend" }, icon("chevronDown", 18));
+  const collapseBtn = h("button", { class: "vc-icon-button", type: "button", "aria-expanded": "true" }, icon("chevronDown", 18));
+  const collapseTip = withTooltip(collapseBtn, "Collapse legend");
   const setCollapsed = (collapsed) => {
     legend.dataset.collapsed = String(collapsed);
     collapseBtn.replaceChildren(icon(collapsed ? "chevronUp" : "chevronDown", 18));
     collapseBtn.setAttribute("aria-expanded", String(!collapsed));
-    collapseBtn.setAttribute("aria-label", collapsed ? "Expand legend" : "Collapse legend");
-    collapseBtn.title = collapsed ? "Expand legend" : "Collapse legend";
+    setTooltip(collapseBtn, collapsed ? "Expand legend" : "Collapse legend");
   };
   let userChoice = false;
   collapseBtn.addEventListener("click", () => {
@@ -508,7 +510,7 @@ function buildLegend(map, layers) {
     if (collapse !== (legend.dataset.collapsed === "true")) setCollapsed(collapse);
   };
   legend.append(
-    h("div", { class: "legend-head" }, h("strong", {}, "Legend"), collapseBtn),
+    h("div", { class: "legend-head" }, h("strong", {}, "Legend"), collapseTip),
     h("div", { class: "legend-body" },
       h("div", { class: "legend-group" }, h("h4", {}, "Suppliers"),
         dot("tier1", "Tier 1 (delivers to our plants)"), dot("tier2", "Tier 2 (delivers to tier 1)"), dot("tier3", "Tier 3")),

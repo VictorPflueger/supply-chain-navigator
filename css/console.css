@@ -10,61 +10,82 @@
 .console-title h2 { margin: 0; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: 1.3rem; line-height: 1.2; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 .console-title .count { color: var(--vc-text-subtle); font-size: var(--vc-font-size-sm); }
 .console-head-actions { display: flex; align-items: center; gap: 6px; }
-.console-head-actions .btn { min-height: 40px; }
-.text-size[aria-pressed="true"] { color: var(--vc-accent); background: var(--vc-accent-soft); border-color: var(--vc-accent-soft-hover); }
 /* Larger text for projectors: only the log grows; timestamps and marks keep their size. */
 #console[data-text="large"] .log { font-size: 1.18rem; line-height: 1.5; }
 #console[data-text="large"] .entry { grid-template-columns: 3.6em 28px minmax(0, 1fr); }
 #console[data-text="large"] .entry-time { font-size: 0.8125rem; }
 
-/* Progress rail: the agent's plan in five steps. Ink while the agent works; burgundy when it is
-   your turn. The connector after a step fills in once the step is done. */
+/* Progress rail: the agent's plan in five steps on Vici's stepper (hexagon markers), in one line
+   above the log, the labels beside the markers so the console keeps its height (DESIGN.md,
+   deviations). Its grammar: ink with a pulsing hexagon while the agent works, merlot when the run
+   waits for you, a tick when a step is done (in ink: merlot means your turn), a stop mark where a
+   run ended early, a dashed hexagon for a step the run did not need. */
 .console-panel { container-type: inline-size; container-name: console; }
-.rail {
-  display: flex; align-items: center;
+.rail.vc-stepper {
+  --_m: 28px;
+  align-items: center;
   margin: 0; padding: 9px 18px 10px;
-  list-style: none;
   border-bottom: 1px solid var(--vc-border-subtle);
   background: var(--vc-surface);
-  counter-reset: none;
 }
-.rail-step { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
-.rail-step:last-child { flex: 0 0 auto; }
-.rail-step:not(:last-child)::after {
-  content: ""; flex: 1 1 auto; min-width: 14px; height: 2px; margin: 0 6px 0 4px;
-  background: var(--vc-border); border-radius: 1px;
+.rail .vc-step { flex: 1 1 auto; flex-direction: row; align-items: center; gap: 8px; text-align: start; }
+.rail .vc-step:last-child { flex: 0 0 auto; }
+.rail .vc-step:not(:last-child)::after {
+  position: static;
+  flex: 1 1 auto; min-width: 14px; height: 2px; margin: 0 6px 0 4px;
+  background: var(--vc-border);
 }
-.rail-step[data-state="done"]:not(:last-child)::after { background: var(--vc-text-muted); }
-.rail-dot {
-  flex: none; width: 28px; height: 28px; border-radius: 50%;
-  display: grid; place-items: center;
-  border: 2px solid var(--vc-border); background: var(--vc-surface); color: var(--vc-text-subtle);
-  font: 700 0.9rem / 1 var(--vc-font-text); font-variant-numeric: tabular-nums;
+.rail .vc-step--done:not(:last-child)::after { background: var(--vc-text-muted); }
+.rail .vc-step__marker { flex: none; font: 700 0.9rem / 1 var(--vc-font-text); font-variant-numeric: tabular-nums; color: var(--vc-text-subtle); }
+.rail .vc-step__label { font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-semibold); color: var(--vc-text-subtle); white-space: nowrap; }
+.rail .rail-turn { --_h: 22px; flex: none; font-weight: var(--vc-weight-bold); }
+/* done: Vici's tick, in ink */
+.rail .vc-step--done .vc-step__marker::before { background: var(--vc-neutral-solid); }
+.rail .vc-step--done .vc-step__marker::after { background: var(--vc-neutral-on-solid); }
+.rail .vc-step--done .vc-step__label { color: var(--vc-text-muted); }
+/* active: an ink ring, its hexagon pulsing */
+.rail-step[data-state="active"] .vc-step__marker { color: var(--vc-text); }
+.rail-step[data-state="active"] .vc-step__marker::before {
+  background: var(--vc-text);
+  clip-path: polygon(evenodd,
+    25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%, 25% 0%,
+    calc(25% + 1.1547px) 2px, 2.3094px 50%, calc(25% + 1.1547px) calc(100% - 2px),
+    calc(75% - 1.1547px) calc(100% - 2px), calc(100% - 2.3094px) 50%,
+    calc(75% - 1.1547px) 2px, calc(25% + 1.1547px) 2px);
 }
-.rail-label { font-weight: 600; font-size: var(--vc-font-size-sm); color: var(--vc-text-subtle); white-space: nowrap; }
-.rail-turn {
-  flex: none; padding: 3px 9px; border-radius: 999px;
-  background: var(--vc-accent); color: var(--vc-on-accent);
-  font-size: var(--fs-xs); font-weight: 700; white-space: nowrap;
+.rail-step[data-state="active"] .vc-step__marker::after {
+  inset: -5px -5.7735px;
+  z-index: -2;
+  background: color-mix(in oklab, var(--vc-text) 14%, transparent);
+  clip-path: var(--vc-hex);
+  animation: railPulse 1.6s ease-in-out infinite;
 }
-.rail-step[data-state="done"] .rail-dot { background: var(--vc-text-muted); border-color: var(--vc-text-muted); color: var(--vc-surface); }
-.rail-step[data-state="done"] .rail-label { color: var(--vc-text-muted); }
-.rail-step[data-state="active"] .rail-dot { border-color: var(--vc-text); color: var(--vc-text); box-shadow: 0 0 0 4px var(--vc-bg-subtle); animation: railPulse 1.6s ease-in-out infinite; }
-.rail-step[data-state="active"] .rail-label { color: var(--vc-text); }
-.rail-step[data-state="yours"] .rail-dot { background: var(--vc-accent); border-color: var(--vc-accent); color: var(--vc-on-accent); box-shadow: 0 0 0 4px var(--vc-accent-soft); }
-.rail-step[data-state="yours"] .rail-label { color: var(--vc-accent-text); }
-.rail-step[data-state="stopped"] .rail-dot { border-color: var(--vc-danger-solid); color: var(--vc-danger-text); }
-.rail-step[data-state="stopped"] .rail-label { color: var(--vc-danger-text); }
-.rail-step[data-state="skipped"] .rail-dot { border-style: dashed; }
-@keyframes railPulse { 0%, 100% { box-shadow: 0 0 0 4px var(--vc-bg-subtle); } 50% { box-shadow: 0 0 0 6px var(--vc-bg-subtle); } }
+.rail-step[data-state="active"] .vc-step__label { color: var(--vc-text); }
+/* yours: solid merlot with the person, its words beside it */
+.rail-step[data-state="yours"] .vc-step__marker { color: var(--vc-on-accent); }
+.rail-step[data-state="yours"] .vc-step__marker::before { background: var(--vc-accent); clip-path: var(--vc-hex); }
+.rail-step[data-state="yours"] .vc-step__marker::after {
+  inset: -4px -4.6188px;
+  z-index: -2;
+  background: var(--vc-accent-soft);
+  clip-path: var(--vc-hex);
+}
+.rail-step[data-state="yours"] .vc-step__label { color: var(--vc-accent-text); }
+/* stopped: a danger ring with the stop mark */
+.rail-step[data-state="stopped"] .vc-step__marker { color: var(--vc-danger-text); }
+.rail-step[data-state="stopped"] .vc-step__marker::before { background: var(--vc-danger-solid); }
+.rail-step[data-state="stopped"] .vc-step__label { color: var(--vc-danger-text); }
+/* skipped: a dashed hexagon */
+.rail-step[data-state="skipped"] .vc-step__marker::before { background: repeating-conic-gradient(var(--vc-border-strong) 0 12deg, transparent 12deg 24deg); }
+@keyframes railPulse { 0%, 100% { scale: 1; opacity: 1; } 50% { scale: 1.12; opacity: 0.55; } }
 /* Narrow consoles (small laptops): only the current step keeps its label. */
 @container console (max-width: 600px) {
-  .rail { padding: 8px 14px; }
+  .rail.vc-stepper { padding: 8px 14px; }
   .rail-step:not([aria-current]) .rail-label { display: none; }
-  .rail-step:not(:last-child)::after { min-width: 10px; }
+  .rail .vc-step:not(:last-child)::after { min-width: 10px; }
 }
 
-/* Simulation watermark: a persistent hazard-tape band plus a faint diagonal mark behind the log. */
+/* Simulation watermark: the neutral tape and the word, plus a faint diagonal mark behind the log. */
 .sim-watermark {
   display: flex; align-items: center; gap: 12px;
   padding: 8px 18px 8px 42px;
@@ -110,9 +131,10 @@
 .entry + .entry { border-top: 1px solid var(--vc-border-subtle); }
 .entry-time {
   color: var(--vc-text-subtle);
-  font-size: var(--vc-font-size-sm);
+  font-family: var(--vc-font-mono);
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
-  padding-top: 0.15em;
+  padding-top: 0.2em;
 }
 .entry-mark { color: var(--vc-text-subtle); padding-top: 0.05em; }
 .entry-body { min-width: 0; overflow-wrap: anywhere; }
@@ -120,9 +142,9 @@
 .entry-body p:last-child { margin-bottom: 0; }
 
 /* Narration paragraphs by kind (prefix labels written by the agent). The colour says how sure the
-   agent is: violet for assumptions, blue while checking, green once confirmed, amber when it could
-   not confirm. Only two kinds get a tinted container, because they are the moments to point at:
-   a visible self-correction (Revised) and the recommendation handed to you (burgundy). */
+   agent is: lilac for assumptions, fjord while checking, success once confirmed, warning (its line
+   dashed) when it could not confirm. Only two kinds get a container, because they are the moments to
+   point at: a visible self-correction (Revised) and the recommendation handed to you (a merlot frame). */
 .para { position: relative; }
 .para .tag {
   display: inline-block; margin-right: 6px;
@@ -143,7 +165,7 @@
 .para[data-kind="hypothesis"] { border-left-color: var(--vc-feature-border); }
 .para[data-kind="check"] { border-left-color: var(--vc-info-border); }
 .para[data-kind="confirmed"] { border-left-color: var(--vc-success-solid); }
-.para[data-kind="unconfirmed"] { border-left-color: var(--vc-warning-text); }
+.para[data-kind="unconfirmed"] { border-left-color: var(--vc-warning-text); border-left-style: dashed; }
 .para[data-kind="revised"] { border-left-color: var(--vc-feature-solid); background: var(--vc-feature-bg); }
 .para[data-kind="finding"] { border-left-color: var(--vc-border-strong); }
 /* The recommendation handed to you: a 2 px merlot frame on the soft merlot tint, plus its label. */
@@ -159,8 +181,8 @@
 }
 
 /* Tool calls -------------------------------------------------------------------------------- */
-/* Tool calls are the agent's own actions: ink, never the brand colour. */
-.entry[data-type="tool_call"] .entry-mark { color: var(--vc-border-strong); }
+/* Tool calls are the agent's own actions: ink, never merlot; a server tool (web search) in fjord. */
+.entry[data-type="tool_call"] .entry-mark { color: var(--vc-text-muted); }
 .entry[data-type="tool_call"][data-server="true"] .entry-mark { color: var(--vc-info-solid); }
 .tool-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
 .tool-name { font-family: var(--vc-font-mono); font-weight: 600; font-size: 0.92em; color: var(--vc-text); }
@@ -178,7 +200,7 @@
   font: 500 var(--vc-font-size-sm) / 1.2 var(--vc-font-text);
   cursor: pointer; text-align: left;
 }
-.result-toggle:hover { background: var(--vc-bg); color: var(--vc-text); }
+.result-toggle:hover { background: var(--vc-surface-hover); color: var(--vc-text); }
 .result-toggle .icon { transition: transform 0.15s ease; }
 .result[data-open="true"] .result-toggle .icon { transform: rotate(90deg); }
 .result-summary[data-ok="false"] { color: var(--vc-danger-text); }
@@ -188,7 +210,7 @@
   max-height: 320px; overflow: auto;
   padding: 10px 12px;
   border-radius: var(--vc-radius-lg);
-  background: var(--vc-bg);
+  background: var(--vc-bg-sunken);
   border: 1px solid var(--vc-border-subtle);
   font: 400 0.82rem / 1.45 var(--vc-font-mono);
   color: var(--vc-text-muted);
@@ -200,21 +222,14 @@
 .result-sources a:hover { color: var(--vc-info-text); text-decoration: underline; }
 
 /* Alerts, notices, decisions ------------------------------------------------------------------- */
+/* An alert is Vici's alert: danger for a finding of high severity, warning below that, lilac for a
+   what-if exercise. */
 .entry[data-type="alert"] .entry-mark { color: var(--vc-danger-solid); }
-.alert-card {
-  border-left: 4px solid var(--vc-danger-solid);
-  background: var(--vc-danger-bg);
-  box-shadow: inset 0 0 0 1px var(--vc-danger-border);
-  border-radius: 0 var(--vc-radius-lg) var(--vc-radius-lg) 0;
-  padding: 10px 12px;
-}
-.alert-card[data-severity="medium"], .alert-card[data-severity="low"] { border-left-color: var(--vc-warning-text); background: var(--vc-warning-bg); box-shadow: inset 0 0 0 1px var(--vc-warning-border); }
-.alert-card h3 { margin: 0 0 4px; font-size: var(--fs-lg); line-height: 1.25; color: var(--vc-text); }
-.alert-card .alert-sev { font-size: var(--fs-xs); font-weight: 700; color: var(--vc-danger-text); margin-bottom: 4px; }
-.alert-card[data-severity="medium"] .alert-sev, .alert-card[data-severity="low"] .alert-sev { color: var(--vc-warning-text); }
-.alert-card ul { margin: 6px 0 0; padding-left: 18px; font-size: var(--vc-font-size-sm); color: var(--vc-text-muted); }
-.alert-card[data-basis="what_if"] { border-left-color: var(--vc-feature-solid); background: var(--vc-feature-bg); box-shadow: inset 0 0 0 1px var(--vc-feature-border); }
-.alert-card[data-basis="what_if"] .alert-sev { color: var(--vc-feature-text); }
+.alert-card.vc-alert { font-size: var(--vc-font-size-md); line-height: 1.45; }
+.alert-card h3 { margin: 0 0 4px; font-family: var(--vc-font-text); font-size: var(--fs-lg); font-weight: var(--vc-weight-bold); line-height: 1.25; letter-spacing: 0; color: inherit; }
+.alert-card .alert-sev { font-size: var(--fs-xs); font-weight: 700; }
+.alert-card ul { margin: 6px 0 0; padding-left: 18px; font-size: var(--vc-font-size-sm); }
+.alert-card .alert-evidence { font-size: var(--vc-font-size-sm); }
 
 .entry[data-type="notice"] { padding-top: 5px; padding-bottom: 5px; }
 .entry[data-type="notice"] .entry-body { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
@@ -222,8 +237,8 @@
 .entry[data-type="notice"][data-level="error"] .entry-mark { color: var(--vc-danger-text); }
 .entry[data-type="notice"][data-level="error"] .entry-body { color: var(--vc-danger-text); }
 
-/* Your decisions are recorded in burgundy: the human in charge. */
-.entry[data-type="decision"] .entry-mark { color: var(--vc-accent); }
+/* Your decisions are recorded in merlot: the human in charge. */
+.entry[data-type="decision"] .entry-mark { color: var(--vc-accent-text); }
 .entry[data-type="decision"] .entry-body strong { font-weight: 700; }
 
 .entry[data-type="phase"] { padding-top: 12px; padding-bottom: 2px; }
@@ -232,7 +247,7 @@
 
 .entry[data-type="run"] .entry-body { color: var(--vc-text-muted); }
 .entry[data-type="run"] .run-title { color: var(--vc-text); font-weight: 700; font-size: var(--fs-lg); }
-.entry[data-type="run"] .seed { margin-top: 6px; padding: 8px 12px; border-radius: var(--vc-radius-lg); background: var(--vc-bg); border: 1px dashed var(--vc-border); color: var(--vc-text); }
+.entry[data-type="run"] .seed { margin-top: 6px; padding: 8px 12px; border-radius: var(--vc-radius-lg); background: var(--vc-bg-subtle); border: 1px dashed var(--vc-border); color: var(--vc-text); }
 
 /* Reasoning summaries ---------------------------------------------------------------------------- */
 .reasoning summary {
@@ -245,15 +260,14 @@
 .reasoning[open] summary .icon { transform: rotate(90deg); }
 .reasoning .reasoning-text { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); white-space: pre-wrap; max-width: 72ch; padding: 2px 0 6px 10px; border-left: 2px solid var(--vc-feature-border); }
 
-/* Report card ------------------------------------------------------------------------------------- */
-.report-card { border: 1px solid var(--vc-border); border-radius: var(--vc-radius-xl); background: var(--vc-surface); padding: 12px 14px; box-shadow: var(--vc-shadow-md); }
-.report-card { position: relative; }
+/* Report card: Vici's card with the AI label in its corner --------------------------------------- */
+.report-card.vc-card { padding: 12px 14px; box-shadow: var(--vc-shadow-md); overflow: visible; }
 .report-card > .ai-label-wrap { position: absolute; top: 8px; right: 6px; }
 .report-card > .md > :first-child { padding-right: 52px; }
 .report-card .report-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 
-/* Markdown --------------------------------------------------------------------------------------- */
-.md { line-height: 1.5; }
+/* Markdown: Vici's prose, a little tighter in the console --------------------------------------- */
+.md.vc-prose { line-height: 1.5; max-width: none; }
 .md h2, .md h3 { margin: 12px 0 6px; line-height: 1.2; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 .md h4 { margin: 12px 0 6px; line-height: 1.2; font-family: var(--vc-font-text); font-weight: var(--vc-weight-semibold); color: var(--vc-text); }
 .md h2 { font-size: 1.35rem; }
@@ -262,22 +276,17 @@
 .md p { margin: 0 0 8px; max-width: 75ch; }
 .md ul, .md ol { margin: 0 0 8px; padding-left: 22px; }
 .md li { margin: 2px 0; }
-.md code { font-family: var(--vc-font-mono); font-size: 0.88em; background: var(--vc-bg); padding: 1px 5px; border-radius: 4px; }
-.md blockquote { margin: 8px 0; padding: 4px 12px; border-left: 3px solid var(--vc-accent-soft-hover); color: var(--vc-text-muted); }
-.md hr { border: 0; border-top: 1px solid var(--vc-border-subtle); margin: 12px 0; }
+.md hr { margin: 12px 0; }
 .md-table { overflow-x: auto; margin: 8px 0; }
-.md table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: var(--vc-font-size-sm); }
+.md table { font-size: var(--vc-font-size-sm); }
 .md th, .md td { border-bottom: 1px solid var(--vc-border-subtle); padding: 5px 12px 5px 0; text-align: left; }
 .md th { color: var(--vc-text-muted); font-weight: 600; }
 
 /* Empty state ------------------------------------------------------------------------------------ */
 .log-empty { padding: 26px 22px; color: var(--vc-text-muted); max-width: 60ch; }
-.log-empty h3 { margin: 0 0 8px; color: var(--vc-text); font-size: var(--fs-lg); }
-.log-empty ol { margin: 8px 0 0; padding-left: 20px; }
-.log-empty li { margin: 4px 0; }
-.log-empty li::marker { color: var(--vc-text-muted); font-weight: 700; }
+.log-empty h3 { margin: 0 0 8px; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); color: var(--vc-text); font-size: var(--fs-lg); letter-spacing: var(--vc-tracking-heading); }
+.log-empty p { margin: 0 0 10px; }
 
 .entry-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
-.entry-actions .btn { min-height: 40px; }
 .run-facts { margin-top: 6px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .run-facts strong { color: var(--vc-text); font-weight: 600; }

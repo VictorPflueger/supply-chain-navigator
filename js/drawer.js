@@ -25,13 +25,15 @@ export function createDrawer(root, { onToggle } = {}) {
   // The bar holds three groups: the tabs on the left, the credit in the middle, the note and the
   // toggle on the right. Only the tabs form the tab list.
   const tabBar = h("div", { class: "drawer-tabs" });
-  const tabList = h("div", { class: "drawer-tablist", role: "tablist", "aria-label": "Decision drawer" });
+  // Vici's tab list; this module owns the tabs (a click on the open tab closes the drawer), so the
+  // list has no .vc-tabs around it for vici.js to bind.
+  const tabList = h("div", { class: "vc-tabs__list drawer-tablist", role: "tablist", "aria-label": "Decision drawer" });
   const body = h("div", { class: "drawer-body" });
   let active = "options";
   let open = false;
 
   for (const t of TABS) {
-    const count = h("span", { class: "count num", hidden: true }, "0");
+    const count = h("span", { class: "vc-badge count", hidden: true }, "0");
     const btn = h("button", {
       class: "drawer-tab", type: "button", role: "tab", id: `tab-${t.id}`,
       "aria-selected": "false", "aria-controls": `panel-${t.id}`
@@ -47,7 +49,7 @@ export function createDrawer(root, { onToggle } = {}) {
     body.appendChild(panel);
   }
 
-  const toggleBtn = h("button", { class: "btn btn-ghost btn-sm", type: "button", "aria-label": "Show or hide the drawer" }, icon("chevronUp", 18), h("span", {}, "Show"));
+  const toggleBtn = h("button", { class: "vc-button vc-button--ghost button-compact drawer-toggle", type: "button", "aria-label": "Show or hide the drawer" }, icon("chevronUp", 18), h("span", {}, "Show"));
   toggleBtn.addEventListener("click", () => setOpen(!open));
   const credit = h("p", { class: "drawer-credit" },
     h("span", { class: "credit-label" }, "Built by"),
@@ -90,6 +92,8 @@ export function createDrawer(root, { onToggle } = {}) {
     t.count.hidden = !n;
     t.count.textContent = String(n);
     t.count.dataset.tone = attention ? "attention" : "";
+    // A count that needs your decision is a merlot badge; the others stay quiet.
+    t.count.classList.toggle("badge-quiet", !attention);
   }
 
   return { panel: (id) => panels.get(id), show, setOpen, setCount, isOpen: () => open, active: () => active };

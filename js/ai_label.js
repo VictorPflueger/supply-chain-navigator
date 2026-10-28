@@ -1,7 +1,8 @@
-// AI label, after IBM's Carbon for AI: a small "AI" mark on content an AI system wrote, which opens a
-// short explanation on click (a toggletip that stays open until you click elsewhere or press Escape).
+// AI label: Vici's feature tag (lilac, the sparkle and "AI") on content an AI system wrote, which opens
+// a short explanation on click: a toggletip in Vici's popover look that stays open until you click
+// elsewhere or press Escape (this module owns it; it has no popover attribute for vici.js to bind).
 // Used where the agent's words reach a decision: the options, each draft and the management summary.
-// Violet is the AI's colour throughout Navigator; burgundy stays with the human's decisions.
+// Lilac is the AI's colour throughout Navigator; merlot stays with the human's decisions.
 
 import { bus } from "./events.js";
 import { h } from "./dom.js";
@@ -52,8 +53,8 @@ export function aiLabel(kind) {
   const button = h("button", {
     class: "ai-label", type: "button", "aria-expanded": "false", "aria-controls": id,
     "aria-label": `AI-generated content: what this means`, title: "AI-generated: click for details"
-  }, h("span", { class: "ai-label-chip", "aria-hidden": "true" }, icon("spark", 14), "AI"));
-  const tip = h("div", { class: "ai-tip", id, role: "note", hidden: true });
+  }, h("span", { class: "vc-tag vc-tag--feature ai-label-chip", "aria-hidden": "true" }, icon("spark", 14), "AI"));
+  const tip = h("div", { class: "vc-popover ai-tip", id, role: "note", hidden: true });
   const wrap = h("span", { class: "ai-label-wrap" }, button, tip);
   wrap.button = button;
 

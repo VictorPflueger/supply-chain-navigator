@@ -33,18 +33,19 @@
 }
 
 /* Map toolbar ------------------------------------------------------------------------------ */
+/* Two actions that move the view: Vici's compact buttons (40 px) on the map's surface, floating with
+   a shadow; Vici's focus ring sits outside them, clear of the shadow. */
 .map-tools { position: absolute; top: 12px; right: 12px; z-index: 800; display: flex; gap: 8px; }
-.map-tools .btn { background: var(--vc-surface); box-shadow: var(--vc-shadow-md); }
-.map-tools .btn:hover { background: var(--vc-surface-hover); }
+.map-tools .vc-button { --_bg: var(--vc-surface); box-shadow: var(--vc-shadow-md); }
+/* The map's own notice (tiles unavailable): Vici's neutral alert, compact, floating on the map. */
 .map-status {
-  position: absolute; top: 12px; left: 64px; z-index: 800;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 12px; border-radius: 999px;
-  background: var(--vc-surface); border: 1px solid var(--vc-border);
-  color: var(--vc-text-muted); font-size: var(--vc-font-size-sm);
+  position: absolute; top: 12px; left: 12px; z-index: 800;
+  max-width: calc(100% - 340px);
+  align-items: center; gap: 8px;
+  padding: 6px 12px;
+  font-size: var(--fs-xs); line-height: 1.3;
   box-shadow: var(--vc-shadow-md);
 }
-.map-status[hidden] { display: none; }
 
 /* Map unavailable fallback */
 .map-fallback {

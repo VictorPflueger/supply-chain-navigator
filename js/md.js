@@ -5,7 +5,7 @@
 
 export function renderMarkdown(src) {
   const root = document.createElement("div");
-  root.className = "md";
+  root.className = "md vc-prose";
   const lines = String(src || "").replace(/\r\n?/g, "\n").split("\n");
   let i = 0;
 

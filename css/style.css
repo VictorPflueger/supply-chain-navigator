@@ -42,11 +42,9 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 .app-shell, .app-shell * { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
 
 .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 0; }
-.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.num { font-variant-numeric: tabular-nums lining-nums; }
 
 /* ------------------------------------------------------------------------------------------ */
-/* Header: brand, mode badge, AI disclosure, KPI strip                                         */
+/* Header: brand, mode badge, "How it works", AI disclosure, KPI strip                          */
 /* ------------------------------------------------------------------------------------------ */
 
 .app-header {
@@ -62,7 +60,7 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-mark { width: 34px; height: 34px; flex: none; }
-/* The mark is drawn from the tokens: a burgundy tile, a white route and a rose ring at the goal. */
+/* The mark is drawn from the tokens: a merlot tile, a route and a ring at the goal. */
 .brand-mark .mark-tile { fill: var(--vc-accent); }
 .brand-mark .mark-line { fill: none; stroke: var(--vc-on-accent); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .brand-mark .mark-start { fill: var(--vc-on-accent); }
@@ -82,94 +80,56 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
    height, so wrapping never shifts the layout (and never overlaps the KPI tiles). */
 .header-badges { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; min-width: 0; }
 
-/* Mode badge ------------------------------------------------------------------------------ */
+/* Mode badge: a Vici tag at today's size. LIVE is solid merlot with a pulsing mark; SIMULATION
+   wears the neutral tape; no run is a plain tag. */
 .mode-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 36px; padding: 0 14px;
-  border-radius: 999px;
+  --_h: 36px;
+  gap: 8px;
   font-family: var(--vc-font-text);
   font-weight: var(--vc-weight-bold);
   font-size: 1.05rem;
   letter-spacing: var(--vc-tracking-caps);
-  border: 1px solid var(--vc-border);
-  color: var(--vc-text-muted);
-  background: var(--vc-surface);
-  white-space: nowrap;
-}
-.mode-badge[data-mode="live"] {
-  color: var(--vc-on-accent);
-  background: var(--vc-accent);
-  border-color: var(--vc-accent);
 }
 .mode-badge[data-mode="live"] .mode-dot {
   width: 10px; height: 10px; border-radius: 50%; background: var(--vc-on-accent);
   animation: livePulse 1.6s ease-in-out infinite;
 }
-/* The simulation's tape: two neutral stripes and the word, outside every state colour. */
 .mode-badge[data-mode="simulation"] {
-  color: var(--vc-text);
-  border-color: var(--vc-border-strong);
-  padding: 0 14px 0 34px;
-  background:
-    repeating-linear-gradient(-45deg, var(--vc-text) 0 6px, var(--vc-surface) 6px 12px) left / 24px 100% no-repeat,
-    var(--vc-bg-subtle);
+  --_fg: var(--vc-text);
+  --_bg: repeating-linear-gradient(-45deg, var(--vc-text) 0 6px, var(--vc-surface) 6px 12px) left / 30px 100% no-repeat, var(--vc-bg-subtle);
+  padding-left: 38px;
 }
-.mode-badge[data-mode="none"] { font-family: var(--vc-font-text); font-weight: 600; letter-spacing: 0; font-size: var(--vc-font-size-sm); }
+.mode-badge[data-mode="none"] { font-weight: var(--vc-weight-semibold); letter-spacing: 0; font-size: var(--vc-font-size-sm); }
 
 @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-/* AI disclosure ---------------------------------------------------------------------------- */
-.ai-disclosure {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 36px; padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--vc-border);
-  background: var(--vc-surface);
-  color: var(--vc-text);
-  font-size: var(--vc-font-size-sm);
-  white-space: nowrap;
-}
+/* "How it works": reopens the intro window; on small laptops only its icon stays, and its tooltip
+   names it. */
+.about-btn { --_h: 40px; --_fs: var(--vc-font-size-sm); }
+
+/* AI disclosure: the EU AI Act notice, in the AI's lilac (Vici's feature tag) at today's size. */
+.ai-disclosure { --_h: 36px; gap: 8px; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-medium); }
 .ai-disclosure svg { color: var(--vc-feature-solid); flex: none; }
 
-/* "How it works": reopens the intro window ------------------------------------------------ */
-.about-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 40px; padding: 0 16px 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--vc-accent-soft-hover);
-  background: var(--vc-surface-hover);
-  color: var(--vc-accent);
-  font: inherit; font-size: var(--vc-font-size-sm); font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.about-btn:hover { background: var(--vc-accent-soft); border-color: var(--vc-accent); color: var(--vc-accent-hover); }
-.about-btn:active { transform: translateY(1px); }
-
-/* KPI strip: four tiles. A tile takes the pastel tint of its state, so the strip turns from red
-   and amber tints to green as the run moves from exposure to decision. */
+/* KPI strip: four of Vici's stat cards, compact (the header's height is fixed). A tile takes the
+   tone of its state, so the strip turns from danger and warning to success as the run moves from
+   exposure to decision; the figure keeps today's size (Vici's stat runs up to 2.25rem). */
 .kpis { display: flex; align-items: stretch; gap: 8px; }
-.kpi {
-  display: flex; flex-direction: column; justify-content: center;
+.kpi.vc-stat {
+  justify-content: center;
+  gap: 0;
   padding: 6px 16px 7px;
   min-width: 158px;
   max-width: 260px;
-  border-radius: var(--vc-radius-lg);
-  border: 1px solid var(--vc-border-subtle);
-  background: var(--vc-bg);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
-.kpi-label { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); white-space: nowrap; }
-.kpi-value {
-  font-family: var(--vc-font-display);
-  font-weight: var(--vc-weight-semibold);
+.kpi-label { white-space: nowrap; }
+.kpi-value.vc-stat__value {
   font-size: var(--fs-kpi);
   line-height: 1.05;
-  font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
 }
-.kpi-sub { color: var(--vc-text-muted); font-size: var(--fs-xs); line-height: 1.2; white-space: nowrap; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
-/* State tiles use step 4 fills: still pale, but visible on a projector next to white tiles. */
+.kpi-sub.vc-stat__note { color: var(--vc-text-muted); font-size: var(--fs-xs); line-height: 1.2; white-space: nowrap; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
 .kpi[data-tone="affected"] { background: var(--vc-danger-bg); border-color: var(--vc-danger-border); }
 .kpi[data-tone="affected"] .kpi-value { color: var(--vc-danger-text); }
 .kpi[data-tone="at-risk"] { background: var(--vc-warning-bg); border-color: var(--vc-warning-border); }
@@ -197,23 +157,18 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 .control-group { display: flex; align-items: center; gap: 8px; }
 .control-label { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 
+/* The run's status: a Vici tag at today's size (44 px, 1rem), in the tone of the state with a mark
+   and words: ink while the agent works, merlot when it waits for you, success, danger. */
 .status-pill {
-  display: inline-flex; align-items: center; gap: 10px;
-  height: var(--hit); padding: 0 16px;
-  border-radius: 999px;
-  background: var(--vc-surface);
-  border: 1px solid var(--vc-border);
-  font-weight: 600;
-  white-space: nowrap;
+  --_h: var(--hit);
+  gap: 10px;
+  font-size: var(--vc-font-size-md);
+  font-weight: var(--vc-weight-semibold);
 }
 .status-pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--vc-text-subtle); }
-/* The agent working: ink. Waiting for you: burgundy, your turn. */
 .status-pill[data-tone="active"] .dot { background: var(--vc-text); animation: livePulse 1.2s ease-in-out infinite; }
-.status-pill[data-tone="waiting"] { background: var(--vc-accent-soft); border-color: var(--vc-accent-soft-hover); color: var(--vc-accent-text); }
 .status-pill[data-tone="waiting"] .dot { background: var(--vc-accent); animation: livePulse 1.2s ease-in-out infinite; }
-.status-pill[data-tone="done"] { background: var(--vc-success-bg); border-color: var(--vc-success-border); color: var(--vc-success-text); }
 .status-pill[data-tone="done"] .dot { background: var(--vc-success-solid); }
-.status-pill[data-tone="stopped"] { background: var(--vc-danger-bg); border-color: var(--vc-danger-border); color: var(--vc-danger-text); }
 .status-pill[data-tone="stopped"] .dot { background: var(--vc-danger-solid); }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -228,38 +183,24 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 .map-panel { position: relative; min-height: 0; overflow: hidden; border-right: 1px solid var(--vc-border-subtle); background: var(--vc-bg-sunken); }
 .console-panel { display: flex; flex-direction: column; min-height: 0; background: var(--vc-surface); }
 
-/* Banners (file://, web search unavailable, etc.) */
+/* Banners (file://, web search unavailable, etc.): Vici's alert in the tone of their level, floating
+   under the header. */
 .banner-stack { position: fixed; left: 50%; top: 92px; transform: translateX(-50%); z-index: 1200; display: flex; flex-direction: column; gap: 8px; width: min(920px, calc(100vw - 32px)); pointer-events: none; }
-.banner {
+.banner.vc-alert {
   pointer-events: auto;
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 12px 14px 12px 16px;
-  border-radius: var(--vc-radius-lg);
-  background: var(--vc-surface);
-  border: 1px solid var(--vc-border);
-  border-left: 4px solid var(--vc-info-solid);
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  font-size: var(--vc-font-size-md);
   box-shadow: var(--vc-shadow-lg);
 }
-.banner[data-level="warn"] { border-left-color: var(--vc-warning-text); background: var(--vc-warning-bg); }
-.banner[data-level="error"] { border-left-color: var(--vc-danger-solid); background: var(--vc-danger-bg); }
-.banner[data-level="info"] > .icon { color: var(--vc-info-solid); }
-.banner[data-level="warn"] > .icon { color: var(--vc-warning-text); }
-.banner[data-level="error"] > .icon { color: var(--vc-danger-text); }
-.banner-text { flex: 1 1 auto; }
-.banner-text strong { display: block; }
+.banner.vc-alert > .icon { color: var(--_icon); }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Skip link and boot screen                                                                  */
 /* ------------------------------------------------------------------------------------------ */
 
-.skip-link {
-  position: fixed; left: 16px; top: -80px; z-index: 4000;
-  padding: 10px 16px;
-  border-radius: var(--vc-radius-lg);
-  background: var(--vc-accent); color: var(--vc-on-accent);
-  font-weight: 600; text-decoration: none;
-}
-.skip-link:focus { top: 12px; }
+/* Vici's skip link, above the header while it has the focus. */
+.skip-link.vc-skip-link { position: fixed; z-index: 4000; }
 
 /* Covers the page until js/main.js has started the workspace. The help text appears after a few
    seconds without any script, so a page opened via file:// still explains itself. */
@@ -276,15 +217,8 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 .boot-brand .brand-mark { width: 46px; height: 46px; }
 .boot-brand .brand-name { font-size: 2.1rem; }
 .boot-status { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: var(--fs-lg); }
-.boot[data-state="failed"] .boot-status .spinner { display: none; }
-.boot-detail {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border-left: 3px solid var(--vc-danger-solid);
-  border-radius: var(--vc-radius-md);
-  background: var(--vc-danger-bg);
-  color: var(--vc-text);
-}
+.boot[data-state="failed"] .boot-status .vc-spinner { display: none; }
+.boot-detail { margin: 0 0 14px; }
 .boot-help { color: var(--vc-text-muted); opacity: 0; visibility: hidden; animation: bootReveal 0.3s ease 6s forwards; }
 .boot-help p { margin: 0 0 10px; max-width: 68ch; }
 .boot[data-state="failed"] .boot-help { animation: none; opacity: 1; visibility: visible; }
@@ -295,32 +229,34 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 /* ------------------------------------------------------------------------------------------ */
 
 @media (max-width: 1700px) {
-  .kpi { min-width: 132px; max-width: 210px; padding: 6px 12px 7px; }
+  .kpi.vc-stat { min-width: 132px; max-width: 210px; padding: 6px 12px 7px; }
   .brand-sub { display: none; }
   /* Inter and Bricolage run wider than the former Barlow: a tile's second line wraps (two lines at
      most) instead of widening the tile, and the figures step down to 1.875rem, so the header keeps
      its height and the badges keep their room (DESIGN.md, deviations). */
-  .kpi-sub { contain: inline-size; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-overflow: clip; }
-  .kpi-value { font-size: 1.875rem; }
+  .kpi-sub.vc-stat__note { contain: inline-size; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-overflow: clip; }
+  .kpi-value.vc-stat__value { font-size: 1.875rem; }
 }
 
 /* Laptop widths, including 1536 px (a 1080p screen at 125 % scaling): keep the control bar on one row. */
 @media (max-width: 1600px) {
   /* Inter runs wider than the former Barlow: tighter gaps and paddings keep the bar on one row. */
   .controls { gap: 6px; padding: 10px 12px; }
-  .controls .btn { padding: 0 var(--vc-space-3); }
-  .controls .status-pill { padding: 0 var(--vc-space-3); gap: var(--vc-space-2); }
+  .controls .vc-button { --_px: var(--vc-space-3); }
+  .controls .status-pill { padding-inline: 14px; gap: var(--vc-space-2); }
   .control-label { display: none; }
   .controls .dropdown-toggle { min-width: 0 !important; }
   .controls .dropdown-toggle .caption { display: none; }
   .controls .btn-text { display: none; }
-  #btn-reset, #btn-diagnostics { padding: 0 12px; }
+  .controls { --words-tip: visible; }
+  #btn-reset, #btn-diagnostics { --_px: 12px; }
 }
 
-/* Small laptops: "How it works" becomes an info icon so the header keeps at most two badge rows. */
+/* Small laptops: "How it works" keeps its icon only, so the header keeps at most two badge rows. */
 @media (max-width: 1300px) {
-  .about-btn { width: 40px; padding: 0; justify-content: center; }
+  .about-btn { width: 40px; --_px: 0; }
   .about-btn .btn-text { display: none; }
+  .header-badges { --words-tip: visible; }
 }
 
 @media (max-width: 1180px) {
@@ -335,6 +271,5 @@ html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
   .console-panel { height: 70vh; }
   .ai-disclosure .long { display: none; }
   .kpis { flex-wrap: wrap; }
-  .kpi { min-width: calc(50% - 4px); }
+  .kpi.vc-stat { min-width: calc(50% - 4px); }
 }
-
