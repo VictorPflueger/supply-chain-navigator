@@ -3,6 +3,9 @@
 
 #map { position: absolute; inset: 0; background: var(--sea); }
 .leaflet-container { background: var(--sea); font-family: var(--font-ui); font-size: var(--fs-sm); }
+/* Vici's base caps every svg and canvas at its parent's width. Leaflet lifts that cap only in its own
+   overlay pane; the map's custom panes are zero-width boxes, so their layers need it lifted as well. */
+#map .leaflet-pane > svg, #map .leaflet-pane > canvas { max-width: none; max-height: none; }
 
 /* OpenStreetMap standard tiles, desaturated into a pale pastel base. CARTO Positron is light already. */
 .tiles-osm-light { filter: saturate(0.3) brightness(1.05) contrast(0.94); }

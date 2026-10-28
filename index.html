@@ -17,6 +17,9 @@
   <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" referrerpolicy="no-referrer">
 
+  <!-- The look comes from Victor's design system Vici, copied unchanged into vici/ (vici/README.md).
+       It sits in cascade layers, so the app's own stylesheets below refine it without !important. -->
+  <link rel="stylesheet" href="vici/dist/vici.min.css">
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/style.css">
@@ -25,6 +28,8 @@
   <link rel="stylesheet" href="css/console.css">
   <link rel="stylesheet" href="css/drawer.css">
   <link rel="stylesheet" href="css/modals.css">
+
+  <script src="vici/dist/vici.js" defer></script>
 
   <!-- Synthetic world and scripted replays: plain scripts that set window globals (no fetch needed). -->
   <script src="data/world.js" defer></script>
