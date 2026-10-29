@@ -1,212 +1,162 @@
-/* Navigator — buttons, segmented controls, dropdown menus, chips, form fields. */
+/* Navigator — the app's settings for Vici's components (buttons, icon buttons, tags, menus,
+ * fields, the AI label) and the two controls Vici has no component for (the replay speed and the
+ * dropdowns). Vici's components keep their look; what this file changes is recorded with its reason
+ * in DESIGN.md (deviations): the room reads the interface from a distance, so text and targets keep
+ * the sizes they had before Vici, and nothing clickable is smaller than 40 px. */
 
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: var(--hit);
-  padding: 0 18px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line-strong);
-  background: var(--paper);
-  color: var(--text);
-  font: 600 var(--fs-md) / 1 var(--font-ui);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+/* Buttons ------------------------------------------------------------------------------------ */
+/* Today's sizes: 44 px with 1rem text; a compact button 40 px with .875rem text. Vici's default is
+   2.5rem with .875rem text (37.5 px at the 15 px root of a 1280 px screen). One line each. */
+.vc-button { --_h: var(--hit); --_fs: var(--vc-font-size-md); white-space: nowrap; }
+.vc-button.button-compact { --_h: 40px; --_px: 14px; --_fs: var(--vc-font-size-sm); }
+/* Abort and Forget key: an outline in the danger tone. A solid red bar in the control bar would
+   shout at the room for an action that is rarely needed. */
+.vc-button--danger {
+  --_bg: transparent;
+  --_bg-hover: var(--vc-danger-bg);
+  --_bg-active: var(--vc-danger-bg);
+  --_fg: var(--vc-danger-text);
+  --_bd: var(--vc-danger-solid);
 }
-.btn:hover { background: var(--brand-soft); border-color: var(--brand-mid); color: var(--brand-deep); }
-.btn:active { transform: translateY(1px); }
-.btn .icon { margin-left: -2px; }
+/* A disabled button keeps the pointer, so its title still says why it is off; the code ignores the
+   click. Vici's disabled look stays (and it does not light up on hover). */
+.vc-button[aria-disabled="true"],
+.vc-icon-button[aria-disabled="true"] { pointer-events: auto; }
+.vc-button[aria-disabled="true"]:hover,
+.vc-button[aria-disabled="true"]:active { background: var(--_bg); translate: none; }
+.vc-icon-button[aria-disabled="true"]:hover::before { background: var(--_fill); }
 
-/* Primary: the one thing to do next (Start agent, Review options, Run all tests). */
-.btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
-.btn-primary:hover { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--on-brand); }
+/* Icon buttons: a 44 px hexagon cell, as large as the square icon buttons were. */
+.vc-icon-button { --_h: var(--hit); }
 
-/* Destructive: only for actions that throw work away (Abort, Forget key). */
-.btn-danger { background: var(--paper); color: var(--danger-text); border-color: var(--danger-mid); }
-.btn-danger:hover { background: var(--danger-fill); border-color: var(--danger-line); color: var(--danger-text); }
+/* A button's words that give way to its icon on small screens: its tooltip names it then, and only
+   then (--words-tip: visible where the words are hidden). */
+.vc-tooltip-anchor:has(> button .btn-text) > .vc-tooltip { visibility: var(--words-tip, hidden); }
+/* A tooltip shows on hover and on keyboard focus, not when a dialog moves the focus after a click. */
+.vc-tooltip-anchor:not(:hover):not(:has(:focus-visible)) > .vc-tooltip { visibility: hidden; }
 
-/* Approve is a human decision, so it takes the brand colour, never a status colour. */
-.btn-approve { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
-.btn-approve:hover { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--on-brand); }
-/* Secondary brand: a decision that is available but not the recommended one. */
-.btn-brand-outline, .btn-approve.btn-brand-outline { background: var(--paper); border-color: var(--brand-mid); color: var(--brand-text); }
-.btn-brand-outline:hover, .btn-approve.btn-brand-outline:hover { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
-/* Reject is an ordinary decision, not a destructive act: quiet neutral, no alarm colour. */
-.btn-reject { color: var(--text-muted); }
-.btn-reject:hover { color: var(--text); background: var(--porcelain); border-color: var(--border-control); }
-
-.btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
-.btn-ghost:hover { background: var(--porcelain-2); color: var(--text); border-color: var(--line); }
-
-.btn-sm { min-height: 40px; padding: 0 14px; font-size: var(--fs-sm); }
-.btn-icon { padding: 0; width: var(--hit); }
-
-.btn[aria-disabled="true"],
-.btn[aria-disabled="true"]:hover {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: var(--porcelain);
-  border-color: var(--line);
-  color: var(--text-faint);
-  transform: none;
-}
-
-/* Segmented control (speed) --------------------------------------------------------------- */
+/* Replay speed -------------------------------------------------------------------------------- */
+/* The app's group of toggle buttons (aria-pressed), drawn like Vici's segmented control. Vici's own
+   is a radio group, which would change the keyboard path (DESIGN.md, deviations). 44 px in all. */
 .segmented {
   display: inline-flex;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--paper);
+  gap: 2px;
+  padding: 1px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius-md);
+  background: var(--vc-bg-subtle);
 }
 .segmented button {
-  min-height: calc(var(--hit) - 2px);
-  min-width: 46px;
-  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vc-space-2);
+  min-height: 40px;
+  min-width: 44px;
+  padding: 0 var(--vc-space-3);
   border: 0;
-  border-left: 1px solid var(--line);
-  background: var(--paper);
-  color: var(--text-muted);
-  font: 600 var(--fs-md) / 1 var(--font-figures);
+  border-radius: calc(var(--vc-radius-md) - 1px);
+  background: transparent;
+  color: var(--vc-text-muted);
+  font: var(--vc-weight-semibold) var(--vc-font-size-md) / 1 var(--vc-font-text);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
+  transition: background-color var(--vc-duration-quick) var(--vc-ease-standard), color var(--vc-duration-quick) var(--vc-ease-standard);
 }
-.segmented button:first-child { border-left: 0; }
-.segmented button:hover { background: var(--porcelain); color: var(--text); }
-.segmented button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-text); box-shadow: inset 0 -2px 0 var(--brand); }
-.segmented[aria-disabled="true"] { opacity: 0.5; }
+.segmented button:hover { color: var(--vc-text); }
+.segmented button[aria-pressed="true"] {
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  box-shadow: var(--vc-shadow-sm), 0 0 0 1px var(--vc-border-subtle);
+}
+.segmented button:focus-visible { outline-offset: 1px; }
+.segmented[aria-disabled="true"] { opacity: 0.45; }
 .segmented[aria-disabled="true"] button { cursor: not-allowed; }
 
-/* Dropdown (scenario, model) -------------------------------------------------------------- */
+/* Dropdowns (scenario, model) ------------------------------------------------------------------- */
 .dropdown { position: relative; }
 .dropdown-toggle { justify-content: space-between; min-width: 220px; max-width: 360px; }
 .dropdown-toggle .value { overflow: hidden; text-overflow: ellipsis; text-align: left; }
-.dropdown-toggle .caption { color: var(--text-muted); font-weight: 500; margin-right: 2px; }
-.dropdown-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 1100;
-  min-width: 100%; width: max-content; max-width: min(520px, 92vw);
+.dropdown-toggle .caption { color: var(--vc-text-muted); font-weight: var(--vc-weight-medium); margin-right: 2px; }
+/* Vici's menu, opened under its toggle by this app (vici.js would fix it to the viewport). */
+.dropdown-menu.vc-menu {
+  position: absolute;
+  inset: calc(100% + 6px) auto auto 0;
+  z-index: 1100;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(520px, 92vw);
+  margin: 0;
   padding: 6px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-pop);
 }
-.dropdown-menu[hidden] { display: none; }
-.menu-item {
-  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px;
-  width: 100%;
+/* Menu items at today's size: 44 px high, 1rem text, the scenario's number in front. */
+.dropdown-menu .vc-menu__item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
   min-height: var(--hit);
   padding: 8px 10px;
-  border: 0; border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-  font: 500 var(--fs-md) / 1.25 var(--font-ui);
-  cursor: pointer;
+  font: var(--vc-weight-medium) var(--vc-font-size-md) / 1.25 var(--vc-font-text);
+  white-space: normal;
 }
-.menu-item:hover, .menu-item:focus-visible { background: var(--porcelain); }
-.menu-item[aria-checked="true"] { background: var(--brand-soft); }
-.menu-item .num-badge {
+.dropdown-menu .vc-menu__item[aria-checked="true"] { background: var(--vc-surface-selected); }
+.dropdown-menu .vc-menu__item[aria-disabled="true"] { cursor: not-allowed; }
+/* The scenario's number in a hexagon cell with a 1 px outline (merlot when chosen). */
+.vc-menu__item .num-badge {
+  position: relative; isolation: isolate;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 50%;
-  border: 1px solid var(--line-strong);
-  background: var(--paper);
-  font: 600 var(--fs-sm) / 1 var(--font-figures);
-  color: var(--text-muted);
+  width: 30px; height: 26px; clip-path: var(--vc-hex);
+  background: var(--vc-border);
+  font: var(--vc-weight-semibold) var(--vc-font-size-sm) / 1 var(--vc-font-text);
+  font-variant-numeric: tabular-nums;
+  color: var(--vc-text-muted);
 }
-.menu-item[aria-checked="true"] .num-badge { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
-.menu-item .menu-title { display: block; }
-.menu-item .menu-hint { display: block; color: var(--text-muted); font-size: var(--fs-sm); }
-.menu-item[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
-.menu-item[aria-disabled="true"]:hover { background: transparent; }
-.menu-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.vc-menu__item .num-badge::before { content: ""; position: absolute; inset: 1px 1.1547px; z-index: -1; clip-path: var(--vc-hex); background: var(--vc-surface); }
+.vc-menu__item[aria-checked="true"] .num-badge { background: var(--vc-accent); color: var(--vc-on-accent); }
+.vc-menu__item[aria-checked="true"] .num-badge::before { background: var(--vc-accent); }
+.vc-menu__item .menu-title { display: block; }
+.vc-menu__item .menu-hint { display: block; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 
-/* Chips ------------------------------------------------------------------------------------ */
-.chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 26px; padding: 0 10px;
-  border-radius: 999px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  border: 1px solid var(--line-strong);
-  background: var(--paper);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-/* Waiting for you is burgundy (your turn); outcomes take status colours; a rejection is neutral. */
-.chip[data-tone="pending"] { color: var(--brand-text); border-color: var(--brand-line); background: var(--brand-soft); }
-.chip[data-tone="approved"] { color: var(--success-text); border-color: var(--success-mid); background: var(--success-fill); }
-.chip[data-tone="rejected"] { color: var(--text-muted); border-color: var(--line-strong); background: var(--porcelain); }
-.chip[data-tone="risk"] { color: var(--warning-text); border-color: var(--warning-mid); background: var(--warning-fill); }
-.chip[data-tone="recommended"] { color: var(--on-brand); border-color: var(--brand); background: var(--brand); }
-.chip[data-tone="expired"] { color: var(--text-muted); border-color: var(--line-strong); background: var(--porcelain); }
-.chip[data-tone="live-only"] { color: var(--text-muted); }
-.chip[data-tone="info"] { color: var(--info-text); border-color: var(--info-mid); background: var(--info-fill); }
-.chip[data-tone="muted"] { color: var(--text-faint); }
+/* Tags ----------------------------------------------------------------------------------------- */
+/* Today's size: 26 px high with .8125rem text (Vici's are 1.5rem with .75rem). */
+.vc-tag { --_h: 26px; font-size: var(--fs-xs); }
 
-/* Fields ----------------------------------------------------------------------------------- */
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field label { font-weight: 600; }
-.field .help { color: var(--text-muted); font-size: var(--fs-sm); }
-.input-row { display: flex; gap: 8px; }
-.input, .textarea {
-  width: 100%;
-  min-height: var(--hit);
-  padding: 10px 12px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line-strong);
-  background: var(--paper);
-  color: var(--text);
-  font: 500 var(--fs-md) / 1.3 var(--font-ui);
-}
-.input.mono { font-family: var(--font-mono); font-size: var(--fs-sm); letter-spacing: 0.02em; }
-.textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
-.input::placeholder, .textarea::placeholder { color: var(--text-faint); }
-.input:focus, .textarea:focus { outline: none; border-color: var(--brand); box-shadow: var(--focus); }
-.field-error { color: var(--danger-text); font-size: var(--fs-sm); min-height: 1.2em; }
-.field-ok { color: var(--success-text); font-size: var(--fs-sm); min-height: 1.2em; }
+/* Fields --------------------------------------------------------------------------------------- */
+/* Today's sizes: 44 px inputs with 1rem text, labels at 1rem, help at .875rem. */
+.vc-input, .vc-textarea { --_h: var(--hit); font-size: var(--vc-font-size-md); }
+.vc-textarea { min-height: 120px; }
+.vc-label { font-size: var(--vc-font-size-md); }
+.vc-help { font-size: var(--vc-font-size-sm); }
+.field-msg { min-height: 1.45em; }
+.input-row { display: flex; align-items: center; gap: 8px; }
+.input-row > .vc-input { flex: 1 1 auto; }
+/* The API key: Vici's hexagon mask while hidden, JetBrains Mono once shown. */
+.key-input:not([type="password"]) { font-family: var(--vc-font-mono); font-size: var(--vc-font-size-sm); letter-spacing: 0.02em; }
 
-/* Inline status marks ---------------------------------------------------------------------- */
-.mark-pass { color: var(--success-text); }
-.mark-fail { color: var(--danger-text); }
-.mark-warn { color: var(--warning-text); }
-.mark-skip { color: var(--text-faint); }
-
-/* Spinner ---------------------------------------------------------------------------------- */
-.spinner { width: 16px; height: 16px; border: 2px solid var(--line-strong); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Empty states ----------------------------------------------------------------------------- */
-.empty {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-  max-width: 62ch;
-  padding: 18px 4px;
-  color: var(--text-muted);
-}
-.empty strong { color: var(--text); font-size: var(--fs-lg); font-weight: 600; }
-
-/* AI label (after IBM Carbon for AI): marks AI-written content and opens a short explanation.
-   Violet is the AI's colour; the 40 px target sits around a 24 px chip. --------------------------- */
+/* AI label ------------------------------------------------------------------------------------ */
+/* After IBM Carbon for AI: Vici's feature tag (lilac, the sparkle, "AI") on content the agent wrote,
+   a 40 px target around it, and the explanation in Vici's popover look. */
 .ai-label-wrap { display: inline-flex; flex: none; }
 .ai-label {
   display: inline-grid; place-items: center;
   min-width: 40px; min-height: 40px; padding: 0 2px; margin: -8px 0;
-  border: 0; border-radius: var(--r-sm); background: transparent; cursor: pointer;
+  border: 0; border-radius: var(--vc-radius-md); background: transparent; cursor: pointer;
 }
-.ai-label-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  height: 24px; padding: 0 9px 0 7px;
-  border-radius: 999px; border: 1px solid var(--violet-mid);
-  background: var(--violet-2); color: var(--violet-text);
-  font: 700 var(--fs-xs) / 1 var(--font-ui); letter-spacing: 0.02em;
-}
-.ai-label:hover .ai-label-chip, .ai-label[aria-expanded="true"] .ai-label-chip { background: var(--violet-4); border-color: var(--violet-line); }
-.ai-tip {
+.ai-label .ai-label-chip { --_h: 24px; font-weight: var(--vc-weight-bold); letter-spacing: 0.02em; }
+.ai-label:hover .ai-label-chip,
+.ai-label[aria-expanded="true"] .ai-label-chip { --_bg: var(--vc-feature-border); }
+.ai-tip.vc-popover {
   position: fixed; z-index: 2500;
-  padding: 12px 14px; border-radius: var(--r-md);
-  background: var(--paper); border: 1px solid var(--violet-mid); border-top: 3px solid var(--violet-line);
-  box-shadow: var(--shadow-pop);
-  font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.45;
+  color: var(--vc-text-muted); line-height: 1.45;
 }
-.ai-tip strong { display: block; margin-bottom: 4px; color: var(--text); font-size: var(--fs-md); }
+.ai-tip strong { display: block; margin-bottom: 4px; color: var(--vc-text); font-size: var(--vc-font-size-md); }
 .ai-tip p { margin: 4px 0 0; }
 
+/* Forced colours (Windows contrast themes): the app's own hexagons keep their outlines, as Vici's cells do. */
+@media (forced-colors: active) {
+  .vc-menu__item .num-badge { forced-color-adjust: none; background-color: CanvasText; color: CanvasText; }
+  .vc-menu__item .num-badge::before { background-color: Canvas; }
+  .vc-menu__item[aria-checked="true"] .num-badge { background-color: Highlight; color: HighlightText; }
+  .vc-menu__item[aria-checked="true"] .num-badge::before { background-color: Highlight; }
+}

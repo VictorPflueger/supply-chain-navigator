@@ -20,11 +20,12 @@ const WATCH_STATE = {
 };
 
 export function createKpis(container) {
+  // Vici's stat card; a tile that shows a state takes that state's tone (css/style.css).
   const make = (id, label, sub) => {
-    const value = h("div", { class: "kpi-value", id: `kpi-${id}-value` }, "—");
-    const subEl = h("div", { class: "kpi-sub", id: `kpi-${id}-sub` }, sub);
-    const el = h("div", { class: "kpi", dataset: { tone: "muted" }, role: "group", "aria-label": label },
-      h("div", { class: "kpi-label" }, label), value, subEl);
+    const value = h("div", { class: "vc-stat__value kpi-value", id: `kpi-${id}-value` }, "—");
+    const subEl = h("div", { class: "vc-stat__note kpi-sub", id: `kpi-${id}-sub` }, sub);
+    const el = h("div", { class: "vc-stat kpi", dataset: { tone: "muted" }, role: "group", "aria-label": label },
+      h("div", { class: "vc-stat__label kpi-label" }, label), value, subEl);
     container.appendChild(el);
     return { el, value, sub: subEl };
   };

@@ -6,7 +6,9 @@ import path from "node:path";
 import { APP_ROOT } from "./lib/harness.mjs";
 
 const SUITES = [
-  { id: "tokens", what: "colour system: WCAG 2.2 contrast, colour-blind separation, token files", file: "tools/palette.mjs", args: ["--check"], browser: false },
+  { id: "tokens", what: "colour system on Vici's tokens, light and dark: contrast, colour-blind separation", file: "tests/tokens.mjs", browser: false },
+  { id: "page-icon", what: "page icon: favicon, header and loading screen, as on the website's card", file: "tests/page-icon.mjs", browser: false },
+  { id: "vici-files", what: "vici/ holds exactly the files its README lists, unchanged", file: "tests/vici-files.mjs", browser: false },
   { id: "world", what: "synthetic world, scenarios, reference cases, simulation scripts", file: "tools/check_world.mjs", browser: false },
   { id: "unit", what: "streaming client, retries, cost maths", file: "tests/unit.mjs", browser: false },
   { id: "smoke", what: "main flows and loading failures", file: "tests/smoke.mjs", browser: true },
@@ -14,7 +16,8 @@ const SUITES = [
   { id: "live", what: "live agent against the scripted API stand-in", file: "tests/live.mjs", browser: true },
   { id: "accept", what: "M6 acceptance: key, Diagnostics, Abort/Reset, offline", file: "tests/accept.mjs", browser: true },
   { id: "layout", what: "viewports and touch targets", file: "tests/layout.mjs", browser: true },
-  { id: "design", what: "colour grammar in the app, projector and colour-blind captures", file: "tests/design.mjs", browser: true }
+  { id: "design", what: "colour grammar in the app, projector and colour-blind captures, light and dark", file: "tests/design.mjs", browser: true },
+  { id: "hexagon", what: "nothing round: the app's files, and the rendered app in both themes", file: "tests/hexagon.mjs", browser: true }
 ];
 
 const only = process.argv.slice(2);
@@ -32,7 +35,7 @@ for (const s of chosen) {
 }
 
 console.log("\n=== Summary ===");
-for (const s of summary) console.log(`${s.ok ? "PASS" : "FAIL"}  ${s.id.padEnd(7)} ${String(s.seconds).padStart(4)} s  ${s.what}`);
+for (const s of summary) console.log(`${s.ok ? "PASS" : "FAIL"}  ${s.id.padEnd(10)} ${String(s.seconds).padStart(4)} s  ${s.what}`);
 const skipped = chosen.length - summary.length;
 if (skipped) console.log(`(${skipped} suite${skipped === 1 ? "" : "s"} not run)`);
 process.exit(summary.length === chosen.length && summary.every((s) => s.ok) ? 0 : 1);

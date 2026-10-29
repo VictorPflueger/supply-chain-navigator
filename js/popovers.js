@@ -8,10 +8,18 @@ import { nameOf, openPOs, routesThroughNode } from "./world.js";
 const TIER_TEXT = { 1: "Tier-1 supplier", 2: "Tier-2 supplier", 3: "Tier-3 supplier" };
 const STATE_TEXT = { affected: "Affected", at_risk: "At risk", resolved: "Resolved" };
 
+// Tags in Vici's tones, each the tone the chip had: a state in its own tone (danger, warning, success)
+// with its word; a risk in the warning tone; a directed buy in fjord (info), as it was in blue.
+const TAG_TONE = { affected: "vc-tag--danger", at_risk: "vc-tag--warning", resolved: "vc-tag--success", risk: "vc-tag--warning", info: "vc-tag--info" };
+
 function stateChip(state) {
   if (!state || state === "neutral") return null;
-  const tone = state === "affected" ? "rejected" : state === "at_risk" ? "pending" : "approved";
-  return h("span", { class: "chip", dataset: { tone } }, STATE_TEXT[state]);
+  return tag(state, STATE_TEXT[state]);
+}
+
+/** A Vici tag in one of the map's tones (TAG_TONE). */
+function tag(tone, text) {
+  return h("span", { class: ["vc-tag", TAG_TONE[tone] || ""] }, text);
 }
 
 function dl(rows) {
@@ -28,8 +36,8 @@ export function supplierPopover(model, id, state) {
     h("div", { class: "pop-sub" }, `${TIER_TEXT[s.tier] || "Supplier"} in ${s.location}`),
     h("div", { class: "pop-tags" },
       stateChip(state),
-      s.directed_buy ? h("span", { class: "chip", dataset: { tone: "info" } }, "Directed buy") : null,
-      !s.dual_source ? h("span", { class: "chip", dataset: { tone: "risk" } }, "Single source") : null
+      s.directed_buy ? tag("info", "Directed buy") : null,
+      !s.dual_source ? tag("risk", "Single source") : null
     ),
     dl([
       ["Cluster", s.cluster],
@@ -58,7 +66,7 @@ export function plantPopover(model, id, state) {
       ["Output", `${int(p.output_per_day)} ${p.output_unit} per day`],
       ["Line-stop cost", `${eurFull(p.line_stop_cost_eur_per_day)} per day (assumption)`]
     ]),
-    h("table", { class: "pop-table" },
+    h("table", { class: "vc-table vc-table--compact pop-table" },
       h("thead", {}, h("tr", {}, h("th", {}, "Part family"), h("th", { class: "r" }, "Cover"), h("th", { class: "r" }, "Safety"))),
       h("tbody", {}, cover.map((c) => h("tr", {},
         h("td", {}, c.name.split(" (")[0]),
@@ -83,7 +91,7 @@ export function routePopover(model, id, state) {
     h("div", { class: "pop-title" }, r.name),
     h("div", { class: "pop-sub" }, `Normal transit ${r.total} days`),
     h("div", { class: "pop-tags" }, stateChip(state)),
-    h("table", { class: "pop-table" }, h("tbody", {}, legs)),
+    h("table", { class: "vc-table vc-table--compact pop-table" }, h("tbody", {}, legs)),
     dl([
       ["Used by", `${users.length} supply flow${users.length === 1 ? "" : "s"} from ${new Set(users.map((f) => f.from)).size} supplier(s)`],
       ["In transit", pos.length ? `${pos.length} orders (${eurCompact(pos.reduce((a, p) => a + p.value_eur, 0))})` : "no open orders"],

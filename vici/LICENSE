@@ -1,0 +1,92 @@
+Vici Design System
+Copyright (c) 2026 Victor Pflüger
+
+This repository holds material under different terms. Section 1 covers most of
+it. Sections 2 to 4 list the exceptions.
+
+
+1. Code, design tokens, icons and documentation: MIT License
+-----------------------------------------------------------
+
+Everything in this repository that is not listed in sections 2, 3 or 4 is
+licensed under the MIT License below. That includes the CSS, the JavaScript,
+the design tokens, the icons, the documentation pages, the starters, the
+integrations, the build and check scripts, and the Vici Mask font
+(assets/fonts/vici-mask.woff2).
+
+MIT License
+
+Copyright (c) 2026 Victor Pflüger
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+2. Victor Pflüger's personal brand: all rights reserved
+-------------------------------------------------------
+
+The following are not licensed under the MIT License, and no licence is
+granted for them beyond the limited permission below. Victor Pflüger reserves
+all other rights to them.
+
+  - The name "Victor Pflüger" used as a mark.
+  - His portrait photographs, including the files in assets/brand/. Rights
+    that belong to the photographer stay with the photographer.
+  - The Vertex logo with its lockups, app icon and favicon, the monogram
+    options, the "Victor Pflüger" and "Vici" wordmarks, and the archived logo
+    concepts, in any form: the files in assets/logo/, the outlines in
+    src/brand/, and scripts/lib/logos.mjs, the file that draws them. That file
+    is reserved as a whole, because its coordinates and colours are the
+    designs.
+
+Permission: you may show these items unchanged to refer to Victor Pflüger or to
+this project, for example next to a link, in a citation or in a review, and you
+may run this repository's build, which uses scripts/lib/logos.mjs, to produce
+its own files. You may not use them as, or as part of, your own logo, product
+name or brand, and you may not use them in a way that suggests that he made,
+endorses or is affiliated with your work. If you build on Vici, put your own
+name, photo and logo in their place, and replace scripts/lib/logos.mjs with your
+own file or remove it from scripts/build.mjs.
+
+
+3. Fonts: SIL Open Font License 1.1
+-----------------------------------
+
+Bricolage Grotesque, Inter and JetBrains Mono in assets/fonts/ are licensed by
+their authors under the SIL Open Font License, Version 1.1. Each licence text
+sits next to the fonts it covers (assets/fonts/OFL-*.txt). The OFL covers the
+font files, not artwork made with them, such as the wordmarks in section 2.
+
+
+4. Other companies' trademarks
+------------------------------
+
+GitHub and the Invertocat logo are trademarks of GitHub, Inc. LinkedIn and the
+[in] logo are trademarks of LinkedIn Corporation. These and other platform
+names and logos belong to their owners. They appear in this repository only to
+link to Victor Pflüger's profiles, as their owners' brand guidelines allow,
+and this licence grants no rights to them.
+
+assets/marks/github.svg is the Invertocat exactly as GitHub publishes it in the
+Octicons package (@primer/octicons). That file is distributed under the MIT
+License, Copyright (c) 2026 GitHub Inc., reproduced in
+assets/marks/OCTICONS-LICENSE. Its use is subject to GitHub's logo guidelines.
+
+assets/marks/linkedin.png, linkedin-white.png and linkedin-blue.png are
+LinkedIn's [in] logo files as LinkedIn publishes them for download, unchanged.
+Their use is subject to LinkedIn's brand guidelines and terms.

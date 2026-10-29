@@ -28,12 +28,12 @@ Exact URLs, parameters and response shapes are in `TECH_NOTES.md` §4. CORS is n
 
 | Layer | Source | Licence / terms |
 |---|---|---|
-| Default basemap | OpenStreetMap standard tiles, `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, desaturated with a CSS filter | Data © OpenStreetMap contributors, ODbL; attribution shown on the map. OSMF tile policy: light interactive use with valid Referer, no bulk downloading |
-| Optional basemap | CARTO Positron raster tiles, used only if a free CARTO key is entered in `js/config.js` | Since 25 Sep 2026 CARTO requires a key; free tier 1M requests/month for commercial use. Attribution © OpenStreetMap, © CARTO |
-| Offline land layer (always present) | Natural Earth land polygons via the `world-atlas` package, bundled as `data/basemap_offline.js` | Natural Earth: public domain |
+| Default basemap | OpenStreetMap standard tiles, `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, quietened with a CSS filter in the light theme and darkened by one in the dark theme | Data © OpenStreetMap contributors, ODbL; attribution shown on the map. OSMF tile policy: light interactive use with valid Referer, no bulk downloading |
+| Optional basemap | CARTO raster tiles from the same host, Positron in the light theme and Dark Matter in the dark one, used only if a free CARTO key is entered in `js/config.js` | Since 25 Sep 2026 CARTO requires a key; free tier 1M requests/month for commercial use. Attribution © OpenStreetMap, © CARTO |
+| Offline land layer (always present) | Natural Earth land polygons via the `world-atlas` package, bundled as `data/basemap_offline.js`, drawn in the theme's colours | Natural Earth: public domain |
 | Coordinates of cities, ports, airports, passes and chokepoints | Public geography (approximate to ~1–5 km) | — |
 
-Front-end assets are open source as well: Leaflet 1.9.4 (BSD-2-Clause) from public CDNs, with an identical local copy in `vendor/` as a fallback, and the fonts Barlow, Barlow Semi Condensed and IBM Plex Mono (SIL Open Font License 1.1), served from the app itself so no visitor data goes to a font service.
+Front-end assets are open source as well: Leaflet 1.9.4 (BSD-2-Clause) from public CDNs, with an identical local copy in `vendor/` as a fallback, and Victor Pflüger's design system Vici, copied into `vici/` (`vici/README.md`): its stylesheet, script and tokens (MIT), its fonts Bricolage Grotesque, Inter and JetBrains Mono (SIL Open Font License 1.1), his portrait for the byline and LinkedIn's own logo file. Vici is served from the app itself, so no visitor data goes to a font service.
 
 ## 3. The synthetic company — what is invented and what is anchored
 

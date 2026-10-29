@@ -7,8 +7,7 @@
        and open data only the four documented hosts (TECH_NOTES §6). -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' https://unpkg.com https://cdn.jsdelivr.net; img-src 'self' data: https://tile.openstreetmap.org https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://unpkg.com https://cdn.jsdelivr.net; font-src 'self'; connect-src https://api.anthropic.com https://api.open-meteo.com https://earthquake.usgs.gov https://eonet.gsfc.nasa.gov https://www.pegelonline.wsv.de; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light dark">
   <meta name="description" content="Navigator detects supply chain disruptions, maps them onto a fictional EV maker's supplier network, quantifies which plant stops when and proposes costed responses for human approval.">
   <title>Navigator — Supply Chain Disruption Navigator</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -17,14 +16,19 @@
   <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" referrerpolicy="no-referrer">
 
-  <link rel="stylesheet" href="css/fonts.css">
-  <link rel="stylesheet" href="css/tokens.css">
+  <!-- The look comes from Victor's design system Vici, copied unchanged into vici/ (vici/README.md).
+       It sits in cascade layers, so the app's own stylesheets below refine it without !important. -->
+  <link rel="stylesheet" href="vici/dist/vici.min.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/map.css">
   <link rel="stylesheet" href="css/console.css">
   <link rel="stylesheet" href="css/drawer.css">
   <link rel="stylesheet" href="css/modals.css">
+
+  <!-- The theme before the page is drawn (light unless the visitor chose dark), then Vici's script. -->
+  <script src="js/theme.js"></script>
+  <script src="vici/dist/vici.js" defer></script>
 
   <!-- Synthetic world and scripted replays: plain scripts that set window globals (no fetch needed). -->
   <script src="data/world.js" defer></script>
@@ -34,19 +38,12 @@
   <script src="data/basemap_offline.js" defer></script>
   <script type="module" src="js/main.js"></script>
 </head>
-<body>
-  <a class="skip-link" href="#console">Skip to the agent console</a>
+<body class="app-shell">
+  <a class="vc-skip-link skip-link" href="#console">Skip to the agent console</a>
 
   <header class="app-header">
     <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-        <rect class="mark-tile" x="1" y="1" width="30" height="30" rx="8"/>
-        <path class="mark-line" d="M7 23.5 12.5 15l6 3.5L24 9.5"/>
-        <circle class="mark-start" cx="7" cy="23.5" r="2.2"/>
-        <circle class="mark-node" cx="12.5" cy="15" r="2"/>
-        <circle class="mark-node" cx="18.5" cy="18.5" r="2"/>
-        <circle class="mark-ring" cx="24" cy="9.5" r="3.4"/>
-      </svg>
+      <span class="vc-cell vc-cell--lilac" aria-hidden="true"><span class="vc-icon vc-icon--globe-hex"></span></span>
       <div class="brand-text">
         <span class="brand-name">Navigator</span>
         <span class="brand-sub">Disruption agent for Nordwerk Automotive (fictional)</span>
@@ -54,9 +51,14 @@
     </div>
 
     <div class="header-badges">
-      <span id="mode-badge" class="mode-badge" data-mode="none" role="status" aria-live="polite" title="Choose a mode with Start agent">No run active</span>
-      <span class="ai-disclosure" title="Navigator is an AI system. Its analysis can be wrong. Every action is a draft that waits for your approval, and nothing is ever sent to a real company.">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8z"/><path d="M18.5 15.5l.8 2 2 .7-2 .8-.8 2-.7-2-2-.8 2-.7z"/></svg>
+      <span id="mode-badge" class="vc-tag mode-badge" data-mode="none" role="status" aria-live="polite" title="Choose a mode with Start agent">No run active</span>
+      <!-- Vici's theme toggle (vici.js switches the theme and remembers the choice). -->
+      <span class="vc-tooltip-anchor">
+        <button type="button" class="vc-icon-button theme-toggle" data-vc-theme-toggle aria-labelledby="tip-theme"><span class="vc-icon vc-icon--moon vc-when-light" aria-hidden="true"></span><span class="vc-icon vc-icon--sun vc-when-dark" aria-hidden="true"></span></button>
+        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-theme">Dark theme</span>
+      </span>
+      <span class="vc-tag vc-tag--feature ai-disclosure" title="Navigator is an AI system. Its analysis can be wrong. Every action is a draft that waits for your approval, and nothing is ever sent to a real company.">
+        <span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span>
         <span><span class="long">You are interacting with an </span>AI system</span>
       </span>
     </div>
@@ -82,18 +84,11 @@
   <div id="boot" class="boot" data-state="loading">
     <div class="boot-card">
       <div class="boot-brand">
-        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-          <rect class="mark-tile" x="1" y="1" width="30" height="30" rx="8"/>
-          <path class="mark-line" d="M7 23.5 12.5 15l6 3.5L24 9.5"/>
-          <circle class="mark-start" cx="7" cy="23.5" r="2.2"/>
-          <circle class="mark-node" cx="12.5" cy="15" r="2"/>
-          <circle class="mark-node" cx="18.5" cy="18.5" r="2"/>
-          <circle class="mark-ring" cx="24" cy="9.5" r="3.4"/>
-        </svg>
+        <span class="vc-cell vc-cell--lilac vc-cell--xl" aria-hidden="true"><span class="vc-icon vc-icon--globe-hex"></span></span>
         <span class="brand-name">Navigator</span>
       </div>
-      <p class="boot-status" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span><span id="boot-status">Starting Navigator…</span></p>
-      <p id="boot-detail" class="boot-detail" hidden></p>
+      <p class="boot-status" role="status" aria-live="polite"><span class="vc-spinner" aria-hidden="true"></span><span id="boot-status">Starting Navigator…</span></p>
+      <p id="boot-detail" class="vc-alert vc-alert--danger boot-detail" hidden></p>
       <div class="boot-help">
         <p>Still on this screen? Navigator has to be served over http or https. Browsers block its program modules when <code>index.html</code> is opened straight from disk, at an address starting with <code>file://</code>.</p>
         <p>To run it on your computer, open a terminal in this folder, run <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>. Published on GitHub Pages, it works as is. Use a current Chrome or Edge.</p>

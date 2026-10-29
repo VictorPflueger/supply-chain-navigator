@@ -1,10 +1,12 @@
-// Design checks and review captures (DESIGN.md §8):
-//   states   the colour grammar in the running app: map strokes and legend use the state tokens, the
-//            status pill and the progress rail name the human step ("Your decision", then "Your
-//            approval"), the rail ends with every step done, and the AI labels open and close
+// Design checks and review captures (DESIGN.md §8), each in the light and the dark theme:
+//   states   the colour grammar in the running app: the map's corridors, cells and legend use the
+//            state tokens of the theme on screen, the status tag and the progress rail name the human
+//            step ("Your decision", then "Your approval"), the rail ends with every step done, and the
+//            AI labels open and close
 //   review   screenshots for a design review: the options at 1920×1080 as rendered and under a
 //            simulated projector washout, and the finished run as seen with protanopia,
-//            deuteranopia and tritanopia (Machado et al. 2009 matrices, applied in linear RGB)
+//            deuteranopia and tritanopia (Machado et al. 2009 matrices, applied in linear RGB);
+//            the dark theme's files end in -dark
 // Usage: node tests/design.mjs [case…]
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
@@ -14,8 +16,9 @@ const OUT = await outDir("design");
 const { base: BASE, close } = await serveStatic(APP_ROOT, 8770);
 const browser = await launchBrowser();
 const results = [];
+const suffix = (theme) => (theme === "light" ? "" : `-${theme}`);
 
-// Severity 1.0 (dichromacy). The same matrices as the palette check in tools/palette.mjs.
+// Severity 1.0 (dichromacy). The same matrices as the colour check in tests/tokens.mjs.
 const CVD = {
   "Normal vision": null,
   Protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
@@ -24,10 +27,13 @@ const CVD = {
 };
 // A projector in a lit room: lower contrast, brighter, less saturated.
 const WASHOUT = "contrast(0.62) brightness(1.18) saturate(0.8)";
+const THEMES = ["light", "dark"];
 
-async function newPage() {
-  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+/** A page in the given theme: the visitor's choice as Vici remembers it (vc-theme), read by js/theme.js. */
+async function newPage(theme = "light") {
+  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: theme });
   await context.addInitScript(SKIP_INTRO);
+  await context.addInitScript((t) => { try { localStorage.setItem("vc-theme", t); } catch { /* blocked storage */ } }, theme);
   await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, async (route) => {
     if (await fulfilLeaflet(route)) return;
     return route.abort("blockedbyclient");
@@ -37,6 +43,8 @@ async function newPage() {
   page.on("pageerror", (e) => errors.push(String(e.message || e)));
   await page.goto(BASE);
   await page.waitForSelector('html[data-boot="ready"]', { timeout: 20000 });
+  const shown = await page.evaluate(() => document.documentElement.dataset.theme);
+  if (shown !== theme) errors.push(`the page shows the ${shown} theme, not the ${theme} one`);
   return { context, page, errors };
 }
 
@@ -58,10 +66,10 @@ async function toOptions(page) {
   await page.click("#btn-start");
   await page.waitForSelector(".mode-card");
   await page.click('.mode-card[data-mode="simulation"] .mode-cta button');
-  await page.waitForSelector('.option-card[data-recommended="true"] .btn-approve', { state: "visible", timeout: 120000 });
+  await page.waitForSelector('.option-card[data-recommended="true"] [data-action="approve"]', { state: "visible", timeout: 120000 });
 }
 async function toDrafts(page) {
-  await page.click('.option-card[data-recommended="true"] .btn-approve');
+  await page.click('.option-card[data-recommended="true"] [data-action="approve"]');
   await page.waitForFunction(() => /Waiting for your approval of \d+ draft/.test(document.querySelector("#console").innerText), null, { timeout: 120000 });
 }
 async function toDone(page) {
@@ -69,8 +77,8 @@ async function toDone(page) {
   await page.waitForSelector('button:has-text("Open management summary")', { state: "visible", timeout: 60000 });
 }
 
-if (wanted("states")) {
-  const { context, page, errors } = await newPage();
+for (const theme of wanted("states") ? THEMES : []) {
+  const { context, page, errors } = await newPage(theme);
   const problems = [];
   try {
     await toOptions(page);
@@ -84,17 +92,21 @@ if (wanted("states")) {
       const token = (n) => cs.getPropertyValue(n).trim().toLowerCase();
       const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`; };
       const out = { mismatches: [], counted: {} };
-      for (const [st, name] of [["affected", "--affected"], ["at_risk", "--at-risk"], ["resolved", "--resolved"]]) {
+      // The state tokens (Vici): danger, warning and success, as lines and outlines.
+      for (const [st, name] of [["affected", "--vc-danger-solid"], ["at_risk", "--vc-warning-text"], ["resolved", "--vc-success-solid"]]) {
         const want = token(name);
         const paths = [...document.querySelectorAll(`.leaflet-interactive.state-${st}`)];
-        out.counted[st] = paths.length;
+        // The suppliers, hubs and alternatives are hexagon cells in SVG: their outline is the body's stroke.
+        const cells = [...document.querySelectorAll(`.hex-marker[data-state="${st}"]:not([data-kind="badge"]) .hex-body`)];
+        out.counted[st] = paths.length + cells.length;
         for (const p of paths) if ((p.getAttribute("stroke") || "").toLowerCase() !== want) out.mismatches.push(`${st} path stroke ${p.getAttribute("stroke")} ≠ ${want}`);
+        for (const c of cells) if (getComputedStyle(c).stroke !== rgb(want)) out.mismatches.push(`${st} cell outline ${getComputedStyle(c).stroke} ≠ ${rgb(want)}`);
       }
       const legend = [...document.querySelectorAll(".legend-group")].find((g) => /Status/.test(g.textContent));
       const rows = legend ? [...legend.querySelectorAll(".legend-row")] : [];
-      for (const [label, name] of [["Affected", "--affected"], ["At risk", "--at-risk"], ["Resolved", "--resolved"]]) {
+      for (const [label, name] of [["Affected", "--vc-danger-solid"], ["At risk", "--vc-warning-text"], ["Resolved", "--vc-success-solid"]]) {
         const row = rows.find((r) => r.textContent.trim().startsWith(label));
-        const got = row ? getComputedStyle(row.querySelector(".legend-swatch-line")).borderTopColor : "missing";
+        const got = row ? getComputedStyle(row.querySelector(".legend-swatch .hex-body")).stroke : "missing";
         if (got !== rgb(token(name))) out.mismatches.push(`legend "${label}" ${got} ≠ ${rgb(token(name))}`);
       }
       return out;
@@ -114,7 +126,7 @@ if (wanted("states")) {
     if (!after.hidden || !after.focus) problems.push(`AI label after Escape: ${JSON.stringify(after)}`);
 
     // Approving the option hands the next step to the drafts.
-    await page.click('.option-card[data-recommended="true"] .btn-approve');
+    await page.click('.option-card[data-recommended="true"] [data-action="approve"]');
     await page.waitForFunction(() => document.querySelector(".status-pill .text")?.textContent.trim() !== "Awaiting your decision", null, { timeout: 5000 });
     await page.waitForFunction(() => /Waiting for your approval of \d+ draft/.test(document.querySelector("#console").innerText), null, { timeout: 120000 });
     await waitPill(page, /^Awaiting your approval$/);
@@ -132,25 +144,26 @@ if (wanted("states")) {
     if (rail.states.some((s) => s !== "done")) problems.push(`done: rail states ${rail.states.join(", ")}`);
     if ((await pillText(page)) !== "Done") problems.push(`done: pill reads ${await pillText(page)}`);
     if (!(await page.$(".report-card .ai-label"))) problems.push("no AI label on the summary card");
-    await page.screenshot({ path: path.join(OUT, "states-done.png") });
+    await page.screenshot({ path: path.join(OUT, `states-done${suffix(theme)}.png`) });
   } catch (e) { problems.push(`exception: ${String(e.message).split("\n")[0]}`); }
   problems.push(...errors.map((e) => `page error: ${e}`));
-  results.push({ name: "colour grammar, handover labels, AI labels", ok: !problems.length, problems });
+  results.push({ name: `colour grammar, handover labels, AI labels (${theme} theme)`, ok: !problems.length, problems });
   await context.close();
 }
 
-if (wanted("review")) {
-  const { context, page, errors } = await newPage();
+for (const theme of wanted("review") ? THEMES : []) {
+  const { context, page, errors } = await newPage(theme);
   const problems = [];
   const files = [];
+  const file = (name) => `${name}${suffix(theme)}.png`;
   try {
     await toOptions(page);
     await page.waitForTimeout(900);
-    await page.screenshot({ path: path.join(OUT, "review-options.png") });
+    await page.screenshot({ path: path.join(OUT, file("review-options")) });
     await page.evaluate((f) => { document.documentElement.style.filter = f; }, WASHOUT);
-    await page.screenshot({ path: path.join(OUT, "review-options-washout.png") });
+    await page.screenshot({ path: path.join(OUT, file("review-options-washout")) });
     await page.evaluate(() => { document.documentElement.style.filter = ""; });
-    files.push("review-options.png", "review-options-washout.png");
+    files.push(file("review-options"), file("review-options-washout"));
 
     await toDrafts(page);
     await toDone(page);
@@ -185,14 +198,13 @@ if (wanted("review")) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px">${list.map(([n, b]) =>
           `<figure style="margin:0"><figcaption style="padding:2px 2px 6px">${n}</figcaption><img style="width:100%;display:block;border:1px solid #e5d9db" src="data:image/png;base64,${b}"></figure>`).join("")}</div></body></html>`);
       await sheet.waitForTimeout(200);
-      const file = `review-cvd-${kind}.png`;
-      await sheet.screenshot({ path: path.join(OUT, file), fullPage: true });
-      files.push(file);
+      await sheet.screenshot({ path: path.join(OUT, file(`review-cvd-${kind}`)), fullPage: true });
+      files.push(file(`review-cvd-${kind}`));
     }
     await sheet.close();
   } catch (e) { problems.push(`exception: ${String(e.message).split("\n")[0]}`); }
   problems.push(...errors.map((e) => `page error: ${e}`));
-  results.push({ name: `review captures (${files.length} files)`, ok: !problems.length && files.length === 4, problems });
+  results.push({ name: `review captures (${files.length} files, ${theme} theme)`, ok: !problems.length && files.length === 4, problems });
   await context.close();
 }
 

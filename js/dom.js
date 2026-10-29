@@ -54,6 +54,36 @@ export function escapeHtml(text) {
   return String(text ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+let tipCount = 0;
+
+/**
+ * Gives a button Vici's tooltip (as in Vici's app starter): the button and a .vc-tooltip sit in a
+ * .vc-tooltip-anchor, and the tooltip names the button through aria-labelledby, so its text is the
+ * button's name. vici.js turns the tooltip into a top-layer popover that no panel can clip; Vici.init
+ * runs on a detached holder with nothing but this anchor in it, so it binds no other behaviour (the
+ * app keeps its own tabs, menus and dialogs). Returns the anchor: put it where the button would go.
+ * Icon-only buttons always get one; a button whose text hides on small screens gets one that its
+ * stylesheet shows only then.
+ */
+export function withTooltip(button, label, { below = false } = {}) {
+  const id = `tip-${++tipCount}`;
+  const tip = h("span", { class: below ? "vc-tooltip vc-tooltip--bottom" : "vc-tooltip", role: "tooltip", id }, label);
+  button.removeAttribute("aria-label");
+  button.setAttribute("aria-labelledby", id);
+  button.tooltip = tip;
+  const anchor = h("span", { class: "vc-tooltip-anchor" }, button, tip);
+  const holder = document.createElement("span");
+  holder.appendChild(anchor);
+  window.Vici?.init?.(holder);
+  anchor.remove();
+  return anchor;
+}
+
+/** Changes the name a button's tooltip shows (and so the button's name). */
+export function setTooltip(button, label) {
+  if (button?.tooltip) button.tooltip.textContent = label;
+}
+
 /** Sets aria-disabled + a reason tooltip without using the `disabled` attribute (keeps tooltips working). */
 export function setDisabled(el, disabled, reason = "") {
   if (!el) return;

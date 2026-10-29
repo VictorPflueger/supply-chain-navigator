@@ -1,132 +1,50 @@
-/* Navigator — semantic tokens, base typography and page layout.
+/* Navigator — the app's own tokens, page layout, header, control bar and boot screen.
  *
- * Colour system (DESIGN.md): every colour comes from css/tokens.css, generated in OKLCH from the
- * brand burgundy by tools/palette.mjs. This file only assigns roles. Four rules:
- *   1. Burgundy is identity and the human in charge: primary actions and every point where a person
- *      decides or approves. It never encodes the state of the network.
- *   2. Status colours describe the supply network and outcomes: red affected, amber at risk, green
- *      resolved, blue checking. They always come with a second cue (an icon, a word, a size or a line
- *      style), and their hues are fixed so they stay apart for colour-blind viewers.
- *   3. Violet is the AI's voice: AI labels, hypotheses, revisions, what-if analyses, reasoning.
- *   4. Ink, a neutral tinted with the brand hue, carries everything else. Colour appears only where
- *      it means something.
+ * The look comes from Vici (vici/dist/vici.min.css, loaded first). Vici sits in cascade layers, so
+ * these unlayered rules refine it without !important; they style the app's own classes only and
+ * use Vici's semantic tokens, which switch with the theme. Four rules of meaning (DESIGN.md §3):
+ *   1. Merlot (--vc-accent and its tokens) is the human in charge: primary actions, Approve, the
+ *      step that waits for a person, the recommended option's frame, the person's decisions and the
+ *      focus ring. It never encodes a state, and it is never a mark among state colours: merlot sits
+ *      too close to Vici's danger tone.
+ *   2. States take Vici's danger, warning and success tones (affected, at risk, resolved) and fjord,
+ *      the info tone, while something is being checked. These tones have almost the same lightness,
+ *      so every state also differs in form: an icon, a word, a shape, or a line's weight or pattern.
+ *   3. Lilac, Vici's feature tone, is the AI's voice: AI labels, hypotheses, revisions, what-ifs.
+ *   4. Ink and Vici's neutrals carry everything else; the network at rest is --vc-neutral-solid. The
+ *      simulation's tape is neutral too (--vc-text and --vc-surface stripes, always with the word
+ *      SIMULATION), so a replay never passes for a live run.
  */
 
 :root {
-  color-scheme: light;
-
-  /* surfaces */
-  --paper: #ffffff;                    /* panels, cards, dialogs */
-  --porcelain: var(--ink-3);           /* app background, control bar, sunken areas */
-  --porcelain-2: var(--ink-4);         /* hover on porcelain, chart tracks */
-  --line: var(--ink-5);                /* separators and card edges */
-  --line-strong: var(--ink-7);         /* button and panel borders */
-  --border-control: var(--ink-9);      /* inputs and toggles: 3:1 against paper (WCAG 1.4.11) */
-
-  /* text */
-  --text: var(--ink-12);
-  --text-muted: var(--ink-11);
-  --text-faint: var(--ink-10);
-  --on-brand: #ffffff;
-
-  /* brand: burgundy, the colour of identity and of the human's decisions */
-  --brand: var(--wine-9);
-  --brand-deep: var(--wine-10);
-  --brand-text: var(--wine-11);
-  --brand-mid: var(--wine-8);          /* borders and secondary marks */
-  --brand-line: var(--wine-7);
-  --brand-soft: var(--wine-3);         /* selected and tinted backgrounds */
-  --brand-wash: var(--wine-2);         /* faintest tint */
-
-  /* status families: fill (backgrounds), mid (map fills, bars), line (strokes, icons), text */
-  --danger-fill: var(--danger-3);   --danger-mid: var(--danger-7);   --danger-line: var(--danger-9);   --danger-text: var(--danger-11);
-  --warning-fill: var(--warning-3); --warning-mid: var(--warning-7); --warning-line: var(--warning-9); --warning-text: var(--warning-11);
-  --success-fill: var(--success-3); --success-mid: var(--success-7); --success-line: var(--success-9); --success-text: var(--success-11);
-  --info-fill: var(--info-3);       --info-mid: var(--info-7);       --info-line: var(--info-9);       --info-text: var(--info-11);
-  --violet-fill: var(--violet-3);   --violet-mid: var(--violet-7);   --violet-line: var(--violet-9);   --violet-text: var(--violet-11);
-
-  /* meaning: the network states and the network itself (read by the map), and the live badge */
-  --affected: var(--danger-line);      --affected-fill: var(--danger-mid);
-  --at-risk: var(--warning-line);      --at-risk-fill: var(--warning-mid);
-  --resolved: var(--success-line);     --resolved-fill: var(--success-mid);
-  --network: var(--slate-9);
-  --live: var(--brand);
-
-  /* Simulation identity: hazard tape. Deliberately outside the brand system, so a replay can never
-     be mistaken for a live run. */
-  --butter: #f8e7a0;  --butter-edge: #e2c55c;  --butter-wash: #fffdf4;  --butter-text: #8a6d07;  --hazard: #2b2127;
-  --sim-yellow: var(--butter);
-  --sim-black: var(--hazard);
-
-  /* map */
-  --sea: var(--slate-3);
-
-  /* type */
-  --font-ui: "Barlow", "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --font-figures: "Barlow Semi Condensed", "Barlow", "Segoe UI", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
-
+  /* Type sizes Vici has no step for (Vici's sm and md are used directly): the layout and the
+     projector checks are tuned to them. */
   --fs-xs: 0.8125rem;
-  --fs-sm: 0.875rem;
-  --fs-md: 1rem;
   --fs-lg: 1.1875rem;
   --fs-xl: 1.5rem;
   --fs-kpi: 2.125rem;
-
-  /* geometry */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --hit: 44px;                         /* minimum interactive size (≥ 40px for projector use) */
-  --gap: 12px;
-  /* Elevation: shadows tinted with the darkest burgundy, never neutral black. */
-  --shadow-pop: 0 16px 40px rgb(67 19 32 / 0.16), 0 2px 6px rgb(67 19 32 / 0.06);
-  --shadow-soft: 0 4px 14px rgb(67 19 32 / 0.08);
-  /* Focus: a 2px burgundy ring outside a 2px white gap, 10:1 against paper (WCAG 2.4.13). */
-  --focus: 0 0 0 2px var(--paper), 0 0 0 4px var(--brand);
+  /* The smallest target for what the room clicks: 44 px (40 px at least for projector use). */
+  --hit: 44px;
 }
 
-/* Fluid root size: ~17px on a 1920px projector, never below 15px. */
-html {
-  font-size: clamp(15px, 0.48vw + 8px, 18px);
-  -webkit-text-size-adjust: 100%;
-}
+/* Fluid root size for projectors: 15 px at 1280 px wide, about 17 px at 1920 px, at most 18 px at
+   the usual 16 px default, and it follows the reader's own text-size setting. */
+html { font-size: clamp(93.75%, 0.48vw + 50%, 112.5%); }
 
-*, *::before, *::after { box-sizing: border-box; }
-* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
-
-body {
-  margin: 0;
+/* The page: header, control bar, workspace and drawer fill the window; only panels scroll. */
+.app-shell {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--porcelain);
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: var(--fs-md);
-  line-height: 1.45;
-  font-feature-settings: "kern", "liga";
-  -webkit-font-smoothing: antialiased;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
+/* Thin scrollbars on the app's own scrolling panels (Vici's components keep theirs). */
+:is(.app-shell, .log, .result-body, .md-table, .drawer-body, .race, .portfolio, .legend-body, .pop-body, .kpis) { scrollbar-width: thin; scrollbar-color: var(--vc-border) transparent; }
 
-::selection { background: var(--wine-5); color: var(--text); }
-
-a { color: var(--brand); text-underline-offset: 2px; }
-a:hover { color: var(--brand-deep); }
-
-:focus-visible { outline: none; box-shadow: var(--focus); border-radius: var(--r-sm); }
-
-/* The hidden attribute always wins over component display rules (buttons are inline-flex). */
-[hidden] { display: none !important; }
-
-.icon { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 0; }
-.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.num { font-variant-numeric: tabular-nums lining-nums; }
 
 /* ------------------------------------------------------------------------------------------ */
-/* Header: brand, mode badge, AI disclosure, KPI strip                                         */
+/* Header: brand, mode badge, "How it works", AI disclosure, KPI strip                          */
 /* ------------------------------------------------------------------------------------------ */
 
 .app-header {
@@ -135,127 +53,89 @@ a:hover { color: var(--brand-deep); }
   align-items: center;
   gap: 24px;
   padding: 8px 16px 8px 18px;
-  background: var(--paper);
-  border-bottom: 1px solid var(--line);
+  background: var(--vc-surface);
+  border-bottom: 1px solid var(--vc-border-subtle);
   min-height: 84px;
 }
 
+/* The page icon: the prototype's card on Victor's website, Vici's globe-hex icon in a lilac hexagon cell
+   (Vici's cell at its default size, 2rem high). */
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.brand-mark { width: 34px; height: 34px; flex: none; }
-/* The mark is drawn from the tokens: a burgundy tile, a white route and a rose ring at the goal. */
-.brand-mark .mark-tile { fill: var(--brand); }
-.brand-mark .mark-line { fill: none; stroke: var(--on-brand); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.brand-mark .mark-start { fill: var(--on-brand); }
-.brand-mark .mark-node { fill: var(--brand); stroke: var(--on-brand); stroke-width: 1.8; }
-.brand-mark .mark-ring { fill: none; stroke: var(--wine-6); stroke-width: 2; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
 .brand-name {
-  font-family: var(--font-figures);
-  font-weight: 700;
+  font-family: var(--vc-font-display);
+  font-weight: var(--vc-weight-display);
   font-size: 1.6rem;
-  letter-spacing: 0.01em;
-  color: var(--brand);
+  letter-spacing: var(--vc-tracking-heading);
+  color: var(--vc-text);
 }
-.brand-sub { color: var(--text-muted); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-sub { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* The badges wrap to a second row when the KPI strip needs the room; two rows fit the header's
    height, so wrapping never shifts the layout (and never overlaps the KPI tiles). */
 .header-badges { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; min-width: 0; }
 
-/* Mode badge ------------------------------------------------------------------------------ */
+/* Mode badge: a Vici tag at today's size. LIVE is solid merlot with a pulsing mark; SIMULATION
+   wears the neutral tape; no run is a plain tag. */
 .mode-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 36px; padding: 0 14px;
-  border-radius: 999px;
-  font-family: var(--font-figures);
-  font-weight: 700;
+  --_h: 36px;
+  gap: 8px;
+  font-family: var(--vc-font-text);
+  font-weight: var(--vc-weight-bold);
   font-size: 1.05rem;
-  letter-spacing: 0.06em;
-  border: 1px solid var(--line-strong);
-  color: var(--text-muted);
-  background: var(--paper);
-  white-space: nowrap;
+  letter-spacing: var(--vc-tracking-caps);
 }
-.mode-badge[data-mode="live"] {
-  color: var(--on-brand);
-  background: var(--live);
-  border-color: var(--live);
-}
+/* The live pip: a small hexagon that pulses. */
 .mode-badge[data-mode="live"] .mode-dot {
-  width: 10px; height: 10px; border-radius: 50%; background: #fff;
+  width: 11.55px; height: 10px; clip-path: var(--vc-hex); background: var(--vc-on-accent);
   animation: livePulse 1.6s ease-in-out infinite;
 }
 .mode-badge[data-mode="simulation"] {
-  color: var(--sim-black);
-  border-color: var(--butter-edge);
-  padding: 0 14px 0 34px;
-  background:
-    repeating-linear-gradient(-45deg, var(--sim-black) 0 6px, var(--sim-yellow) 6px 12px) left / 24px 100% no-repeat,
-    var(--sim-yellow);
+  --_fg: var(--vc-text);
+  --_bg: repeating-linear-gradient(-45deg, var(--vc-text) 0 6px, var(--vc-surface) 6px 12px) left / 30px 100% no-repeat, var(--vc-bg-subtle);
+  padding-left: 38px;
 }
-.mode-badge[data-mode="none"] { font-family: var(--font-ui); font-weight: 600; letter-spacing: 0; font-size: var(--fs-sm); }
+.mode-badge[data-mode="none"] { font-weight: var(--vc-weight-semibold); letter-spacing: 0; font-size: var(--vc-font-size-sm); }
 
 @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-/* AI disclosure ---------------------------------------------------------------------------- */
-.ai-disclosure {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 36px; padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
-  background: var(--paper);
-  color: var(--text);
-  font-size: var(--fs-sm);
-  white-space: nowrap;
-}
-.ai-disclosure svg { color: var(--violet-line); flex: none; }
+/* "How it works": reopens the intro window; on small laptops only its icon stays, and its tooltip
+   names it. */
+.about-btn { --_h: 40px; --_fs: var(--vc-font-size-sm); }
 
-/* "How it works": reopens the intro window ------------------------------------------------ */
-.about-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 40px; padding: 0 16px 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--brand-mid);
-  background: var(--brand-wash);
-  color: var(--brand);
-  font: inherit; font-size: var(--fs-sm); font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.about-btn:hover { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
-.about-btn:active { transform: translateY(1px); }
+/* The theme toggle: Vici's, 40 px like "How it works", so the badges' two rows keep the header's height. */
+.theme-toggle.vc-icon-button { --_h: 40px; }
 
-/* KPI strip: four tiles. A tile takes the pastel tint of its state, so the strip turns from red
-   and amber tints to green as the run moves from exposure to decision. */
+/* AI disclosure: the EU AI Act notice, in the AI's lilac (Vici's feature tag) at today's size. */
+.ai-disclosure { --_h: 36px; gap: 8px; font-size: var(--vc-font-size-sm); font-weight: var(--vc-weight-medium); }
+.ai-disclosure .vc-icon { color: var(--vc-feature-solid); }
+
+/* KPI strip: four of Vici's stat cards, compact (the header's height is fixed). A tile takes the
+   tone of its state, so the strip turns from danger and warning to success as the run moves from
+   exposure to decision; the figure keeps today's size (Vici's stat runs up to 2.25rem). */
 .kpis { display: flex; align-items: stretch; gap: 8px; }
-.kpi {
-  display: flex; flex-direction: column; justify-content: center;
+.kpi.vc-stat {
+  justify-content: center;
+  gap: 0;
   padding: 6px 16px 7px;
   min-width: 158px;
   max-width: 260px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line);
-  background: var(--porcelain);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
-.kpi-label { color: var(--text-muted); font-size: var(--fs-sm); white-space: nowrap; }
-.kpi-value {
-  font-family: var(--font-figures);
-  font-weight: 600;
+.kpi-label { white-space: nowrap; }
+.kpi-value.vc-stat__value {
   font-size: var(--fs-kpi);
   line-height: 1.05;
-  font-variant-numeric: tabular-nums lining-nums;
   white-space: nowrap;
 }
-.kpi-sub { color: var(--text-muted); font-size: var(--fs-xs); white-space: nowrap; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
-/* State tiles use step 4 fills: still pale, but visible on a projector next to white tiles. */
-.kpi[data-tone="affected"] { background: var(--danger-4); border-color: var(--danger-mid); }
-.kpi[data-tone="affected"] .kpi-value { color: var(--danger-text); }
-.kpi[data-tone="at-risk"] { background: var(--warning-4); border-color: var(--warning-mid); }
-.kpi[data-tone="at-risk"] .kpi-value { color: var(--warning-text); }
-.kpi[data-tone="resolved"] { background: var(--success-4); border-color: var(--success-mid); }
-.kpi[data-tone="resolved"] .kpi-value { color: var(--success-text); }
-.kpi[data-tone="muted"] .kpi-value { color: var(--text-faint); }
+.kpi-sub.vc-stat__note { color: var(--vc-text-muted); font-size: var(--fs-xs); line-height: 1.2; white-space: nowrap; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; }
+.kpi[data-tone="affected"] { background: var(--vc-danger-bg); border-color: var(--vc-danger-border); }
+.kpi[data-tone="affected"] .kpi-value { color: var(--vc-danger-text); }
+.kpi[data-tone="at-risk"] { background: var(--vc-warning-bg); border-color: var(--vc-warning-border); }
+.kpi[data-tone="at-risk"] .kpi-value { color: var(--vc-warning-text); }
+.kpi[data-tone="resolved"] { background: var(--vc-success-bg); border-color: var(--vc-success-border); }
+.kpi[data-tone="resolved"] .kpi-value { color: var(--vc-success-text); }
+.kpi[data-tone="muted"] .kpi-value { color: var(--vc-text-subtle); }
 .kpi-value.flip { animation: kpiFlip 0.55s cubic-bezier(.2,.8,.2,1); }
 @keyframes kpiFlip {
   0% { transform: translateY(-0.35em); opacity: 0; }
@@ -269,31 +149,26 @@ a:hover { color: var(--brand-deep); }
 .controls {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 10px 20px;
-  background: var(--porcelain);
-  border-bottom: 1px solid var(--line);
+  background: var(--vc-bg);
+  border-bottom: 1px solid var(--vc-border-subtle);
 }
 .controls .spacer { flex: 1 1 auto; }
 .control-group { display: flex; align-items: center; gap: 8px; }
-.control-label { color: var(--text-muted); font-size: var(--fs-sm); }
+.control-label { color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 
+/* The run's status: a Vici tag at today's size (44 px, 1rem), in the tone of the state with a mark
+   and words: ink while the agent works, merlot when it waits for you, success, danger. */
 .status-pill {
-  display: inline-flex; align-items: center; gap: 10px;
-  height: var(--hit); padding: 0 16px;
-  border-radius: 999px;
-  background: var(--paper);
-  border: 1px solid var(--line-strong);
-  font-weight: 600;
-  white-space: nowrap;
+  --_h: var(--hit);
+  gap: 10px;
+  font-size: var(--vc-font-size-md);
+  font-weight: var(--vc-weight-semibold);
 }
-.status-pill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-faint); }
-/* The agent working: ink. Waiting for you: burgundy, your turn. */
-.status-pill[data-tone="active"] .dot { background: var(--text); animation: livePulse 1.2s ease-in-out infinite; }
-.status-pill[data-tone="waiting"] { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-text); }
-.status-pill[data-tone="waiting"] .dot { background: var(--brand); animation: livePulse 1.2s ease-in-out infinite; }
-.status-pill[data-tone="done"] { background: var(--success-fill); border-color: var(--success-mid); color: var(--success-text); }
-.status-pill[data-tone="done"] .dot { background: var(--success-line); }
-.status-pill[data-tone="stopped"] { background: var(--danger-fill); border-color: var(--danger-mid); color: var(--danger-text); }
-.status-pill[data-tone="stopped"] .dot { background: var(--danger-line); }
+.status-pill .dot { width: 11.55px; height: 10px; flex: none; clip-path: var(--vc-hex); background: var(--vc-text-subtle); }
+.status-pill[data-tone="active"] .dot { background: var(--vc-text); animation: livePulse 1.2s ease-in-out infinite; }
+.status-pill[data-tone="waiting"] .dot { background: var(--vc-accent); animation: livePulse 1.2s ease-in-out infinite; }
+.status-pill[data-tone="done"] .dot { background: var(--vc-success-solid); }
+.status-pill[data-tone="stopped"] .dot { background: var(--vc-danger-solid); }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Workspace: map (60 %) + agent console (40 %)                                               */
@@ -304,41 +179,26 @@ a:hover { color: var(--brand-deep); }
   grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
   min-height: 0;
 }
-.map-panel { position: relative; min-height: 0; overflow: hidden; border-right: 1px solid var(--line); background: var(--sea); }
-.console-panel { display: flex; flex-direction: column; min-height: 0; background: var(--paper); }
+.map-panel { position: relative; min-height: 0; overflow: hidden; border-right: 1px solid var(--vc-border-subtle); background: var(--vc-bg-sunken); }
+.console-panel { display: flex; flex-direction: column; min-height: 0; background: var(--vc-surface); }
 
-/* Banners (file://, web search unavailable, etc.) */
+/* Banners (file://, web search unavailable, etc.): Vici's alert in the tone of their level, floating
+   under the header. */
 .banner-stack { position: fixed; left: 50%; top: 92px; transform: translateX(-50%); z-index: 1200; display: flex; flex-direction: column; gap: 8px; width: min(920px, calc(100vw - 32px)); pointer-events: none; }
-.banner {
+.banner.vc-alert {
   pointer-events: auto;
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 12px 14px 12px 16px;
-  border-radius: var(--r-md);
-  background: var(--paper);
-  border: 1px solid var(--line-strong);
-  border-left: 4px solid var(--info-line);
-  box-shadow: var(--shadow-pop);
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  font-size: var(--vc-font-size-md);
+  box-shadow: var(--vc-shadow-lg);
 }
-.banner[data-level="warn"] { border-left-color: var(--warning-line); background: var(--warning-fill); }
-.banner[data-level="error"] { border-left-color: var(--danger-line); background: var(--danger-fill); }
-.banner[data-level="info"] > .icon { color: var(--info-line); }
-.banner[data-level="warn"] > .icon { color: var(--warning-text); }
-.banner[data-level="error"] > .icon { color: var(--danger-text); }
-.banner-text { flex: 1 1 auto; }
-.banner-text strong { display: block; }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Skip link and boot screen                                                                  */
 /* ------------------------------------------------------------------------------------------ */
 
-.skip-link {
-  position: fixed; left: 16px; top: -80px; z-index: 4000;
-  padding: 10px 16px;
-  border-radius: var(--r-md);
-  background: var(--brand); color: var(--on-brand);
-  font-weight: 600; text-decoration: none;
-}
-.skip-link:focus { top: 12px; }
+/* Vici's skip link, above the header while it has the focus. */
+.skip-link.vc-skip-link { position: fixed; z-index: 4000; }
 
 /* Covers the page until js/main.js has started the workspace. The help text appears after a few
    seconds without any script, so a page opened via file:// still explains itself. */
@@ -346,33 +206,19 @@ a:hover { color: var(--brand-deep); }
   position: fixed; inset: 0; z-index: 3000;
   display: grid; place-items: center;
   padding: 24px;
-  background: var(--paper);
+  background: var(--vc-surface);
   transition: opacity 0.35s ease;
 }
 .boot[data-state="done"] { opacity: 0; pointer-events: none; }
 .boot-card { width: min(640px, 100%); }
-.boot-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
-.boot-brand .brand-mark { width: 46px; height: 46px; }
+.boot-brand { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; }
 .boot-brand .brand-name { font-size: 2.1rem; }
 .boot-status { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: var(--fs-lg); }
-.boot[data-state="failed"] .boot-status .spinner { display: none; }
-.boot-detail {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border-left: 3px solid var(--danger-line);
-  border-radius: var(--r-sm);
-  background: var(--danger-fill);
-  color: var(--text);
-}
-.boot-help { color: var(--text-muted); opacity: 0; visibility: hidden; animation: bootReveal 0.3s ease 6s forwards; }
-.boot-help p { margin: 0 0 10px; max-width: 68ch; }
+.boot[data-state="failed"] .boot-status .vc-spinner { display: none; }
+.boot-detail { margin: 0 0 14px; }
+.boot-help { color: var(--vc-text-muted); opacity: 0; visibility: hidden; animation: bootReveal 0.3s ease 6s forwards; }
+.boot-help p { margin: 0 0 10px; max-width: var(--vc-container-prose); }
 .boot[data-state="failed"] .boot-help { animation: none; opacity: 1; visibility: visible; }
-.boot-help code {
-  font-family: var(--font-mono); font-size: 0.9em;
-  padding: 1px 6px;
-  border: 1px solid var(--line); border-radius: 4px;
-  background: var(--porcelain); color: var(--text);
-}
 @keyframes bootReveal { to { opacity: 1; visibility: visible; } }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -380,24 +226,34 @@ a:hover { color: var(--brand-deep); }
 /* ------------------------------------------------------------------------------------------ */
 
 @media (max-width: 1700px) {
-  .kpi { min-width: 132px; max-width: 210px; padding: 6px 12px 7px; }
+  .kpi.vc-stat { min-width: 132px; max-width: 210px; padding: 6px 12px 7px; }
   .brand-sub { display: none; }
+  /* Inter and Bricolage run wider than the former fonts: a tile's second line wraps (two lines at
+     most) instead of widening the tile, and the figures step down to 1.875rem, so the header keeps
+     its height and the badges keep their room (DESIGN.md, deviations). */
+  .kpi-sub.vc-stat__note { contain: inline-size; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; text-overflow: clip; }
+  .kpi-value.vc-stat__value { font-size: 1.875rem; }
 }
 
 /* Laptop widths, including 1536 px (a 1080p screen at 125 % scaling): keep the control bar on one row. */
 @media (max-width: 1600px) {
-  .controls { gap: 8px; padding: 10px 16px; }
+  /* Inter runs wider than the former font: tighter gaps and paddings keep the bar on one row. */
+  .controls { gap: 6px; padding: 10px 12px; }
+  .controls .vc-button { --_px: var(--vc-space-3); }
+  .controls .status-pill { padding-inline: 14px; gap: var(--vc-space-2); }
   .control-label { display: none; }
   .controls .dropdown-toggle { min-width: 0 !important; }
   .controls .dropdown-toggle .caption { display: none; }
   .controls .btn-text { display: none; }
-  #btn-reset, #btn-diagnostics { padding: 0 12px; }
+  .controls { --words-tip: visible; }
+  #btn-reset, #btn-diagnostics { --_px: 12px; }
 }
 
-/* Small laptops: "How it works" becomes an info icon so the header keeps at most two badge rows. */
+/* Small laptops: "How it works" keeps its icon only, so the header keeps at most two badge rows. */
 @media (max-width: 1300px) {
-  .about-btn { width: 40px; padding: 0; justify-content: center; }
+  .about-btn { width: 40px; --_px: 0; }
   .about-btn .btn-text { display: none; }
+  .header-badges { --words-tip: visible; }
 }
 
 @media (max-width: 1180px) {
@@ -406,15 +262,16 @@ a:hover { color: var(--brand-deep); }
 }
 
 @media (max-width: 860px) {
-  body { height: auto; min-height: 100dvh; overflow: auto; grid-template-rows: auto auto auto auto; }
+  .app-shell { height: auto; min-height: 100dvh; overflow: auto; grid-template-rows: auto auto auto auto; }
   .workspace { grid-template-columns: 1fr; }
-  .map-panel { height: 56vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  .map-panel { height: 56vh; border-right: 0; border-bottom: 1px solid var(--vc-border-subtle); }
   .console-panel { height: 70vh; }
   .ai-disclosure .long { display: none; }
   .kpis { flex-wrap: wrap; }
-  .kpi { min-width: calc(50% - 4px); }
+  .kpi.vc-stat { min-width: calc(50% - 4px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+/* Forced colours: the status and live pips keep their hexagons. */
+@media (forced-colors: active) {
+  .status-pill[data-tone] .dot, .status-pill .dot, .mode-badge[data-mode="live"] .mode-dot { forced-color-adjust: none; background-color: CanvasText; }
 }

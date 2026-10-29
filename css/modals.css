@@ -1,110 +1,81 @@
-/* Navigator — modal dialogs: mode selection, API key, custom scenario, diagnostics, report. */
+/* Navigator — modal dialogs on Vici's vc-dialog: mode selection, API key, custom scenario,
+ * diagnostics, report, intro. */
 
-.modal-backdrop {
-  position: fixed; inset: 0; z-index: 2000;
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-  background: color-mix(in srgb, var(--ink-12) 38%, transparent);
-  backdrop-filter: blur(3px);
-  animation: fadeIn 0.15s ease-out;
-}
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.modal {
-  width: min(880px, 100%);
-  max-height: calc(100dvh - 48px);
-  display: flex; flex-direction: column;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-pop);
-}
-.modal.narrow { width: min(620px, 100%); }
-.modal.wide { width: min(1080px, 100%); }
-.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 6px 24px; }
-.modal-head h2 { margin: 0; font-family: var(--font-figures); font-size: 1.6rem; line-height: 1.15; color: var(--text); }
-.modal-head p { margin: 6px 0 0; color: var(--text-muted); max-width: 70ch; }
-.modal-body { padding: 14px 24px 20px; overflow-y: auto; }
-.modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 24px 18px; border-top: 1px solid var(--line); flex-wrap: wrap; background: var(--porcelain); border-radius: 0 0 var(--r-lg) var(--r-lg); }
-.modal-foot .left { margin-right: auto; color: var(--text-muted); font-size: var(--fs-sm); }
+/* Today's widths, and the full height of the window less 48 px (Vici: 85vh), so the intro and the
+   mode choice fit a 1280 × 720 projector without scrolling (DESIGN.md, deviations). */
+.vc-dialog { --vc-dialog-width: 880px; max-height: calc(100dvh - 48px); }
+.vc-dialog.dialog-narrow { --vc-dialog-width: 620px; }
+.vc-dialog.dialog-wide { --vc-dialog-width: 1080px; }
+.vc-dialog.dialog-intro { --vc-dialog-width: 1000px; }
+.vc-dialog__header { padding: 18px 20px 6px 24px; }
+.vc-dialog__title { font-size: 1.6rem; line-height: 1.15; color: var(--vc-text); }
+.dialog-lead { margin: 6px 0 0; color: var(--vc-text-muted); max-width: var(--vc-container-prose); }
+.vc-dialog__body { padding: 14px 24px 20px; color: var(--vc-text); }
+/* Reading text in a dialog runs at Vici's prose measure (50ch, about 65 characters of Inter). */
+.vc-dialog__body > p { max-width: var(--vc-container-prose); }
+.vc-dialog__footer { align-items: center; gap: 10px; padding: 14px 24px 18px; }
+.dialog-note { margin-right: auto; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 
 /* Mode selection ----------------------------------------------------------------------------- */
-.run-summary {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+.run-summary.vc-card {
+  flex-direction: row; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 10px 14px; margin-bottom: 14px;
-  border: 1px solid var(--line); border-radius: var(--r-md);
-  background: var(--porcelain);
 }
-.run-summary .label { color: var(--text-muted); }
-.run-summary strong { font-weight: 700; color: var(--text); }
+.run-summary .label { color: var(--vc-text-muted); }
+.run-summary strong { font-weight: 700; color: var(--vc-text); }
 
 .mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.mode-card {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 18px 18px 16px;
-  border-radius: var(--r-lg);
-  border: 1px solid var(--line-strong);
-  background: var(--paper);
-  min-width: 0;
-}
-.mode-card h3 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 1.35rem; font-family: var(--font-figures); color: var(--text); }
-.mode-card ul { margin: 0; padding-left: 20px; color: var(--text-muted); }
+/* Each mode is one choice, Vici's interactive card: its button stretches over the card. */
+.mode-card.vc-card { border-color: var(--vc-border); }
+.mode-card .vc-card__body { gap: 10px; padding: 18px 18px 16px; }
+.mode-card .vc-card__title { display: flex; align-items: center; gap: 10px; font-size: 1.35rem; color: var(--vc-text); }
+.mode-card ul { margin: 0; padding-left: 20px; color: var(--vc-text-muted); }
 .mode-card li { margin: 3px 0; }
 .mode-card .mode-cta { margin-top: auto; padding-top: 6px; }
-.mode-card .mode-cta .btn { width: 100%; }
-.mode-card[data-mode="simulation"] { border-top: 6px solid var(--butter-edge); background: var(--butter-wash); }
-.mode-card[data-mode="simulation"] h3 .icon { color: var(--butter-text); }
-.mode-card[data-mode="live"] { border-top: 6px solid var(--brand); background: var(--brand-wash); }
-.mode-card[data-mode="live"] h3 .icon { color: var(--brand); }
-.mode-card .badge-sim {
-  align-self: flex-start;
-  display: inline-block; padding: 2px 10px 2px 26px; border-radius: 999px;
-  color: var(--sim-black); font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.06em;
-  border: 1px solid var(--butter-edge);
-  background: repeating-linear-gradient(-45deg, var(--sim-black) 0 5px, var(--sim-yellow) 5px 10px) left / 18px 100% no-repeat, var(--sim-yellow);
+.mode-card .mode-cta .vc-button { width: 100%; }
+/* The button is the card's stretched link (vc-card__link) and keeps its own text colour, which the
+   link's colour: inherit would otherwise replace (ink on the solid live button). */
+.mode-card .vc-button.vc-card__link,
+.mode-card .vc-button.vc-card__link:hover { color: var(--_fg); }
+/* The simulation card wears the tape along its top edge; the live card a merlot one. */
+.mode-card[data-mode="simulation"] { background: repeating-linear-gradient(-45deg, var(--vc-text) 0 6px, var(--vc-surface) 6px 12px) top / 100% 6px no-repeat, var(--vc-bg-subtle); }
+.mode-card[data-mode="simulation"] .vc-card__body { padding-top: 23px; }
+.mode-card[data-mode="simulation"] h3 .vc-icon { color: var(--vc-text); }
+.mode-card[data-mode="live"] { border-top: 6px solid var(--vc-accent); background: var(--vc-surface-hover); }
+.mode-card[data-mode="live"] h3 .vc-icon { color: var(--vc-accent-text); }
+.mode-card .mode-tag { --_h: 24px; align-self: flex-start; font-weight: var(--vc-weight-bold); letter-spacing: var(--vc-tracking-caps); }
+.mode-card .mode-tag[data-mode="simulation"] {
+  --_fg: var(--vc-text);
+  --_bg: repeating-linear-gradient(-45deg, var(--vc-text) 0 5px, var(--vc-surface) 5px 10px) left / 22px 100% no-repeat, var(--vc-surface);
+  padding-left: 28px;
 }
-.mode-card .badge-live { align-self: flex-start; display: inline-block; padding: 2px 10px; border-radius: 999px; color: var(--on-brand); background: var(--live); font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.06em; }
 .mode-card[aria-disabled="true"] { opacity: 0.55; }
-.mode-card .why-disabled { color: var(--warning-text); font-size: var(--fs-sm); }
+.mode-card .why-disabled { color: var(--vc-warning-text); font-size: var(--vc-font-size-sm); }
 
 /* API key ----------------------------------------------------------------------------------- */
-.key-advice {
-  display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px;
-  padding: 12px 14px; margin: 4px 0 14px;
-  border: 1px solid var(--warning-mid); border-radius: var(--r-md);
-  background: var(--warning-fill);
-}
-.key-advice .icon { color: var(--warning-text); }
-.key-advice p { margin: 0 0 4px; }
-.key-facts { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; color: var(--text-muted); font-size: var(--fs-sm); }
+.key-advice.vc-alert { margin: 4px 0 14px; font-size: var(--vc-font-size-md); color: var(--vc-text); }
+.key-advice .vc-alert__body p { margin: 0 0 4px; }
+.key-facts { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); }
 .key-facts li { display: flex; gap: 8px; align-items: flex-start; }
-.key-facts .icon { color: var(--success-line); margin-top: 1px; }
-.key-current { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-md); background: var(--porcelain); border: 1px solid var(--line); margin-bottom: 12px; }
-.key-current .icon { color: var(--brand); }
-.key-current code { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.key-facts .vc-icon { color: var(--vc-success-solid); margin-top: 1px; }
+.key-current.vc-alert { align-items: center; margin-bottom: 12px; color: var(--vc-text); font-size: var(--vc-font-size-md); }
+.key-current .vc-icon { color: var(--vc-accent-text); }
 
 /* Diagnostics -------------------------------------------------------------------------------- */
-.diag-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
-.diag-table th { text-align: left; color: var(--text-faint); font-weight: 600; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line-strong); }
-.diag-table td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-.diag-table td.status { white-space: nowrap; font-weight: 700; }
-.diag-table td.ms { white-space: nowrap; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.diag-table .host { display: block; color: var(--text-faint); font-family: var(--font-mono); font-size: 0.78rem; }
-.diag-table .detail { color: var(--text-muted); }
-.diag-status { display: inline-flex; align-items: center; gap: 6px; }
-.diag-status[data-s="pass"] { color: var(--success-text); }
-.diag-status[data-s="fail"] { color: var(--danger-text); }
-.diag-status[data-s="warn"] { color: var(--warning-text); }
-.diag-status[data-s="skip"], .diag-status[data-s="idle"] { color: var(--text-faint); }
-.diag-status[data-s="running"] { color: var(--brand); }
+.diag-table td.status { white-space: nowrap; }
+.diag-table td.ms { white-space: nowrap; color: var(--vc-text-subtle); }
+.diag-table .host { display: block; color: var(--vc-text-subtle); font-family: var(--vc-font-mono); font-size: 0.78rem; }
+.diag-table .detail { color: var(--vc-text-muted); }
+.diag-status { gap: 6px; }
 .diag-section { margin-top: 18px; }
-.diag-section h3 { margin: 0 0 6px; font-size: var(--fs-md); color: var(--text); }
-.diag-section p { margin: 0 0 8px; color: var(--text-muted); font-size: var(--fs-sm); max-width: 80ch; }
-.world-checks { columns: 2; column-gap: 28px; font-size: var(--fs-sm); padding: 0; margin: 8px 0 0; list-style: none; }
-.world-checks li { break-inside: avoid; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; margin: 0 0 6px; color: var(--text-muted); }
+.diag-section h3 { margin: 0 0 6px; font-family: var(--vc-font-text); font-size: var(--vc-font-size-md); font-weight: var(--vc-weight-semibold); letter-spacing: 0; color: var(--vc-text); }
+.diag-section p { margin: 0 0 8px; color: var(--vc-text-muted); font-size: var(--vc-font-size-sm); max-width: var(--vc-container-prose); }
+.world-checks { columns: 2; column-gap: 28px; font-size: var(--vc-font-size-sm); padding: 0; margin: 8px 0 0; list-style: none; }
+.world-checks li { break-inside: avoid; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; margin: 0 0 6px; color: var(--vc-text-muted); }
+.world-checks li::before { display: none; }
 
 /* Report ------------------------------------------------------------------------------------- */
-.report-modal .modal-body { font-size: 1.05rem; }
+.report-modal .vc-dialog__body { font-size: 1.05rem; }
 
 @media (max-width: 860px) {
   .mode-cards { grid-template-columns: 1fr; }
@@ -112,48 +83,52 @@
 }
 
 /* Intro: what Navigator does, how it works, why it pays off ------------------------------------ */
-.modal.intro-modal { width: min(1000px, 100%); }
-.intro-modal .modal-head p { font-size: var(--fs-lg); line-height: 1.4; color: var(--text); max-width: 64ch; }
-.intro-modal .modal-body h3 { margin: 6px 0 14px; font-family: var(--font-figures); font-size: 1.25rem; color: var(--text); }
+.intro-modal .dialog-lead { font-size: var(--fs-lg); line-height: 1.4; color: var(--vc-text); max-width: var(--vc-container-prose); }
+/* The lead and the note run at the prose measure, so the sections sit a little closer: the whole
+   window still fits a 1280 × 720 projector without scrolling. */
+.intro-modal .vc-dialog__body { padding-bottom: 16px; }
+.intro-modal .vc-dialog__body h3 { margin: 2px 0 10px; font-family: var(--vc-font-display); font-weight: var(--vc-weight-semibold); font-size: 1.25rem; line-height: 1.2; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
 
-/* Five steps on one track; each number takes the colour the map uses for that moment of a run. */
-.intro-steps {
-  list-style: none; margin: 0 0 26px; padding: 0;
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px;
+/* Five steps on Vici's stepper; each step's hexagon takes the tone the app uses for that moment of a
+   run: danger for a finding, fjord for checking, warning for risk, ink for your decision (merlot never
+   sits among the state colours), success for a resolved state. */
+.intro-steps.vc-stepper { --_m: 42px; margin: 0 0 18px; padding: 0; }
+/* Flush left, as before: the hints run to five lines, which read better flush left than centred. */
+.intro-steps .vc-step { gap: 6px; align-items: flex-start; text-align: start; padding-right: 12px; }
+.intro-steps .vc-step:not(:last-child)::after { left: calc(var(--_m) * 1.1547 + var(--vc-space-2)); right: var(--vc-space-2); }
+.intro-steps .vc-step__marker { font-size: 1.25rem; font-weight: 700; }
+.intro-steps .vc-step__marker::before { clip-path: var(--vc-hex); }
+.intro-step[data-tone="spot"] .vc-step__marker { color: var(--vc-danger-text); }
+.intro-step[data-tone="spot"] .vc-step__marker::before { background: var(--vc-danger-bg); box-shadow: none; }
+.intro-step[data-tone="check"] .vc-step__marker { color: var(--vc-info-text); }
+.intro-step[data-tone="check"] .vc-step__marker::before { background: var(--vc-info-bg); }
+.intro-step[data-tone="calculate"] .vc-step__marker { color: var(--vc-warning-text); }
+.intro-step[data-tone="calculate"] .vc-step__marker::before { background: var(--vc-warning-bg); }
+.intro-step[data-tone="propose"] .vc-step__marker { color: var(--vc-surface); }
+.intro-step[data-tone="propose"] .vc-step__marker::before { background: var(--vc-text); }
+.intro-step[data-tone="prepare"] .vc-step__marker { color: var(--vc-success-text); }
+.intro-step[data-tone="prepare"] .vc-step__marker::before { background: var(--vc-success-bg); }
+.intro-step-title.vc-step__label { font-family: var(--vc-font-display); font-size: 1.2rem; font-weight: var(--vc-weight-semibold); line-height: 1.2; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
+.intro-step-text.vc-step__hint { color: var(--vc-text-muted); font-size: var(--vc-font-size-md); line-height: 1.4; }
+/* Forced colours: the steps' hexagons in CanvasText with their numbers in Canvas (the tones above would
+   otherwise stay, and the ink one vanish on a dark contrast theme). */
+@media (forced-colors: active) {
+  .intro-steps .intro-step .vc-step__marker { forced-color-adjust: none; color: Canvas; }
+  .intro-steps .intro-step .vc-step__marker::before { forced-color-adjust: none; background: CanvasText; }
 }
-.intro-step { position: relative; display: flex; flex-direction: column; gap: 4px; padding-top: 52px; min-width: 0; }
-.intro-step::before {
-  content: ""; position: absolute; top: 20px; left: 50px; right: -8px;
-  height: 2px; background: var(--line-strong);
-}
-.intro-step:last-child::before { display: none; }
-.intro-num {
-  position: absolute; top: 0; left: 0;
-  width: 42px; height: 42px; border-radius: 50%;
-  display: grid; place-items: center;
-  border: 2px solid;
-  font-family: var(--font-figures); font-weight: 700; font-size: 1.25rem; line-height: 1;
-}
-.intro-step[data-tone="spot"] .intro-num { color: var(--danger-text); border-color: var(--danger-line); background: var(--danger-fill); }
-.intro-step[data-tone="check"] .intro-num { color: var(--info-text); border-color: var(--info-line); background: var(--info-fill); }
-.intro-step[data-tone="calculate"] .intro-num { color: var(--warning-text); border-color: var(--warning-line); background: var(--warning-fill); }
-.intro-step[data-tone="propose"] .intro-num { color: var(--brand); border-color: var(--brand); background: var(--brand-soft); }
-.intro-step[data-tone="prepare"] .intro-num { color: var(--success-text); border-color: var(--success-line); background: var(--success-fill); }
-.intro-step-title { font-family: var(--font-figures); font-size: 1.2rem; font-weight: 700; color: var(--text); }
-.intro-step-text { color: var(--text-muted); line-height: 1.4; }
 
 .intro-value {
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 28px;
 }
-.intro-value li { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 3px solid var(--brand-mid); }
-.intro-value strong { font-family: var(--font-figures); font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: var(--brand); }
-.intro-value span { color: var(--text-muted); line-height: 1.4; }
-.intro-note { margin: 22px 0 0; color: var(--text-faint); font-size: var(--fs-sm); }
+.intro-value li { display: flex; flex-direction: column; gap: 4px; margin: 0; padding-top: 10px; border-top: 3px solid var(--vc-accent-soft-hover); }
+.intro-value li::before { display: none; }
+.intro-value strong { font-family: var(--vc-font-display); font-size: 1.35rem; font-weight: var(--vc-weight-semibold); line-height: 1.15; letter-spacing: var(--vc-tracking-heading); color: var(--vc-text); }
+.intro-value span { color: var(--vc-text-muted); line-height: 1.4; }
+.intro-note { margin: 14px 0 0; color: var(--vc-text-subtle); font-size: var(--vc-font-size-sm); max-width: var(--vc-container-prose); }
 
 @media (max-width: 760px) {
-  .intro-steps { grid-template-columns: 1fr; gap: 14px; }
-  .intro-step { padding: 2px 0 0 56px; min-height: 42px; }
-  .intro-step::before { top: 46px; bottom: -12px; left: 20px; right: auto; width: 2px; height: auto; }
+  .intro-steps.vc-stepper { flex-direction: column; gap: 14px; }
+  .intro-steps .vc-step:not(:last-child)::after { display: none; }
   .intro-value { grid-template-columns: 1fr; }
 }
