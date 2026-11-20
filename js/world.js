@@ -1,5 +1,5 @@
-// World data access: indexes, normalised supply flows, route geometry and query helpers.
-// Pure module (no DOM). Shared by the UI, the agent tools and the impact engine.
+// Nordwerk's synthetic world: indexes, normalised supply flows, route geometry and query helpers.
+// Pure module (no DOM). Shared by the map, the scripted run, the live agent's tools and the engine.
 
 const EPS = 1e-9;
 
@@ -266,65 +266,6 @@ export function routePath(model, routeOrId) {
   return pts;
 }
 
-/** Point at fraction t (0..1) along a polyline, by geographic length. */
-export function pointAlong(path, t) {
-  if (!path.length) return null;
-  if (path.length === 1) return path[0];
-  const segs = [];
-  let total = 0;
-  for (let i = 1; i < path.length; i++) {
-    const d = Math.hypot(path[i][0] - path[i - 1][0], (path[i][1] - path[i - 1][1]) * Math.cos(((path[i][0] + path[i - 1][0]) / 2) * Math.PI / 180));
-    segs.push(d);
-    total += d;
-  }
-  let target = Math.min(Math.max(t, 0), 1) * total;
-  for (let i = 0; i < segs.length; i++) {
-    if (target <= segs[i] || i === segs.length - 1) {
-      const f = segs[i] > EPS ? target / segs[i] : 0;
-      const a = path[i], b = path[i + 1];
-      return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
-    }
-    target -= segs[i];
-  }
-  return path[path.length - 1];
-}
-
-/** Current map position of an open purchase order. */
-export function poLatLng(model, po) {
-  const r = model.routes.get(po.route);
-  if (!r) return locate(model, po.supplier);
-  const path = legPath(model, r, po.position?.leg ?? 0, po.supplier, po.to);
-  return pointAlong(path, po.position?.progress ?? 0) || locate(model, po.supplier);
-}
-
-/** Entry and exit points for drawing a flow's feeder links onto a displayed corridor. */
-export function flowEndpoints(model, flow) {
-  const r = model.routes.get(flow.route);
-  const src = locate(model, flow.from);
-  const dst = locate(model, flow.to);
-  if (!r || r.display === false || !r.nodeSeq.length) return { direct: true, segments: [[src, dst]] };
-  const first = r.nodeSeq[0];
-  const last = r.nodeSeq[r.nodeSeq.length - 1];
-  let entry, exit;
-  if (flow.direction === "reverse") { entry = last; exit = first; }
-  else { entry = flow.enterAt || first; exit = flow.exitAt || last; }
-  const segs = [];
-  const e = locate(model, entry), x = locate(model, exit);
-  if (src && e && distKm(src, e) > 25) segs.push([src, e]);
-  if (dst && x && distKm(x, dst) > 25) segs.push([x, dst]);
-  return { direct: false, segments: segs };
-}
-
-/** Great-circle distance in km. */
-export function distKm(a, b) {
-  const R = 6371;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(b[0] - a[0]);
-  const dLon = toRad(b[1] - a[1]);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
 // ---------------------------------------------------------------------------------------------
 // Query helpers (used by popovers and agent tools)
 // ---------------------------------------------------------------------------------------------
@@ -344,11 +285,6 @@ export function routesThroughNode(model, nodeId) {
 export function routesOfSupplier(model, supplierId) {
   const ids = new Set((model.flowsFrom.get(supplierId) || []).map((f) => f.route));
   return [...ids].map((id) => model.routes.get(id)).filter(Boolean);
-}
-
-/** Flows (any tier) that carry a part or feed into a site making that part. */
-export function flowsForPart(model, partId) {
-  return model.flows.filter((f) => f.part === partId);
 }
 
 /** Open purchase orders matching optional filters. */

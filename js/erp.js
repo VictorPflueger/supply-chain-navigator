@@ -1,5 +1,5 @@
 // ERP-style queries over the synthetic world. Pure functions returning compact, JSON-safe objects.
-// Used by map popovers, the agent's erp_* tools and the simulation player: one source of truth.
+// The live agent's erp_* tools and the scripted run both call them: one source of truth.
 
 import { nameOf, routesThroughNode, routesOfSupplier, openPOs, chainPlantsOf, dayToISO } from "./world.js";
 
@@ -33,22 +33,6 @@ export function erpOverview(model) {
       open_po_value_eur: pos.reduce((a, p) => a + p.value_eur, 0)
     },
     assumptions: { line_stop_cost_eur_per_day: w.assumptions.line_stop_cost_eur_per_day, note: w.assumptions.line_stop_cost_note }
-  };
-}
-
-/** Compact supplier footprint for a live scan: where Nordwerk is exposed. */
-export function erpFootprint(model) {
-  const byCluster = new Map();
-  for (const s of model.world.suppliers) {
-    const key = `${s.city}, ${s.country}`;
-    if (!byCluster.has(key)) byCluster.set(key, []);
-    byCluster.get(key).push(`${s.id} (${s.parts.map((p) => model.parts.get(p)?.name.split(" (")[0]).join("/")}, tier ${s.tier})`);
-  }
-  const chokepoints = model.world.nodes.filter((n) => ["chokepoint", "waterway", "pass"].includes(n.type) || ["N-RTM", "N-HAM", "N-KOP", "N-TME", "N-DUI", "N-MAL", "N-ALA"].includes(n.id));
-  return {
-    sites: [...byCluster.entries()].map(([place, list]) => ({ place, suppliers: list })),
-    logistics_nodes: chokepoints.map((n) => ({ id: n.id, name: n.name })),
-    plants: model.world.plants.map((p) => `${p.name} (${p.city}, ${p.country})`)
   };
 }
 

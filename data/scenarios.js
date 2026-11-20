@@ -1,22 +1,22 @@
 /*
- * NAVIGATOR — injectable disruption scenarios.
+ * NAVIGATOR: the six disruption scenarios.
  *
  * Each scenario is only a short, UNVERIFIED trigger ("seed") written the way a first signal
  * typically arrives (newsletter, carrier notice, social media). In Live mode the agent receives
  * the seed text and nothing else: it must verify the event independently (web search, open data),
  * map it onto Nordwerk's network, quantify it with the deterministic engine and propose options.
  *
- * `map_focus` positions the map. `exposure_check` is used ONLY by the offline integrity check
- * (js/world_check.js) and is never shown to the agent.
+ * `map_focus` is where the scenario happens. `exposure_check` names the sites the scenario must
+ * reach; tests/figures.mjs checks it, and the agent never sees it.
  */
 window.SCENARIOS = [
   {
     id: "SC-RTM-STRIKE",
     number: 1,
-    title: "Container terminal strike — Port of Rotterdam",
+    title: "Container terminal strike at the Port of Rotterdam",
     short: "Rotterdam strike",
     category: "Port / labour",
-    seed: "Unverified signal from a logistics newsletter: dockworkers at the Maasvlakte container terminals in the Port of Rotterdam have walked out over a collective-agreement dispute. Several deep-sea vessels are reportedly waiting at anchor. Duration unknown — the union mentions 'at least a week'.",
+    seed: "Unverified signal from a logistics newsletter: dockworkers at the Maasvlakte container terminals in the Port of Rotterdam have walked out over a collective-agreement dispute. Several deep-sea vessels are reportedly waiting at anchor. Duration unknown; the union mentions 'at least a week'.",
     map_focus: { lat: 51.9, lon: 5.2, zoom: 6 },
     exposure_check: { node_ids: ["N-RTM"] }
   },
@@ -53,7 +53,7 @@ window.SCENARIOS = [
   {
     id: "SC-REDSEA",
     number: 5,
-    title: "Red Sea security situation — Cape rerouting",
+    title: "Red Sea security situation: ships reroute via the Cape",
     short: "Red Sea rerouting",
     category: "Geopolitical / shipping",
     seed: "Unverified signal from a carrier advisory: because of the security situation in the southern Red Sea and Gulf of Aden, Asia–North Europe and Asia–Mediterranean services will be rerouted via the Cape of Good Hope until further notice.",

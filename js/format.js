@@ -1,13 +1,15 @@
-// Formatting helpers for money, durations and dates (English UI, EUR).
+// Formatting for money, counts, durations and dates: British English, euros, a no-break space between
+// a number and its unit. Part of the shell: nothing here knows about supply chains.
 
 const nf0 = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const nf2 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const NBSP = " ";
 
-/** Compact euro amount for KPIs and cards: €19.1M, €380k, €2,640. */
+/** Compact euro amount for figures and cards: €19.1M, €984k, €2,640. */
 export function eurCompact(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
   const v = Number(value);
+  if (value === null || value === undefined || Number.isNaN(v)) return "";
   const sign = v < 0 ? "−" : "";
   const a = Math.abs(v);
   if (a >= 1e9) return `${sign}€${nf1.format(a / 1e9)}B`;
@@ -16,65 +18,53 @@ export function eurCompact(value) {
   return `${sign}€${nf0.format(a)}`;
 }
 
-/** Full euro amount: €2,640,000. */
-export function eurFull(value) {
-  if (value === null || value === undefined) return "—";
-  return `€${nf0.format(Math.round(Number(value)))}`;
-}
-
-/** Small euro amounts with cents, for the cost meter: €0.38. */
+/** Small euro amounts with cents, for the session cost: €0.21. */
 export function eurCents(value) {
   return `€${nf2.format(Number(value) || 0)}`;
+}
+
+/** A euro amount as the records hold it, in full: €12, €1.40, €180,000. */
+export function eurExact(value) {
+  const v = Number(value) || 0;
+  return `€${Number.isInteger(v) ? nf0.format(v) : nf2.format(v)}`;
 }
 
 export function int(value) {
   return nf0.format(Math.round(Number(value) || 0));
 }
 
+/** "9 days", "1 day". */
 export function days(n) {
-  if (n === null || n === undefined) return "—";
-  const v = Math.round(Number(n) * 10) / 10;
-  return `${v} ${Math.abs(v) === 1 ? "day" : "days"}`;
+  return `${int(n)}${NBSP}${Math.abs(Math.round(n)) === 1 ? "day" : "days"}`;
 }
 
-/** mm:ss (or h:mm:ss) for the stopwatch. */
+/** m:ss (or h:mm:ss) for the decision clock. */
 export function clock(ms) {
   const total = Math.max(0, Math.floor((ms || 0) / 1000));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const p = (x) => String(x).padStart(2, "0");
-  return h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+  const s = String(total % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-/** "Tue 21 Oct" for an ISO date or a day offset from today. */
-export function shortDate(isoOrOffset) {
-  let d;
-  if (typeof isoOrOffset === "number") {
-    const now = new Date();
-    d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + isoOrOffset);
-  } else {
-    const text = String(isoOrOffset);
-    d = new Date(text.includes("T") ? text : `${text}T12:00:00`);
-  }
+/** "Sun 29 Nov": a day offset from today, or an ISO date. */
+export function shortDate(isoOrOffset, today = new Date()) {
+  const d = typeof isoOrOffset === "number"
+    ? new Date(today.getFullYear(), today.getMonth(), today.getDate() + isoOrOffset)
+    : new Date(String(isoOrOffset).includes("T") ? isoOrOffset : `${isoOrOffset}T12:00:00`);
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-/** "12 Oct 2026" from an ISO date or timestamp (for recordings made on another day). */
-export function dateWithYear(iso) {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "an earlier date" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
-
-/** "15:56:03" local time from an ISO timestamp. */
-export function timeOfDay(iso) {
-  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
-
-export function pct(ratio) {
-  return `${Math.round((Number(ratio) || 0) * 100)} %`;
+/** "73 %" from a whole percentage. */
+export function pct(n) {
+  return `${int(n)}${NBSP}%`;
 }
 
 export function plural(n, one, many = `${one}s`) {
   return `${int(n)} ${Math.abs(n) === 1 ? one : many}`;
+}
+
+/** "one", "two" … for counts a sentence reads better in words. */
+export function words(n) {
+  return ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][n] ?? int(n);
 }
