@@ -19,23 +19,23 @@ The top right of the page holds the key figures. The guide's chapter *How it wor
 
 ## The talk track
 
-The page opens with Vici's guide, *How the showcase works*, once per browser tab. Its last chapter is the talk track, and the same five steps are the buttons under the header. Each step is one minute.
+The page opens with Vici's guide, *How the showcase works*, once per browser tab. Its last chapter is the talk track: five steps of a minute each, the buttons under the header. Each step plays out by itself; when the page waits for you, the bar under the agent's words says what to press.
 
 | Step | What the room sees | What you say |
 |---|---|---|
 | Spot | The report, not yet confirmed, and the four figures | "€19.1M at risk, and Leipzig stops in 9 days unless we act." |
-| Check | Three sources, then the alert | "One report is not enough: the agent finds a second source." |
-| Calculate | The first estimate against the one after the check, and Leipzig's output falling to zero | "An engine, not the AI, prices five weeks at €19.1M, not €935k." |
-| Propose | Three costed options next to doing nothing. Click **Approve** on option B; the clock stops | "€984k cuts the risk to €1.9M; a person decides in about 4 minutes." |
-| Prepare | Four emails and one booking. Click **Approve all** | "Four emails and one booking wait for approval. Live, this costs €0.20." |
+| Check | **Run step 2**: three sources, then the alert | "One report is not enough: the agent finds a second source." |
+| Calculate | **Run step 3**: the first estimate against the one after the check, and Leipzig's output falling to zero | "An engine, not the AI, prices five weeks at €19.1M, not €935k." |
+| Propose | **Run step 4**: three costed options next to doing nothing. **Approve option B**; the clock stops | "€984k cuts the risk to €1.9M; a person decides in about 4 minutes." |
+| Prepare | Drafted by itself: four emails and one booking. **Approve all** | "Four emails and one booking wait for approval. Live, this costs €0.20." |
 
 `DEMO_SCRIPT.md` has the timings, the checks before the call and the questions you will get.
 
-**Moving through it.** Click a step, press 1 to 5, or use the arrow keys; Home goes back to Spot. **Start over** (the arrow beside the steps) clears your decisions.
+**Moving through it.** Space pauses a running step and continues it; the right arrow finishes it. A click on a step, or 1 to 5, shows it at once; Home goes back to Spot. **Start over** (the arrow beside the steps) clears your decisions.
 
 **Links.** The address holds the step and the scenario: `?step=propose`, `?scenario=rhine&step=calculate`. Add `&guide=0` to keep the guide closed, or open `?guide=present` to start at the talk track.
 
-**Other scenarios.** The menu beside the steps holds five more: a strike in Rotterdam, low water on the Rhine, an earthquake near Hsinchu, floods in Styria and Slovenia, and ships avoiding the Red Sea. Every figure follows the scenario.
+**Other scenarios.** The menu beside the steps holds five more, from a strike in Rotterdam to ships avoiding the Red Sea. Every figure follows the scenario.
 
 ## Start agent: the simulation or a live run
 
@@ -59,8 +59,8 @@ The page opens with Vici's guide, *How the showcase works*, once per browser tab
 
 ```
 index.html        the page: header, key figures, steps, map, story, guide, Start agent
-js/main.js        starts it and wires the shell to the case; follows clicks, keys and a live run
-js/shell.js       the presenter's shell: steps, keys, links, key figures, Start agent, the clock
+js/main.js        plays the steps and says in the bar what to do; follows clicks, keys and a live run
+js/shell.js       the presenter's shell: steps, keys, links, the bar, key figures, Start agent, the clock
 js/claude.js      the browser's client for Claude: session key, streaming, retries
 js/cost.js        session cost: measured from the API's usage, or estimated from a replay
 js/format.js      euros, days, dates, minutes
@@ -97,11 +97,11 @@ Then open http://localhost:8000. On Windows: `py -m http.server 8000`.
 NODE_PATH="$(npm root -g)" node tests/run-all.mjs
 ```
 
-Nine suites: the figures, the files, how lean the app stays, Vici's own checks, the showcase in Chromium, the guide, a live run against a stand-in API, contrast and Vici's hexagon rule. GitHub Actions runs them on every push. `tests/README.md` has the setup.
+Nine suites, from the figures to a live run against a stand-in API in Chromium. GitHub Actions runs them on every push. `tests/README.md` has the setup.
 
 ## History
 
-2.0.0 (20 November 2026) turned the lab into this one-screen showcase on Vici 2.0. Release 1.2.0, the lab version with its toolbar, live scans, diagnostics, outbox and audit log, is in the git history at commit `61f1483`.
+2.1.0 (20 November 2026): the prototype runs, and a bar under the story asks for every click. 2.0.0 turned the lab into this one-screen showcase on Vici 2.0. Release 1.2.0, the lab version with its toolbar, live scans, diagnostics, outbox and audit log, is in the git history at commit `61f1483`.
 
 ## Author
 

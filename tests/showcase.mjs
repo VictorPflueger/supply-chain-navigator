@@ -1,6 +1,11 @@
 // The showcase in Chromium, as a presenter drives it:
 //   steps         the five steps Spot, Check, Calculate, Propose and Prepare under the header, moved by
-//                 click, Next, the arrow keys, 1 to 5, Home and ?step=; the talk track's five minutes
+//                 click, the bar's button, the arrow keys, 1 to 5, Home and ?step=; the talk track's five minutes
+//   run           the prototype runs: step 1 plays by itself once the guide closes, Run plays a step out
+//                 over time, Space pauses and continues, the guide holds it, an approval runs Prepare by
+//                 itself, and a click or a link shows a step at once
+//   move          at every point where the page waits, the bar under the story says in words what
+//                 to do, sits in view uncovered and holds the page's one primary action, which draws attention
 //   scenarios     the Tangier fire carries the demo; the other five wait behind one menu, and every
 //                 figure follows the scenario chosen, in the address too (?scenario=)
 //   first-screen  no lab control on the first screen; Start agent offers the simulation first and a
@@ -8,7 +13,9 @@
 //   kpis          four key figures top right, marked data-vc-kpi, with values before anything happens;
 //                 the clock waits for the guide; the decision moves the figures
 //   layout        at 1920 × 1080, 1366 × 768 and 1280 × 720 in both themes every step fits the window,
-//                 Next stays in view and clickable, and the story shows names, not record ids; a 375 px
+//                 the bar stays in view and clickable, every map label reads clear of the others and of
+//                 the marks, and the story shows names, not record ids; the
+//                 header keeps one line and every key figure reads in full, in all six scenarios; a 375 px
 //                 phone scrolls only down
 // Usage: NODE_PATH="$(npm root -g)" node tests/showcase.mjs [case…]
 import path from "node:path";
@@ -42,7 +49,13 @@ const at = (page) => page.evaluate(() => ({
   query: location.search,
   title: document.getElementById("story-title").textContent.trim()
 }));
-const kpis = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll("[data-vc-kpi]")].map((t) => [t.dataset.vcKpi, { value: t.querySelector(".kpi-value").textContent.replace(/ /g, " ").trim(), note: t.querySelector(".kpi-note").textContent.replace(/ /g, " ").trim(), tone: t.dataset.tone || "" }])));
+// Each key figure: its value, the old value a decision struck through (vc-stat__was), its note and tone.
+const kpis = (page) => page.evaluate(() => Object.fromEntries([...document.querySelectorAll("[data-vc-kpi]")].map((t) => {
+  const v = t.querySelector(".kpi-value");
+  const was = v.querySelector(".vc-stat__was");
+  const text = (n) => n.textContent.replace(/ /g, " ").trim();
+  return [t.dataset.vcKpi, { value: [...v.childNodes].filter((c) => c !== was).map(text).join("").trim(), was: was ? text(was) : null, struck: was ? getComputedStyle(was).textDecorationLine.includes("line-through") : false, note: text(t.querySelector(".kpi-note")), tone: t.dataset.tone || "" }];
+})));
 const press = async (page, key) => { await page.keyboard.press(key); await page.waitForTimeout(120); };
 async function run(name, token, fn) {
   if (!wanted(name)) return;
@@ -73,9 +86,10 @@ try {
     await press(page, "Home");
     s = await at(page);
     check(right === "propose" && left === "calculate" && five === "prepare" && s.step === "spot" && !/step=/.test(s.query), `the arrow keys, 5 and Home move the steps (${right}, ${left}, ${five}, ${s.step})`);
-    await page.click("#next");
+    const label = await page.$eval("#move-actions button[data-attention]", (b) => b.textContent.trim());
+    await page.click("#move-actions button[data-attention]");
     await page.waitForTimeout(120);
-    check((await at(page)).step === "check", "Next moves to Check");
+    check((await at(page)).step === "check", `the bar's button "${label}" moves to Check`);
     await page.click('[data-vc-guide-open="guide"]');
     await page.waitForTimeout(150);
     await press(page, "ArrowRight");
@@ -97,6 +111,190 @@ try {
     });
     check(track.shown && track.items.map((i) => i.name).join("|") === LABELS.join("|") && track.items.every((i) => i.time === "1 min" && i.say.length > 20), `the talk track opens at ?guide=present: ${track.items.map((i) => `${i.name} ${i.time}`).join(", ")}`);
     await talk.context.close();
+  });
+
+  // ---- the prototype runs, and the bar asks ----------------------------------------------------------------
+  // What the page shows now: the agent's words and drafts for the step on screen, and the bar under the
+  // story.
+  const now = (page) => page.evaluate(() => ({
+    step: document.querySelector('#steps [aria-current="step"]')?.closest("li")?.dataset.step || null,
+    n: document.querySelectorAll("#agent-words > p:not(.working):not(.empty), #story-card .draft").length,
+    tone: document.getElementById("move").dataset.tone,
+    text: document.getElementById("move-text").textContent.replace(/\s+/g, " ").trim(),
+    buttons: [...document.querySelectorAll("#move-actions button")].map((b) => b.id)
+  }));
+  /** Samples the page every 150 ms until until(state) holds or ms pass. */
+  async function watch(page, until, ms = 20000) {
+    const seen = [];
+    const t0 = Date.now();
+    for (;;) {
+      const s = await now(page);
+      seen.push({ t: Date.now() - t0, ...s });
+      if (until(s) || Date.now() - t0 > ms) return seen;
+      await page.waitForTimeout(150);
+    }
+  }
+  /** A step plays out over time: its words appear in at least three counts, never fewer, over a second or more. */
+  const playsOut = (seen) => {
+    const ns = seen.map((s) => s.n);
+    const grows = ns.every((n, i) => i === 0 || n >= ns[i - 1]);
+    const firstFull = seen.find((s) => s.n === ns[ns.length - 1]);
+    return grows && new Set(ns).size >= 3 && ns[ns.length - 1] > ns[0] && firstFull.t >= 1000;
+  };
+  const story_ = (seen) => `${seen.map((s) => s.n).filter((n, i, a) => i === 0 || n !== a[i - 1]).join(" → ")} entries over ${(seen[seen.length - 1].t / 1000).toFixed(1)} s`;
+
+  await run("run", "RUN OK", async (check) => {
+    // Step 1 plays by itself once the guide closes, and not before.
+    const { context, page, errors } = await open("");
+    await page.waitForTimeout(1200);
+    const held = await now(page);
+    const guideOpen = await page.evaluate(() => document.getElementById("guide").open);
+    await page.keyboard.press("Escape");
+    const ran = (id) => (s) => s.step === id && s.n > 0 && s.tone !== "working";
+    let seen = await watch(page, ran("spot"));
+    const spotWorking = seen.some((s) => s.tone === "working" && s.buttons.includes("pause"));
+    check(guideOpen && held.n === 0 && seen[seen.length - 1].step === "spot" && spotWorking && playsOut(seen), `step 1 waits for the guide (${held.n} entries while it is open), then plays by itself: ${story_(seen)}`);
+    const last = seen[seen.length - 1];
+    check(/^Your move\./.test(last.text) && last.buttons.join() === "run", `then the bar asks: "${last.text}" (${last.buttons.join(", ")})`);
+
+    // Run plays the next step out over time.
+    await page.click("#run");
+    seen = await watch(page, ran("check"));
+    check(seen[0].step === "check" && playsOut(seen), `Run step 2 plays Check out: ${story_(seen)}`);
+
+    // Space pauses and continues; the guide holds a running step too.
+    await page.click("#run");
+    await page.waitForTimeout(900);
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press(" ");
+    await page.waitForTimeout(200);
+    const paused = await now(page);
+    await page.waitForTimeout(1600);
+    const still = await now(page);
+    await page.keyboard.press(" ");
+    const resumed = (await watch(page, (x) => x.n > still.n, 6000)).pop();
+    check(paused.step === "calculate" && /^Paused\./.test(paused.text) && paused.buttons.join() === "resume" && still.n === paused.n && resumed.n > paused.n && resumed.tone === "working", `Space pauses Calculate at ${paused.n} entries ("${paused.text}"), holds it ${still.n === paused.n ? "still" : "moving"}, and continues to ${resumed.n}`);
+    await page.click('[data-vc-guide-open="guide"]');
+    await page.waitForTimeout(200);
+    const inGuide = await now(page);
+    await page.waitForTimeout(1600);
+    const underGuide = await now(page);
+    await page.keyboard.press("Escape");
+    const afterGuide = (await watch(page, (x) => x.n > underGuide.n, 6000)).pop();
+    check(underGuide.n === inGuide.n && /^Paused\./.test(inGuide.text) && afterGuide.n > underGuide.n, `opening the guide holds the step at ${inGuide.n} entries; closing it goes on (${afterGuide.n})`);
+
+    // The right arrow finishes a running step; an approval then runs Prepare by itself.
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(150);
+    await page.click("#run");
+    seen = await watch(page, (s) => s.buttons.includes("approve-rec"));
+    const ask = seen[seen.length - 1];
+    check(ask.step === "propose" && /^Your decision\. The agent recommends option [A-D]/.test(ask.text), `after Propose the bar asks for the decision: "${ask.text}"`);
+    await page.click("#approve-rec");
+    seen = await watch(page, (s) => s.step === "prepare" && s.buttons.includes("approve-all"));
+    const queued = seen.find((s) => s.step === "propose" && /^Approved\./.test(s.text));
+    const prep = seen.filter((s) => s.step === "prepare");
+    check(!!queued && prep.length && playsOut(prep) && /^Your approval\./.test(prep[prep.length - 1].text), `Approve option ${DEMO.rec} runs Prepare by itself: "${queued?.text || "no Approved."}", then ${story_(prep)}, then "${prep[prep.length - 1]?.text}"`);
+    check(!errors.length, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
+    await context.close();
+
+    // A link or a click on a step shows it at once. The control: the same measure on a click must not
+    // read as playing out.
+    const linked = await open("?step=calculate&guide=0");
+    const at0 = await now(linked.page);
+    seen = await watch(linked.page, () => false, 1500);
+    check(at0.step === "calculate" && at0.n > 0 && seen.every((s) => s.n === at0.n && s.tone !== "working"), `?step=calculate shows Calculate in full at once (${at0.n} entries, still after 1.5 s): "${at0.text}"`);
+    await linked.page.click('#steps [data-step="propose"] button');
+    const clicked = await watch(linked.page, () => false, 1500);
+    check(clicked[0].step === "propose" && clicked[0].n > 0 && !playsOut(clicked) && !playsOut(seen), `a click shows Propose at once (${story_(clicked)}), and neither reads as playing out`);
+    await linked.context.close();
+  });
+
+  await run("move", "MOVE OK", async (check) => {
+    // Runs in the page: what keeps the bar from asking. The page's one primary button must sit in the bar,
+    // in view and uncovered, and draw attention; the bar's words must say whose move it is.
+    const barProblems = (plant = null) => {
+      const undo = [];
+      if (plant === "static") { const f = document.querySelector(".story-foot"); f.style.position = "static"; document.getElementById("story").scrollTop = 0; undo.push(() => { f.style.position = ""; }); }
+      if (plant === "calm") { const b = document.querySelector("#move [data-attention]"); b.removeAttribute("data-attention"); undo.push(() => b.setAttribute("data-attention", "")); }
+      if (plant === "two") { const c = document.querySelector("#move [data-attention]").cloneNode(true); c.removeAttribute("id"); document.getElementById("story-card").prepend(c); undo.push(() => c.remove()); }
+      const out = [];
+      const bar = document.getElementById("move");
+      const r = bar.getBoundingClientRect();
+      if (!(r.height > 10 && r.top >= -1 && r.left >= -1 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1)) out.push("the bar is out of view");
+      const text = document.getElementById("move-text").textContent.replace(/\s+/g, " ").trim();
+      if (!/^(Your move|Your decision|Your approval|Paused)\. \S/.test(text)) out.push(`the bar does not say what to do ("${text}")`);
+      const shown = (e) => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).visibility === "visible"; };
+      const primary = [...document.querySelectorAll(".vc-button")].filter((b) => shown(b) && !/vc-button--(secondary|ghost|danger|link)\b/.test(b.className));
+      if (primary.length !== 1 || !bar.contains(primary[0])) out.push(`${primary.length} primary buttons (${primary.map((b) => b.textContent.trim()).join(", ")}), not one in the bar`);
+      for (const b of primary.filter((x) => bar.contains(x))) {
+        const box = b.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        if (!hit || !b.contains(hit)) out.push(`"${b.textContent.trim()}" is covered`);
+        if (!b.hasAttribute("data-attention") || getComputedStyle(b).animationName !== "attention") out.push(`"${b.textContent.trim()}" does not draw attention`);
+      }
+      if (document.getElementById("next")) out.push("the old Next button is still there");
+      for (const u of undo) u();
+      return out;
+    };
+    const asks = (page, plant = null) => page.evaluate(barProblems, plant);
+    for (const [width, height] of VIEWPORTS) {
+      const { context, page, errors } = await open("?guide=0", { width, height });
+      const points = [];
+      const visit = async (name) => { const s = await now(page); points.push([name, s.text, await asks(page), await page.$eval("#move-actions button[data-attention]", (b) => b.textContent.trim()).catch(() => "")]); };
+      await watch(page, (s) => s.buttons.includes("pause"));
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(150);
+      await visit("Spot done");
+      for (const n of [2, 3, 4]) {
+        await page.click("#run");
+        await page.waitForTimeout(700);
+        if (n === 3) {
+          await page.evaluate(() => document.activeElement?.blur());
+          await page.keyboard.press(" ");
+          await page.waitForTimeout(150);
+          await visit("Calculate paused");
+          await page.keyboard.press(" ");
+        }
+        await page.keyboard.press("ArrowRight");
+        await page.waitForTimeout(150);
+        await visit(`step ${n} done`);
+      }
+      // The controls: each break must be caught where the story is long and the bar is needed most.
+      if (width === 1280) {
+        await page.click('#steps [data-step="calculate"] button');
+        await page.waitForTimeout(150);
+        const planted = { static: await asks(page, "static"), calm: await asks(page, "calm"), two: await asks(page, "two") };
+        const clean = await asks(page);
+        check(planted.static.some((p) => /out of view/.test(p)) && planted.calm.some((p) => /draw attention/.test(p)) && planted.two.some((p) => /2 primary buttons/.test(p)) && !clean.length, `the controls fail as they must: a bar that scrolls away (${planted.static.join("; ") || "passed"}), a button that does not draw attention (${planted.calm.join("; ") || "passed"}), a second dark button (${planted.two.join("; ") || "passed"}), while the page itself passes (${clean.join("; ") || "no problem"})`);
+        await page.click('#steps [data-step="propose"] button');
+        await page.waitForTimeout(150);
+      }
+      await page.click("#approve-rec");
+      await watch(page, (s) => s.step === "prepare" && s.tone === "working");
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(150);
+      await visit("Prepare done");
+      await page.screenshot({ path: path.join(OUT, `${width}x${height}-asks.png`) });
+      await page.click("#approve-all");
+      await page.waitForTimeout(150);
+      const end = await now(page);
+      const failed = points.filter(([, , p]) => p.length);
+      check(points.length === 6 && !failed.length && !errors.length, `${width} × ${height}: the bar asks at all ${points.length} waiting points (${points.map(([n, t]) => `${n}: "${t.split(". ")[0]}."`).join(", ")})${failed.length ? `; ${failed.map(([n, , p]) => `${n}: ${p.join(", ")}`).join("; ")}` : ""}${errors.length ? `; errors: ${errors.join(" | ")}` : ""}`);
+      check(/^Done\. From the report to your decision in \d+:\d\d\. Nothing was sent\./.test(end.text) && end.buttons.join() === "again,cases", `${width} × ${height}: at the end it says "${end.text}" and offers ${end.buttons.join(", ")}`);
+      if (width === VIEWPORTS[0][0]) {
+        // The talk track tells the presenter what to press, in the bar's own words. The control: the step
+        // names alone must not pass.
+        const track = await page.$$eval('#guide [data-vc-chapter="present"] .vc-guide__path > li strong', (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+        const labelAt = (name) => points.find(([n]) => n === name)?.[3] || "(none)";
+        const short = (l) => l.split(":")[0];
+        const want = [["Spot", "by itself"], ["Check", labelAt("Spot done")], ["Calculate", labelAt("step 2 done")], ["Propose", labelAt("step 3 done")], ["Propose", labelAt("step 4 done")], ["Prepare", "by itself"], ["Prepare", labelAt("Prepare done")]];
+        const missing = (lines) => want.filter(([step, l]) => !(lines[LABELS.indexOf(step)] || "").includes(short(l)));
+        const control = missing(track.map((t) => t.split(":")[0]));
+        check(track.length === 5 && !missing(track).length && control.length === want.length, `the talk track names what to press, in the bar's words: ${want.map(([st, l]) => `${st} "${short(l)}"`).join(", ")}${missing(track).length ? `; missing ${missing(track).map(([st, l]) => `${st} "${short(l)}"`).join(", ")}` : ""} (the step names alone miss ${control.length} of ${want.length})`);
+      }
+      await context.close();
+    }
   });
 
   await run("scenarios", "SCENARIOS OK", async (check) => {
@@ -182,13 +380,13 @@ try {
     const stopped = k["Detection → decision"].value;
     await page.waitForTimeout(1300);
     const later = (await kpis(page))["Detection → decision"].value;
-    check(k["Value at risk"].value === DEMO["rec-left"] && k["Value at risk"].note === `left with option ${DEMO.rec}, was ${DEMO.var}` && k["Value at risk"].tone === "at_risk", `the approval moves Value at risk to ${k["Value at risk"].value} (${k["Value at risk"].note})`);
-    check(k["Detection → decision"].tone === "decided" && stopped === later && k["Detection → decision"].note === "from the report to your decision", `the approval stops the clock at ${stopped} (${k["Detection → decision"].note})`);
-    check(k["First line stop in"].value !== norm(DEMO["stop-days"]) || /slows/.test(k["First line stop in"].note), `First line stop in follows the option (${k["First line stop in"].value}, ${k["First line stop in"].note})`);
+    check(k["Value at risk"].value === DEMO["rec-left"] && k["Value at risk"].was === DEMO.var && k["Value at risk"].struck && k["Value at risk"].note === `option ${DEMO.rec} approved` && k["Value at risk"].tone === "at_risk", `the approval moves Value at risk from ${k["Value at risk"].was}, struck through, to ${k["Value at risk"].value} (${k["Value at risk"].note})`);
+    check(k["Detection → decision"].tone === "decided" && stopped === later && k["Detection → decision"].note === "until your decision", `the approval stops the clock at ${stopped} (${k["Detection → decision"].note})`);
+    check((k["First line stop in"].value !== norm(DEMO["stop-days"]) && k["First line stop in"].was === norm(DEMO["stop-days"])) || /slows/.test(k["First line stop in"].note), `First line stop in follows the option (${k["First line stop in"].was ? `${k["First line stop in"].was} struck through, then ` : ""}${k["First line stop in"].value}, ${k["First line stop in"].note})`);
     await page.click("#restart");
     await page.waitForTimeout(150);
     k = await kpis(page);
-    check(k["Value at risk"].value === DEMO.var && k["Detection → decision"].tone === "", "Start over puts the figures back");
+    check(k["Value at risk"].value === DEMO.var && !k["Value at risk"].was && k["Detection → decision"].tone === "", "Start over puts the figures back");
     check(!errors.length, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
     await context.close();
 
@@ -203,35 +401,79 @@ try {
     await guided.context.close();
   });
 
+  // The header: its height, and the key figures that do not read in full (a cut note or a tile too narrow).
+  const headerNow = (page) => page.evaluate(() => ({
+    height: Math.round(document.querySelector(".app-header").getBoundingClientRect().height),
+    cut: [...document.querySelectorAll("[data-vc-kpi]")].filter((t) => [t, ...t.querySelectorAll("p")].some((e) => e.scrollWidth > e.clientWidth + 1)).map((t) => `${t.dataset.vcKpi} (${t.querySelector(".kpi-note").textContent.trim()})`)
+  }));
+  // The map's labels: any that overlaps another label or another site's mark, and any the map hid. plant
+  // moves one label onto another first, as a control.
+  const mapProblems = (page, plant = false) => page.evaluate((plant) => {
+    const sites = [...document.querySelectorAll("#map .map-site")].map((g) => ({ g, text: g.querySelector("text"), mark: g.querySelector("polygon") }));
+    if (plant && sites.length > 1) for (const k of ["x", "y"]) sites[1].text.setAttribute(k, sites[0].text.getAttribute(k));
+    const shown = sites.filter((s) => s.text.getAttribute("visibility") !== "hidden").map((s) => ({ name: s.text.textContent, text: s.text.getBoundingClientRect(), mark: s.mark.getBoundingClientRect() }));
+    const cut = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+    const out = sites.filter((s) => s.text.getAttribute("visibility") === "hidden").map((s) => `${s.text.textContent} is hidden`);
+    for (const a of shown) for (const b of shown) {
+      if (a !== b && a.name < b.name && cut(a.text, b.text)) out.push(`${a.name} overlaps ${b.name}`);
+      if (a !== b && cut(a.text, b.mark)) out.push(`${a.name} covers the mark of ${b.name}`);
+    }
+    return out;
+  }, plant);
   await run("layout", "LAYOUT OK", async (check) => {
     for (const [width, height] of VIEWPORTS) {
       for (const theme of ["light", "dark"]) {
         const { context, page, errors } = await open("?guide=0", { width, height, theme });
         const problems = [];
+        const first = await headerNow(page);
         for (const id of STEP_IDS) {
           await page.click(`#steps [data-step="${id}"] button`);
           if (id === "propose") await page.click('.option[data-recommended="true"] [data-action="approve"]');
           if (id === "prepare") await page.click("#approve-all");
           await page.waitForTimeout(120);
-          const m = await page.evaluate((last) => {
+          const m = await page.evaluate(() => {
             const inView = (sel) => { const e = document.querySelector(sel); if (!e || e.hidden) return true; const r = e.getBoundingClientRect(); return r.top >= -1 && r.left >= -1 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1; };
-            const next = document.getElementById("next");
-            let clickable = true;
-            if (!last) { const r = next.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); clickable = !!hit && next.contains(hit); }
-            const parts = [".app-header", ".intro", ".talk-track", "#map", "#story-title", ...(last ? [] : ["#next"])].filter((s) => !inView(s));
+            const covered = [...document.querySelectorAll("#move-actions button")].filter((b) => { const r = b.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !hit || !b.contains(hit); }).map((b) => b.textContent.trim());
+            const parts = [".app-header", ".intro", ".talk-track", "#map", "#story-title", "#move"].filter((s) => !inView(s));
             const ids = (document.getElementById("story").innerText.match(/\b(?:S|A|N|PL|P|R|ALT)-[A-Z]{2,}[A-Z0-9-]*\b/g) || []);
-            return { wide: document.documentElement.scrollWidth - innerWidth, tall: document.documentElement.scrollHeight - innerHeight, parts, clickable, ids };
-          }, id === "prepare");
+            return { wide: document.documentElement.scrollWidth - innerWidth, tall: document.documentElement.scrollHeight - innerHeight, parts, covered, ids };
+          });
+          const head = await headerNow(page);
           if (m.wide > 0 || m.tall > 0) problems.push(`${id}: the page scrolls (${m.wide} px wide, ${m.tall} px tall)`);
           if (m.parts.length) problems.push(`${id}: out of view: ${m.parts.join(", ")}`);
-          if (!m.clickable) problems.push(`${id}: Next is covered`);
+          if (m.covered.length) problems.push(`${id}: the bar's ${m.covered.join(", ")} is covered`);
           if (m.ids.length) problems.push(`${id}: record ids on screen (${[...new Set(m.ids)].join(", ")})`);
+          if (head.height !== first.height) problems.push(`${id}: the header grew from ${first.height} to ${head.height} px`);
+          if (head.cut.length) problems.push(`${id}: key figures cut: ${head.cut.join(", ")}`);
+          const labels = await mapProblems(page);
+          if (labels.length) problems.push(`${id}: map labels: ${labels.join("; ")}`);
           if (id === "spot" || id === "propose") await page.screenshot({ path: path.join(OUT, `${width}x${height}-${theme}-${id}.png`) });
         }
-        check(!problems.length && !errors.length, `${width} × ${height} ${theme}: every step fits the window and Next stays clickable${problems.length ? `; ${problems.join("; ")}` : ""}${errors.length ? `; errors: ${errors.join(" | ")}` : ""}`);
+        if (width === 1280 && theme === "light") {
+          const planted = await mapProblems(page, true);
+          check(planted.some((p) => /overlaps/.test(p)), `the map check catches a label moved onto another (${planted.join("; ") || "nothing caught"})`);
+        }
+        check(!problems.length && !errors.length, `${width} × ${height} ${theme}: every step fits the window, the bar stays clickable, the header keeps one line and every map label reads clear${problems.length ? `; ${problems.join("; ")}` : ""}${errors.length ? `; errors: ${errors.join(" | ")}` : ""}`);
         await context.close();
       }
     }
+    // Every scenario, both ways a decision can go, at the narrowest desktop window: the key figures
+    // change their notes, and the header must still keep one line with every figure in full.
+    const sweep = [];
+    for (const sc of story.scenarioList()) {
+      for (const choice of ["recommended", "baseline"]) {
+        const { context, page, errors } = await open(`?scenario=${sc.slug}&step=propose&guide=0`, { width: 1280, height: 720 });
+        const first = await headerNow(page);
+        await page.click(choice === "recommended" ? '.option[data-recommended="true"] [data-action="approve"]' : '.option[data-option="baseline"] [data-action="approve"]');
+        await page.waitForTimeout(150);
+        const head = await headerNow(page);
+        if (head.height !== first.height || head.cut.length || errors.length) sweep.push(`${sc.slug} ${choice}: ${head.height !== first.height ? `the header grew from ${first.height} to ${head.height} px` : ""}${head.cut.length ? ` cut: ${head.cut.join(", ")}` : ""}${errors.length ? ` errors: ${errors.join(" | ")}` : ""}`);
+        else sweep.push(null);
+        await context.close();
+      }
+    }
+    const bad = sweep.filter(Boolean);
+    check(sweep.length === 12 && !bad.length, `at 1280 × 720 the header keeps one line with every key figure in full, in ${sweep.length / 2} scenarios after an approval and after accepting the risk${bad.length ? `; ${bad.join("; ")}` : ""}`);
     const phone = await open("?guide=0", { width: 375, height: 760 });
     const wide = await phone.page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     await phone.page.click('#steps [data-step="propose"] button');

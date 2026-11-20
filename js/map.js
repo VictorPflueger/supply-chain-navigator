@@ -12,6 +12,7 @@ const STATE_WORD = { affected: "affected", at_risk: "at risk", resolved: "resolv
 // Sizes on screen, in CSS pixels, whatever the size of the map.
 const PX = { plant: 11, site: 7.5, plantText: 15, siteText: 12.5, route: 3, flow: 2, edge: 1.5, mark: 2, halo: 3.5, pad: 18 };
 const CHAR = 0.56; // average glyph width of a label, in ems
+const RANK = { affected: 1, at_risk: 2, resolved: 3 };
 
 /** Mercator in degrees: x is longitude, y grows southwards. */
 const project = ([lat, lon]) => [lon, -Math.log(Math.tan(Math.PI / 4 + (Math.max(-80, Math.min(80, lat)) * RAD) / 2)) / RAD];
@@ -67,6 +68,7 @@ export function createMap(svg, model) {
       }
     }
     // Our plants always; any other site once the story has marked it. A state adds its mark and its word.
+    const labels = [];
     for (const id of places.ids) {
       const plant = model.plants.has(id);
       if (!plant && !states.get(id)) continue;
@@ -83,6 +85,38 @@ export function createMap(svg, model) {
       const fs = (plant ? PX.plantText : PX.siteText) * u;
       const text = el("text", { x: (x + r * 1.3).toFixed(3), y: (y + fs * 0.35).toFixed(3), "font-size": fs.toFixed(4), "stroke-width": (PX.halo * u).toFixed(4) }, g);
       text.textContent = label;
+      labels.push({ text, x, y, r, fs, rank: plant ? 0 : RANK[state] ?? 4 });
+    }
+    place(labels);
+  }
+
+  /**
+   * Labels sit right of their mark unless that covers another mark or label; then above or below it,
+   * or on the left. Plants and affected sites choose first. A label at risk or resolved that finds no
+   * clear spot gives way: its mark and its tooltip stay.
+   */
+  function place(labels) {
+    // The area the map shows, in map units: the frame and whatever the window adds around it.
+    const box = svg.getBoundingClientRect();
+    const inv = svg.getScreenCTM()?.inverse();
+    const [a, b] = inv ? [new DOMPoint(box.left, box.top).matrixTransform(inv), new DOMPoint(box.right, box.bottom).matrixTransform(inv)] : [null, null];
+    const taken = labels.map(({ x, y, r }) => [x - r, y - r * 0.87, x + r, y + r * 0.87]);
+    const clash = (bx, own) => taken.reduce((sum, t, i) => sum + (i === own ? 0 : Math.max(0, Math.min(bx[2], t[2]) - Math.max(bx[0], t[0])) * Math.max(0, Math.min(bx[3], t[3]) - Math.max(bx[1], t[1]))), 0);
+    for (const l of [...labels].sort((p, q) => p.rank - q.rank)) {
+      const { text, x, y, r, fs } = l;
+      const bb = text.getBBox();
+      const [x0, y0] = [+text.getAttribute("x"), +text.getAttribute("y")];
+      const w = bb.width;
+      const spots = [[x + r * 1.3, y + fs * 0.35], [x + r * 0.9, y - r - fs * 0.35], [x + r * 0.9, y + r + fs * 0.85], [x - r * 1.3 - w, y + fs * 0.35], [x - w / 2, y - r - fs * 0.35], [x - w / 2, y + r + fs * 0.85]];
+      const best = spots.map(([tx, ty]) => {
+        const bx = [bb.x + tx - x0, bb.y + ty - y0, bb.x + w + tx - x0, bb.y + bb.height + ty - y0];
+        const out = !!a && (bx[0] < a.x || bx[1] < a.y || bx[2] > b.x || bx[3] > b.y);
+        return { tx, ty, bx, cost: clash(bx, labels.indexOf(l)) + (out ? 1e9 : 0) };
+      }).reduce((p, q) => (q.cost < p.cost ? q : p));
+      if (best.cost > 0 && l.rank >= RANK.at_risk) { text.setAttribute("visibility", "hidden"); continue; }
+      text.setAttribute("x", best.tx.toFixed(3));
+      text.setAttribute("y", best.ty.toFixed(3));
+      taken.push(best.bx);
     }
   }
 

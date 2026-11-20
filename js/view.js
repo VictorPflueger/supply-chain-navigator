@@ -1,6 +1,7 @@
 // What the presenter sees for each step: the heading, the step's one thing to look at (the report,
 // the sources and the alert, the impact, the options, the drafts), the agent's own words, and the
-// four key figures. It reads a run record that the scripted run and a live run fill the same way.
+// four key figures. It reads a run record that the scripted run and a live run fill the same way,
+// holding only what has happened so far: a step that is running grows as the agent works.
 
 import { STEPS } from "./story.js";
 import { eurCompact, days, pct, plural, words } from "./format.js";
@@ -43,7 +44,7 @@ export function heading(run, step) {
   switch (step) {
     case "spot": return run.scenario.title;
     case "check": return plain(all(run, "alert", "check")[0]?.title || all(run, "alert")[0]?.title || "Is the report true?");
-    case "calculate": return last ? (last.first_stop_day === null ? `No line stop: ${eurCompact(last.value_at_risk_eur)} at risk` : `${last.first_stop_plant_name} stops on day ${last.first_stop_day}: ${eurCompact(last.value_at_risk_eur)} at risk`) : "What it would cost";
+    case "calculate": return last ? (last.first_stop_day === null ? `No line stop: ${eurCompact(last.value_at_risk_eur)} at risk` : `${last.first_stop_plant_name} stops on day ${last.first_stop_day}: ${eurCompact(last.value_at_risk_eur)} at risk`) : "What would it cost?";
     case "propose":
       if (run.decision?.id === "baseline") return "You accepted the risk";
       if (opt) return `You approved option ${opt.letter}`;
@@ -62,8 +63,8 @@ const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // ---- the story panel ------------------------------------------------------------------------------------
 
 /**
- * Draws one step. handlers: { decide(optionId, decision), decideDraft(id, decision), approveAll(),
- * goto(step) }. live: { busy, step } while a live run works.
+ * Draws one step. handlers: { decide(optionId, decision), decideDraft(id, decision) }. run.working
+ * names the step the agent is working on, replayed or live.
  */
 export function renderStory(run, step, handlers) {
   const at = STEPS.findIndex((s) => s.id === step);
@@ -71,20 +72,11 @@ export function renderStory(run, step, handlers) {
   $("story-lead").textContent = STEPS[at].lead;
   $("story-card").replaceChildren(...card(run, step, handlers));
   $("agent-note").textContent = run.mode === "live" ? "Claude, live on your key. You are interacting with an AI system" : "replayed, not live";
-  // A live run writes on: a reader at the foot of the story keeps seeing the newest words.
+  // A running step writes on: a reader at the foot of the story keeps seeing the newest words.
   const story = $("story");
-  const follow = run.mode === "live" && story.scrollHeight - story.scrollTop - story.clientHeight < 48;
+  const follow = run.working === step && story.scrollHeight - story.scrollTop - story.clientHeight < 48;
   $("agent-words").replaceChildren(...agentWords(run, step));
   if (follow) story.scrollTop = story.scrollHeight;
-  const next = $("next");
-  const after = STEPS[at + 1];
-  next.hidden = !after;
-  if (after) {
-    next.replaceChildren(`Next: ${after.label}`, icon("chevron-right"));
-    next.disabled = run.mode === "live" && run.live?.reached && STEPS.findIndex((s) => s.id === run.live.reached) <= at;
-    // One dark button per screen: before a decision, that is the recommended option's Approve.
-    next.classList.toggle("vc-button--secondary", step === "propose" && !run.decision);
-  }
 }
 
 
@@ -102,8 +94,8 @@ function agentWords(run, step) {
       out.push(h("p", { class: "notice", dataset: { level: e.level || "info" } }, e.text));
     }
   }
-  if (run.mode === "live" && run.live?.busy && run.live.step === step) out.push(h("p", { class: "working" }, h("span", { class: "vc-spinner vc-spinner--sm", "aria-hidden": "true" }), "The agent is working on this step…"));
-  if (!out.length) out.push(h("p", { class: "did" }, run.mode === "live" ? "The agent has not reached this step yet." : "Nothing in this step."));
+  if (run.working === step) out.push(h("p", { class: "working" }, h("span", { class: "vc-spinner vc-spinner--sm", "aria-hidden": "true" }), "The agent is working on this step…"));
+  if (!out.length) out.push(h("p", { class: "did empty" }, "The agent has not started this step yet."));
   return out;
 }
 
@@ -142,12 +134,11 @@ function card(run, step, hd) {
       return out;
     }
     case "prepare": {
-      if (!run.decision) return [h("div", { class: "card" }, h("p", { class: "card-title" }, icon("info"), "No decision yet"), h("p", {}, "The agent drafts actions only for an option you approve."), h("button", { type: "button", class: "vc-button vc-button--secondary", on: { click: () => hd.goto("propose") } }, icon("chevron-left"), "Back to Propose"))];
+      if (!run.decision) return [h("div", { class: "card" }, h("p", { class: "card-title" }, icon("info"), "No decision yet"), h("p", {}, "The agent drafts actions only for an option you approve."))];
       const drafts = [...run.drafts.values()];
       const open = drafts.filter((d) => d.status === "pending");
       const out = [];
-      if (drafts.length) out.push(h("div", { class: "drafts-bar" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm" }, icon("sparkle"), "Drafted by the agent"), h("p", {}, icon("shield"), " Approving sends nothing."),
-        open.length ? h("button", { type: "button", class: "vc-button", id: "approve-all", on: { click: () => hd.approveAll() } }, icon("check"), open.length === drafts.length ? "Approve all" : `Approve the other ${words(open.length)}`) : null));
+      if (drafts.length) out.push(h("div", { class: "drafts-bar" }, h("span", { class: "vc-tag vc-tag--feature vc-tag--sm" }, icon("sparkle"), "Drafted by the agent"), h("p", {}, icon("shield"), " Approving sends nothing.")));
       // Once every draft is decided, the agent's management summary closes the story, on top.
       if (run.report && !open.length) out.push(summary(run));
       out.push(h("ul", { class: "drafts" }, drafts.map((d) => draftRow(d, hd))));
@@ -195,7 +186,7 @@ function optionRow(run, o, hd) {
   else if (state === "rejected") actions = h("span", { class: "option-tag" }, "Rejected");
   else if (state === "passed") actions = h("span", { class: "option-tag" }, "Not chosen");
   else actions = h("div", { class: "option-actions" },
-    h("button", { type: "button", class: `vc-button${o.recommended ? "" : " vc-button--secondary"}`, dataset: { option: o.id, action: "approve" }, on: { click: () => hd.decide(o.id, "approved") } }, icon("check"), isBase ? "Accept the risk" : "Approve"),
+    h("button", { type: "button", class: "vc-button vc-button--secondary", dataset: { option: o.id, action: "approve" }, on: { click: () => hd.decide(o.id, "approved") } }, icon("check"), isBase ? "Accept the risk" : "Approve"),
     isBase ? null : h("button", { type: "button", class: "vc-button vc-button--ghost", dataset: { option: o.id, action: "reject" }, on: { click: () => hd.decide(o.id, "rejected") } }, "Reject"));
   return h("li", { class: "option", dataset: { option: o.id, recommended: String(!!o.recommended), state } },
     h("span", { class: "option-letter", "aria-hidden": "true" }, o.letter),
@@ -253,10 +244,11 @@ export function renderKpis(run, setKpi) {
     setKpi("Value at risk", { value: eurCompact(last.value_at_risk_eur), note: "risk accepted, 30 days", tone: "affected" });
     setKpi("First line stop in", { value: last.first_stop_day === null ? "None" : days(last.first_stop_day), note: `${last.first_stop_plant_name || "no plant"}, risk accepted`, tone: last.first_stop_day === null ? "resolved" : "affected" });
   } else if (opt) {
-    setKpi("Value at risk", { value: eurCompact(opt.residual_var_eur), note: `left with option ${opt.letter}, was ${eurCompact(last.value_at_risk_eur)}`, tone: opt.residual_var_eur > 0 ? "at_risk" : "resolved" });
+    const stopWas = last.first_stop_day === opt.first_stop_day ? null : last.first_stop_day === null ? "None" : days(last.first_stop_day);
+    setKpi("Value at risk", { value: eurCompact(opt.residual_var_eur), was: eurCompact(last.value_at_risk_eur), note: `option ${opt.letter} approved`, tone: opt.residual_var_eur > 0 ? "at_risk" : "resolved" });
     setKpi("First line stop in", opt.first_stop_day === null
-      ? { value: "None", note: `no line stop with option ${opt.letter}`, tone: "resolved" }
-      : { value: days(opt.first_stop_day), note: `${opt.first_stop_plant_name} slows to ${pct(opt.min_output_pct)} at worst`, tone: "at_risk" });
+      ? { value: "None", was: stopWas, note: `no line stop with option ${opt.letter}`, tone: "resolved" }
+      : { value: days(opt.first_stop_day), was: stopWas, note: `${opt.first_stop_plant_name} slows to ${pct(opt.min_output_pct)}`, tone: "at_risk" });
   } else {
     setKpi("Value at risk", { value: eurCompact(last.value_at_risk_eur), note: "if nothing is done, 30 days", tone: last.value_at_risk_eur > 0 ? "affected" : "resolved" });
     setKpi("First line stop in", last.first_stop_day === null

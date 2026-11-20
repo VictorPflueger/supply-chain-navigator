@@ -1,11 +1,12 @@
 # Vici, copied into this prototype
 
 These files come unchanged from Vici, Victor Pflüger's design system
-(<https://victorpflueger.github.io/ViciDesign/index.html>), from its main branch at commit **`ddb0b95`**
+(<https://victorpflueger.github.io/ViciDesign/index.html>), from its main branch at commit **`bea0bb8`**
 (20 November 2026), on the way to Vici 2.0. That commit brings the How it works guide (`vc-guide`),
-the 2.0 byline, the rule that the How it works chapter explains every key figure, the AI notice for a
-live run and the brief for building a prototype, all of which this showcase follows; its files still
-call themselves 1.0.0 until 2.0 is released.
+the 2.0 byline, the rule that the How it works chapter explains every key figure, a key figure's old
+value struck through when a decision moves it (`vc-stat__was`), the AI notice for a live run and the
+brief for building a prototype, with its rule that a bar asks for every click; this showcase follows
+all of them. Its files still call themselves 1.0.0 until 2.0 is released.
 The prototype loads them from here rather than from a CDN, so every page is served from this site alone.
 
 | File here | What it is |

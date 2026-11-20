@@ -10,9 +10,11 @@ One screen a presenter drives in five minutes, for partners and their customers 
 | Under the header | One sentence: what it does, that the company is fictional, that nothing is sent without approval; the byline, as Vici asks of a single screen |
 | Talk track | Start agent and the AI notice; the five steps, Spot, Check, Calculate, Propose and Prepare; the scenario menu; Start over |
 | Map | Our two plants, and the sites and routes the agent has marked by this step, each with its state |
-| Story | The step's result as a heading, what the step does, the one thing to look at, the agent's own words, Next |
+| Story | The step's result as a heading, what the step does, the one thing to look at, the agent's own words, and at its foot the bar that says what happens or what to do next |
 
-Each step shows one thing to look at: the report (Spot), the sources and the alert (Check), the first estimate against the revised one with the plant's output (Calculate), the options (Propose), the drafts, the management summary and the decision log of who approved what and when (Prepare). One dark button per screen: Next, or the recommended Approve before a decision.
+Each step shows one thing to look at: the report (Spot), the sources and the alert (Check), the first estimate against the revised one with the plant's output (Calculate), the options (Propose), the drafts, the management summary and the decision log of who approved what and when (Prepare). One dark button per screen, and it sits in the bar.
+
+**The prototype runs; the bar asks.** Step 1 starts by itself once the guide closes, and every step plays out event by event, as the agent works. While it works, the bar under the story says what it is doing and offers Pause. When the page waits for the presenter, the bar says so in words (Your move, Your decision, Your approval) and holds the one action, which pulses until it is pressed: Run step 2, Approve option B, Approve all. The bar sits right under what just happened, where the eye is when a step ends, and stays in view however long the story grows. An approval runs Prepare by itself. Space pauses and continues; the right arrow finishes a step or runs the next; a click on a step, a number key or `?step=` shows a step at once. The guide holds a running step while it is open, so nothing plays out unseen.
 
 The key figures have values before anything happens: the replay's figures, answer first, and the estimated cost of a live run. A live run starts them at "Step 3" until the engine has run. Detection → decision is measured on the page, from the report on screen (the guide closed) to the approval.
 
@@ -31,12 +33,12 @@ The shell is the presenter's frame and knows nothing about supply chains. Rebate
 
 | Shell | Case |
 |---|---|
-| `js/shell.js`: steps by click, key and `?step=`, the key figures, the mode, the case menu, the Start agent dialog and the decision clock | `js/story.js`: the steps, the scenarios and a scenario's run, with every figure filled in |
+| `js/shell.js`: steps by click, key and `?step=`, the bar that asks (`setMove`), the key figures, the mode, the case menu, the Start agent dialog and the decision clock | `js/story.js`: the steps, the scenarios and a scenario's run, with every figure filled in |
 | `js/claude.js`: the session key, streaming from the Messages API, retries | `js/view.js`: how a step looks, and the key figures' values |
 | `js/cost.js`: the session cost, measured or estimated | `js/map.js`, `js/agent.js`, `js/tools.js`, `js/prompt.js`, `js/erp.js`, `js/impact.js`, `js/world.js` |
 | `js/format.js`, `js/theme.js` | `js/main.js` wires the two |
 
-To port it: copy the shell modules and the page's header, talk track, Start agent dialog and guide; mark your figures `data-vc-kpi`; write your own `STEPS`, a run record with events by step, a `renderStory(run, step)` and a `renderKpis(run, setKpi)`; and wire them in a `main.js` like this one. `tests/files.mjs shell` checks that the shell imports nothing of the case.
+To port it: copy the shell modules and the page's header, talk track, Start agent dialog and guide; mark your figures `data-vc-kpi`; write your own `STEPS`, each with what it will do (`next`) and what the agent is doing (`doing`), a run record with events by step, a `renderStory(run, step)` and a `renderKpis(run, setKpi)`; and wire them in a `main.js` like this one. `tests/files.mjs shell` checks that the shell imports nothing of the case.
 
 ## The run record
 

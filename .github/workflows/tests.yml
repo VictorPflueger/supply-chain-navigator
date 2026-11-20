@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: VictorPflueger/ViciDesign
-          ref: ddb0b951154aaa27320a702d5a435ec268b4998e
+          ref: bea0bb85ccfd58a6ad83afca703a8921e57d9459
           path: ViciDesign
           fetch-depth: 0
       - uses: actions/setup-node@v4
