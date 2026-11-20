@@ -8,7 +8,8 @@
 //   kpis          four key figures top right, marked data-vc-kpi, with values before anything happens;
 //                 the clock waits for the guide; the decision moves the figures
 //   layout        at 1920 × 1080, 1366 × 768 and 1280 × 720 in both themes every step fits the window,
-//                 Next stays in view and clickable; a 375 px phone scrolls only down
+//                 Next stays in view and clickable, and the story shows names, not record ids; a 375 px
+//                 phone scrolls only down
 // Usage: NODE_PATH="$(npm root -g)" node tests/showcase.mjs [case…]
 import path from "node:path";
 import { launchBrowser, serveStatic, offlineContext, outDir, wanted, loadApp, NETWORK_NOISE, STEP_IDS, KPI_NAMES, VIEWPORTS } from "./lib/harness.mjs";
@@ -218,11 +219,13 @@ try {
             let clickable = true;
             if (!last) { const r = next.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); clickable = !!hit && next.contains(hit); }
             const parts = [".app-header", ".intro", ".talk-track", "#map", "#story-title", ...(last ? [] : ["#next"])].filter((s) => !inView(s));
-            return { wide: document.documentElement.scrollWidth - innerWidth, tall: document.documentElement.scrollHeight - innerHeight, parts, clickable };
+            const ids = (document.getElementById("story").innerText.match(/\b(?:S|A|N|PL|P|R|ALT)-[A-Z]{2,}[A-Z0-9-]*\b/g) || []);
+            return { wide: document.documentElement.scrollWidth - innerWidth, tall: document.documentElement.scrollHeight - innerHeight, parts, clickable, ids };
           }, id === "prepare");
           if (m.wide > 0 || m.tall > 0) problems.push(`${id}: the page scrolls (${m.wide} px wide, ${m.tall} px tall)`);
           if (m.parts.length) problems.push(`${id}: out of view: ${m.parts.join(", ")}`);
           if (!m.clickable) problems.push(`${id}: Next is covered`);
+          if (m.ids.length) problems.push(`${id}: record ids on screen (${[...new Set(m.ids)].join(", ")})`);
           if (id === "spot" || id === "propose") await page.screenshot({ path: path.join(OUT, `${width}x${height}-${theme}-${id}.png`) });
         }
         check(!problems.length && !errors.length, `${width} × ${height} ${theme}: every step fits the window and Next stays clickable${problems.length ? `; ${problems.join("; ")}` : ""}${errors.length ? `; errors: ${errors.join(" | ")}` : ""}`);

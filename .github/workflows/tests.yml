@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   tests:
-    name: Figures, files, lean, Vici's checks, and the showcase and a live run in Chromium
+    name: All tests, from the figures to a live run in Chromium
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

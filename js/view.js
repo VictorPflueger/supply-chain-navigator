@@ -20,6 +20,8 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 const icon = (name) => h("span", { class: `vc-icon vc-icon--${name}`, "aria-hidden": "true" });
 const all = (run, type, upTo = "prepare") => STEPS.slice(0, STEPS.findIndex((s) => s.id === upTo) + 1).flatMap((s) => run.events[s.id].filter((e) => e.type === type));
+/** Words for people: Nordwerk's record ids, such as "(S-TNG-HAR)", stay in the records. */
+const plain = (text) => String(text ?? "").replace(/\s\((?:S|A|N|PL|P|R|ALT)-[A-Z0-9-]+\)/g, "");
 const LABEL = /^(Signal received|Hypothesis|Check|Confirmed|Not confirmed|Revised|Finding|Impact|Recommendation|First estimate|Response levers|Option [ABC] (?:approved|rejected)|Risk accepted)([:.])/;
 
 /** The first and the latest engine figures of a run: the first estimate and the one after the check. */
@@ -40,7 +42,7 @@ export function heading(run, step) {
   const rec = run.options?.options.find((o) => o.recommended);
   switch (step) {
     case "spot": return run.scenario.title;
-    case "check": return all(run, "alert", "check")[0]?.title || all(run, "alert")[0]?.title || "Is the report true?";
+    case "check": return plain(all(run, "alert", "check")[0]?.title || all(run, "alert")[0]?.title || "Is the report true?");
     case "calculate": return last ? (last.first_stop_day === null ? `No line stop: ${eurCompact(last.value_at_risk_eur)} at risk` : `${last.first_stop_plant_name} stops on day ${last.first_stop_day}: ${eurCompact(last.value_at_risk_eur)} at risk`) : "What it would cost";
     case "propose":
       if (run.decision?.id === "baseline") return "You accepted the risk";
@@ -90,7 +92,7 @@ function agentWords(run, step) {
   const out = [];
   for (const e of run.events[step]) {
     if (e.type === "narration" && e.text?.trim()) {
-      for (const para of e.text.split(/\n\s*\n/)) {
+      for (const para of plain(e.text).split(/\n\s*\n/)) {
         const m = LABEL.exec(para);
         out.push(m ? h("p", {}, h("strong", {}, m[1] + m[2]), para.slice(m[0].length)) : h("p", {}, para));
       }
@@ -119,7 +121,7 @@ function card(run, step, hd) {
         h("ul", { class: "sources" }, sources.slice(0, 5).map((s) => h("li", {}, s.title, s.source ? h("span", { class: "src" }, ` · ${s.source}${s.representative ? ", representative" : ""}`) : null)))));
       if (alert) out.push(h("div", { class: "card card--alert", role: "status" },
         h("p", { class: "card-title" }, icon("error"), alert.basis === "what_if" ? "What-if alert: not confirmed" : `Alert, confirmed by ${words(Math.max(2, (alert.sources || []).length))} sources`),
-        h("p", { class: "alert-headline" }, alert.title), h("p", {}, alert.summary)));
+        h("p", { class: "alert-headline" }, plain(alert.title)), h("p", {}, plain(alert.summary))));
       return out;
     }
     case "calculate": {
