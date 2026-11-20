@@ -1,0 +1,51 @@
+# Runs every suite on every push and pull request. The showcase has no build step and no
+# dependencies; Playwright is installed here only for the browser suites (tests/README.md). ViciDesign
+# is checked out next to the app at the commit vici/ was copied from, so the suites can use Vici's own
+# checks and compare vici/ with it byte for byte.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Figures, files, lean, Vici's checks, and the showcase and a live run in Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+      - uses: actions/checkout@v4
+        with:
+          repository: VictorPflueger/ViciDesign
+          ref: 410adba122609bc377eee58b670a709dd1975cf1
+          path: ViciDesign
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cache the Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-1.56.0-chromium-${{ runner.os }}
+      - run: npm install -g playwright@1.56.0 && npx playwright install --with-deps chromium
+      - name: All suites
+        working-directory: app
+        run: NODE_PATH="$(npm root -g)" node tests/run-all.mjs --require-vici
+        env:
+          NAV_TEST_OUT: ${{ runner.temp }}/navigator-tests
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-screenshots
+          path: ${{ runner.temp }}/navigator-tests
