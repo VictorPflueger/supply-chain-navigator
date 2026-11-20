@@ -1,5 +1,5 @@
 // A scripted stand-in for POST /v1/messages that streams realistic SSE and checks every request
-// against the protocol rules the live agent must follow (TECH_NOTES §3).
+// against the protocol rules the live agent must follow (DESIGN.md, "The live run").
 import { isDeepStrictEqual } from "node:util";
 
 export function sseFor({ id, model = "claude-sonnet-5-5", blocks, stop, usage = {}, cut = null }) {
@@ -63,7 +63,7 @@ export function createFakeClaude(script, { model = "claude-sonnet-5-5" } = {}) {
     check(req.stream === true, "stream must be true");
     check(typeof req.max_tokens === "number" && req.max_tokens > 0, "max_tokens missing");
     check(req.tool_choice?.type === "auto", "tool_choice must be auto");
-    check(Array.isArray(req.tools) && req.tools.length >= 18, "tools missing");
+    check(Array.isArray(req.tools) && req.tools.length === 16, "tools missing");
     check(typeof req.system === "string" && req.system.includes("Nordwerk"), "system prompt missing");
     // Every assistant turn must be echoed exactly; every tool_use must be answered next.
     const msgs = req.messages || [];

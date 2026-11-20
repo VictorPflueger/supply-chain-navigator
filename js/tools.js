@@ -1,19 +1,16 @@
 // The live agent's tools: JSON Schemas sent to the model, and executors that run in the browser.
-// Every UI effect is emitted on the run-event bus, exactly as the simulation player does it.
+// Every effect on screen goes out through emit(), the same events the scripted run produces, and the
+// scripted run shapes its options and tool lines with the helpers at the end of this file.
 //
 // Guardrails enforced in code, not only in the prompt:
 //   - option € figures and times come from the latest sim_impact result (by variant_id);
 //   - an alert needs at least two sources;
 //   - every outbound action is a draft carrying the AI footer, and the final report waits until
-//     every draft has been approved or rejected.
+//     every draft has been approved or rejected. Nothing is ever sent.
 
 import { MITIGATION_TYPES, simulateImpact, compactForModel } from "./impact.js";
 import { erpOverview, erpListSuppliers, erpGetSupplier, erpGetPart, erpGetOpenPOs, erpGetAlternatives, erpGetRoutes } from "./erp.js";
-import { geoWeather, geoEarthquakes, geoNaturalEvents, geoRhineLevel, EONET_CATEGORIES } from "./geo.js";
-import { summarizeToolResult } from "./summaries.js";
-import { optionFigures, baselineFigures, decisionEffects } from "./payoff.js";
-import { ANTHROPIC } from "./config.js";
-import { eurCompact } from "./format.js";
+import { eurCompact, plural } from "./format.js";
 
 export const DRAFT_FOOTER = "Prepared with the Navigator AI assistant. Requires human approval before sending.";
 export const MOCK_BOOKING_LINE = "Mock booking for demonstration; no carrier system is connected.";
@@ -94,52 +91,12 @@ const DEFINITIONS = [
     }
   },
   {
-    name: "geo_weather",
-    description: "Live Open-Meteo daily weather (past days and forecast) at a coordinate, with flags for heavy rain, storm gusts, snow and heat, and the nearest Nordwerk sites.",
-    input_schema: {
-      type: "object",
-      properties: {
-        lat: { type: "number" }, lon: { type: "number" },
-        days: { type: "integer", minimum: 1, maximum: 16, description: "Forecast days (default 7)." },
-        past_days: { type: "integer", minimum: 0, maximum: 14, description: "Past days included (default 3)." }
-      },
-      required: ["lat", "lon"]
-    }
-  },
-  {
-    name: "geo_earthquakes",
-    description: "Live USGS earthquakes, joined with Nordwerk's network (sites within 300 km).",
-    input_schema: {
-      type: "object",
-      properties: {
-        min_magnitude: { type: "number", description: "Default 4.5." },
-        days: { type: "integer", minimum: 1, maximum: 30, description: "Look-back window (default 7)." }
-      }
-    }
-  },
-  {
-    name: "geo_natural_events",
-    description: "Live NASA EONET open natural events (storms, floods, wildfires, volcanoes …) within 250 km of Nordwerk sites. EONET is a reference feed: always confirm with a second source.",
-    input_schema: {
-      type: "object",
-      properties: {
-        category: { type: "string", enum: EONET_CATEGORIES },
-        days: { type: "integer", minimum: 1, maximum: 90, description: "Look-back window (default 30)." }
-      }
-    }
-  },
-  {
-    name: "geo_rhine_level",
-    description: "Live Rhine gauge from PEGELONLINE (default station KAUB) with the 7-day trend and, for Kaub, the estimated share of normal barge capacity.",
-    input_schema: { type: "object", properties: { station: { type: "string", description: "PEGELONLINE station short name (default \"KAUB\")." } } }
-  },
-  {
     name: "sim_impact",
     description: [
       "Deterministic impact engine (no LLM maths). Simulates a disruption day by day through the supply network and returns, over horizon_days:",
       "value_at_risk_eur, first_stop_day and plant, per-part shortage days, propagation, and for each variant the mitigation cost, residual exposure, total and time to effect.",
       "Use ids from erp_* results only. Durations are your evidence-based assumptions; say what they rest on.",
-      "Mitigation fields by type — surge: supplier_id, extra_share_pct, start_in_days ≥ ramp-up; airfreight: part_id, plant_id, max_share_pct, start_in_days ≥ lead, duration_days;",
+      "Mitigation fields by type. surge: supplier_id, extra_share_pct, start_in_days ≥ ramp-up; airfreight: part_id, plant_id, max_share_pct, start_in_days ≥ lead, duration_days;",
       "spot_buy: part_id, plant_id, max_share_pct, start_in_days, duration_days; alt_supplier: alternative_id (A-…), share_pct, start_in_days ≥ qualification_days;",
       "build_shy: part_id, plant_id, max_days; reroute: alternative_id (ALT-…), optional route_id, start_in_days; input_contingency: supplier_id, input, share_pct, start_in_days ≥ lead.",
       "Errors come back with the field to fix."
@@ -197,7 +154,7 @@ const DEFINITIONS = [
   },
   {
     name: "ui_report_alert",
-    description: "Raise a disruption alert in the console and mark the affected entities on the map. basis \"verified\" requires at least two independent sources; basis \"what_if\" labels the alert as an unverified exercise.",
+    description: "Raise a disruption alert on screen and mark the affected entities on the map. basis \"verified\" requires at least two independent sources; basis \"what_if\" labels the alert as an unverified exercise.",
     input_schema: {
       type: "object",
       properties: {
@@ -266,7 +223,7 @@ const DEFINITIONS = [
   },
   {
     name: "ui_draft_action",
-    description: "Queue one outbound action as a draft in the Outbox, pending human approval. Nothing is ever sent. Use names and quantities from erp_* results.",
+    description: "Queue one outbound action as a draft, pending human approval. Nothing is ever sent. Use names and quantities from erp_* results.",
     input_schema: {
       type: "object",
       properties: {
@@ -280,7 +237,7 @@ const DEFINITIONS = [
   },
   {
     name: "ui_await_approvals",
-    description: "Wait until the human has approved or rejected every draft in the Outbox. Returns each decision. Call after the last ui_draft_action and before ui_final_report.",
+    description: "Wait until the human has approved or rejected every draft. Returns each decision. Call after the last ui_draft_action and before ui_final_report.",
     input_schema: { type: "object", properties: {} }
   },
   {
@@ -297,10 +254,10 @@ const DEFINITIONS = [
   }
 ];
 
-/** Tool list for a request; web search is omitted when the organisation has it switched off. */
+/** Tool list for a request; web search is left out when the key's organisation has it switched off. */
 export function toolDefinitions({ webSearch = true } = {}) {
   const tools = DEFINITIONS.map((d) => ({ ...d }));
-  if (webSearch) tools.unshift({ ...ANTHROPIC.webSearchTool });
+  if (webSearch) tools.unshift({ type: "web_search_20250305", name: "web_search", max_uses: 5 });
   return tools;
 }
 
@@ -336,10 +293,6 @@ export function createToolbox(ctx) {
     erp_get_open_pos: (i) => erpGetOpenPOs(ctx.model, i || {}),
     erp_get_alternatives: (i) => erpGetAlternatives(ctx.model, i.part_id),
     erp_get_routes: (i) => erpGetRoutes(ctx.model, i.node_or_supplier ?? i.query ?? ""),
-    geo_weather: (i) => geoWeather(ctx.model, i),
-    geo_earthquakes: (i) => geoEarthquakes(ctx.model, i),
-    geo_natural_events: (i) => geoNaturalEvents(ctx.model, i),
-    geo_rhine_level: (i) => geoRhineLevel(ctx.model, i),
     sim_impact: simImpact,
     ui_report_alert: reportAlert,
     ui_mark_map: markMap,
@@ -352,27 +305,27 @@ export function createToolbox(ctx) {
 
   async function execute(name, input = {}) {
     const fn = handlers[name];
-    if (!fn) return done({ error: `Unknown tool "${name}".` }, true, name);
+    if (!fn) return done({ error: `Unknown tool "${name}".` }, true, name, input);
     let result;
     try {
       result = await fn(input || {});
     } catch (e) {
       // Cancellation (the agent's abort symbol or a fetch AbortError) ends the run, not the tool.
       if (typeof e === "symbol" || e?.name === "AbortError") throw e;
-      console.error(`[Navigator] tool ${name} failed:`, e);
+      console.error(`[showcase] tool ${name} failed:`, e);
       result = { error: `The tool failed unexpectedly (${String(e?.message || "unknown error")}). Try different input or another tool.` };
     }
     const isError = !!(result && (result.error || result.ok === false));
-    return done(result, isError, name);
+    return done(result, isError, name, input);
   }
 
-  function done(result, isError, name) {
+  function done(result, isError, name, input = {}) {
     const forModel = name === "sim_impact" && result?.ok ? compactForModel(result) : result;
     return {
       content: JSON.stringify(forModel),
       isError,
       result: forModel,
-      summary: summarizeToolResult(name, forModel)
+      summary: toolLine(name, input, forModel, ctx.model)
     };
   }
 
@@ -527,8 +480,8 @@ export function createToolbox(ctx) {
     const action_id = `act-${ctx.drafts.size + 1}`;
     ctx.drafts.set(action_id, { status: "pending", subject, recipient: String(i.recipient || "").slice(0, 160), type });
     ctx.onPhase("executing");
-    ctx.emit("action_draft", { action_id, type, recipient: String(i.recipient || "").slice(0, 160), subject: subject.slice(0, 200), body, status: "pending" });
-    return { action_id, status: "pending_approval", note: "Queued in the Outbox as a draft. Nothing is sent." };
+    ctx.emit("action_draft", { action_id, kind: type, recipient: String(i.recipient || "").slice(0, 160), subject: subject.slice(0, 200), body, status: "pending" });
+    return { action_id, status: "pending_approval", note: "Queued as a draft for the human's approval. Nothing is sent." };
   }
 
   async function awaitApprovals() {
@@ -536,7 +489,7 @@ export function createToolbox(ctx) {
     if (!ctx.drafts.size) return { error: "There are no drafts. Use ui_draft_action first." };
     if (pending()) {
       ctx.onPhase("awaiting_approval");
-      ctx.emit("notice", { level: "info", text: `Waiting for your approval of ${pending()} draft${pending() === 1 ? "" : "s"} in the Outbox.` });
+      ctx.emit("notice", { level: "info", text: `Waiting for your approval of ${pending()} draft${pending() === 1 ? "" : "s"}.` });
       await ctx.waitUntil(() => pending() === 0);
     }
     ctx.onPhase("executing");
@@ -577,3 +530,89 @@ function safeHttpUrl(url) {
     return null;
   }
 }
+
+// ---- shared with the scripted run --------------------------------------------------------------------
+
+/** One engine variant as an option card shows it; every figure is the engine's. */
+export function optionFigures(model, v) {
+  const plant = v.first_stop_plant ? v.plants.find((p) => p.plant_id === v.first_stop_plant) : null;
+  return {
+    mitigation_cost_eur: v.mitigation_cost_eur,
+    residual_var_eur: v.residual_var_eur,
+    total_cost_eur: v.total_cost_eur,
+    savings_eur: v.savings_vs_baseline_eur,
+    time_days: v.time_to_effect_days,
+    first_stop_day: v.first_stop_day ?? null,
+    first_stop_plant_name: v.first_stop_plant ? model.plants.get(v.first_stop_plant)?.short || v.first_stop_plant : null,
+    min_output_pct: plant ? plant.min_output_pct : 100,
+    plant_exposure: Object.fromEntries((v.plants || []).map((p) => [p.plant_id, p.exposure_eur || 0]))
+  };
+}
+
+/** The do-nothing baseline as its card shows it. */
+export function baselineFigures(model, b, description = "") {
+  const plant = b.first_stop_plant ? b.plants.find((p) => p.plant_id === b.first_stop_plant) : null;
+  return {
+    value_at_risk_eur: b.value_at_risk_eur,
+    first_stop_day: b.first_stop_day,
+    first_stop_plant_name: b.first_stop_plant ? model.plants.get(b.first_stop_plant)?.short || b.first_stop_plant : null,
+    min_output_pct: plant ? plant.min_output_pct : 100,
+    plant_exposure: Object.fromEntries((b.plants || []).map((p) => [p.plant_id, p.exposure_eur || 0])),
+    description: String(description || "").slice(0, 300)
+  };
+}
+
+/**
+ * What an approval changes on screen, as [type, payload] events: the key figures show what remains,
+ * and every exposed plant turns resolved (nothing left) or at risk (some exposure remains).
+ */
+export function decisionEffects(optionsPayload, optionId) {
+  if (!optionsPayload) return [];
+  const base = optionsPayload.baseline || {};
+  if (optionId === "baseline") return [["kpi_update", { decided: true, accepted: true, option_label: "Do nothing" }]];
+  const opt = (optionsPayload.options || []).find((o) => o.id === optionId);
+  if (!opt) return [];
+  const out = [["kpi_update", {
+    decided: true, option_label: `option ${opt.letter}`, residual_eur: opt.residual_var_eur, before_eur: base.value_at_risk_eur,
+    first_stop_day_after: opt.first_stop_day, first_stop_plant_name_after: opt.first_stop_plant_name, min_output_pct_after: opt.min_output_pct
+  }]];
+  const exposed = Object.entries(base.plant_exposure || {}).filter(([, eur]) => eur > 0).map(([id]) => id);
+  const resolved = exposed.filter((id) => !(opt.plant_exposure?.[id] > 0));
+  const atRisk = exposed.filter((id) => opt.plant_exposure?.[id] > 0);
+  if (resolved.length) out.push(["map_update", { plant_ids: resolved, state: "resolved" }]);
+  if (atRisk.length) out.push(["map_update", { plant_ids: atRisk, state: "at_risk" }]);
+  return out;
+}
+
+const partName = (model, id) => (model.parts.get(id)?.name || id || "").split(" (")[0].toLowerCase();
+const regions = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames(["en-GB"], { type: "region" }) : null;
+/** "MA" reads Morocco; "SI, AT" Slovenia and Austria; any other text stays as it is. */
+const place = (text) => String(text).split(/\s*,\s*/).map((t) => (/^[A-Z]{2}$/.test(t) && regions ? regions.of(t) : t)).join(" and ");
+/** A name up to its first dash or bracket: "Kaub", not the world's "Kaub", dash, "Middle Rhine bottleneck (gauge KAUB)". */
+export const shortName = (name) => String(name || "").split(/ [—–-] | \(/)[0];
+
+/** What the agent did with one tool, in plain words for the story panel. */
+export function toolLine(name, input = {}, result = {}, model = null) {
+  if (result?.error || result?.ok === false) return `${TOOL_VERB[name] || "Used a tool"}: it answered with an error`;
+  switch (name) {
+    case "erp_get_overview": return "Read the company overview";
+    case "erp_list_suppliers": return `Looked up our suppliers${input.region ? ` in ${place(input.region)}` : ""}: ${plural(result.count || 0, "match", "matches")}`;
+    case "erp_get_supplier": return `Opened the record of ${shortName(result.name) || input.supplier_id}`;
+    case "erp_get_part": return `Checked stock and supply of ${(result.name || "").split(" (")[0].toLowerCase() || (model ? partName(model, input.part_id) : input.part_id)}`;
+    case "erp_get_open_pos": return `Checked orders in transit: ${result.count || 0} (${eurCompact(result.value_eur || 0)})`;
+    case "erp_get_alternatives": return `Listed other sources: ${plural((result.alternatives || []).length, "qualified alternative")}, ${plural((result.surge_options || []).length, "supplier")} with spare capacity`;
+    case "erp_get_routes": return `Checked our routes${result.resolved?.name ? ` through ${shortName(result.resolved.name)}` : ""}: ${plural(result.count || 0, "corridor")}`;
+    case "web_search": return `Searched the web for “${input.query || "the event"}”: ${plural((result.results || []).length, "result")}`;
+    case "sim_impact": {
+      const b = result.baseline || {};
+      return `Ran the impact engine: ${eurCompact(b.value_at_risk_eur)} at risk${b.first_stop_day === null || b.first_stop_day === undefined ? ", no line stop" : `, first stop on day ${b.first_stop_day}`}${result.variants?.length ? `, ${plural(result.variants.length, "option")} costed` : ""}`;
+    }
+    default: return TOOL_VERB[name] || "Used a tool";
+  }
+}
+
+const TOOL_VERB = {
+  ui_report_alert: "Raised the alert", ui_mark_map: "Marked the map", ui_propose_options: "Put three options to you",
+  ui_await_decision: "Waited for your decision", ui_draft_action: "Wrote a draft", ui_await_approvals: "Waited for your approvals",
+  ui_final_report: "Wrote the summary", erp_get_part: "Checked a part", sim_impact: "Ran the impact engine", web_search: "Searched the web"
+};

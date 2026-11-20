@@ -1,21 +1,22 @@
 /*
- * NAVIGATOR — simulation scripts (Simulation mode).
+ * NAVIGATOR: the scripted runs behind the simulation.
  *
  * One script per preset scenario. Each mirrors what the live agent does: the same tools in the
  * same order, a hypothesis that is checked against a second independent source, a visible
  * "Revised:" self-correction, exactly three costed options plus the do-nothing baseline, drafts
  * that wait for approval, and a management summary.
  *
- * Integrity rules for authors (checked by js/sim_check.js in Diagnostics and tools/check_world.mjs):
- *   - ERP results are produced at playback by the real ERP queries (js/erp.js).
- *   - Every € figure and line-stop day comes from the impact engine via {{placeholders}}
- *     (js/sim_vars.js); never type a number that the engine computes.
- *   - Web search and open-data results are representative and labelled as such; they carry no
- *     URLs because they do not point to real articles.
+ * Rules for authors, checked by tests/figures.mjs:
+ *   - ERP results come from the real ERP queries (js/erp.js) when the page builds the run.
+ *   - Every € figure and line-stop day comes from the impact engine through {{placeholders}}
+ *     (js/story.js); never type a number that the engine computes.
+ *   - Web-search results are representative and labelled so; they carry no URLs because they do
+ *     not point to real articles.
  *   - Reports end with the simulation marker; nothing here may present itself as a live run.
  *
- * A completed live run can replace a script: "Save run as simulation" in the Audit tab exports it
- * in this format (source: "recorded"), to be appended to the end of this file.
+ * The page splits each script into the five steps on screen: Spot until the first "verifying",
+ * Check until the first "diagnosing", Calculate until the last "diagnosing", then Propose, and
+ * Prepare for the drafts of the approved option.
  */
 window.SIM_RUNS = {
   "SC-RTM-STRIKE": {
@@ -80,7 +81,7 @@ window.SIM_RUNS = {
 
       { state: "diagnosing" },
       { tool: "erp_get_alternatives", input: { part_id: "P-DSP" } },
-      { say: "Response levers: divert our containers to Antwerp-Bruges (two extra days) or Hamburg (three), fly displays from Tainan at €12 a set with four days' lead time, or build vehicles without displays for up to eight days and retrofit them in the yard." },
+      { say: "Response levers: divert our containers to Antwerp-Bruges (two extra days) or Hamburg (three), fly displays from Tainan at {{part.P-DSP.air}} a set with four days' lead time, or build vehicles without displays for up to eight days and retrofit them in the yard." },
 
       { options: {
         recommended: "V1",
@@ -114,7 +115,7 @@ window.SIM_RUNS = {
         approved: {
           V1: [
             { state: "executing" },
-            { say: "Option A approved. Drafting the diversion request, the onward rail booking and a note for Leipzig logistics. Each draft waits for your approval in the Outbox; nothing is sent." },
+            { say: "Option A approved. Drafting the diversion request, the onward rail booking and a note for Leipzig logistics. Each draft waits for your approval; nothing is sent." },
             { draft: {
               type: "email", recipient: "Contracted ocean carrier, Asia–North Europe service (key account desk)",
               subject: "Divert Nordwerk containers from Rotterdam to Antwerp-Bruges",
@@ -132,12 +133,12 @@ window.SIM_RUNS = {
             } },
             { map: { node_ids: ["N-ANR"], supplier_ids: ["S-TNN-DSP"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Rotterdam terminal strike: response decision\n\n**What happened.** A strike has stopped the Maasvlakte deep-sea terminals in the Port of Rotterdam. The union's announcement and a port-authority update confirm it; carriers expect about five days of congestion after the nine-day strike.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}): 60 % of them arrive by sea through Rotterdam. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: discharge our Rotterdam-bound containers in Antwerp-Bruges and rail them to Leipzig.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** Antwerp-Bruges may congest as other shippers divert; the air-freight bridge for displays (option B) is the fallback.\n\n**How we know.** Exposure from ERP master data; stop dates and euro figures from the deterministic impact engine; the event confirmed by two independent sources.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Rotterdam terminal strike: response decision\n\n**What happened.** A strike has stopped the Maasvlakte deep-sea terminals in the Port of Rotterdam. The union's announcement and a port-authority update confirm it; carriers expect about five days of congestion after the nine-day strike.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}): 60 % of them arrive by sea through Rotterdam. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: discharge our Rotterdam-bound containers in Antwerp-Bruges and rail them to Leipzig.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** Antwerp-Bruges may congest as other shippers divert; the air-freight bridge for displays (option B) is the fallback.\n\n**How we know.** Exposure from ERP master data; stop dates and euro figures from the deterministic impact engine; the event confirmed by two independent sources.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V2: [
             { state: "executing" },
-            { say: "Option B approved. Drafting the air-freight booking and the shipping request to Tainan; each draft waits for your approval in the Outbox." },
+            { say: "Option B approved. Drafting the air-freight booking and the shipping request to Tainan; each draft waits for your approval." },
             { draft: {
               type: "booking", recipient: "Contracted air-freight forwarder (framework agreement)",
               subject: "Mock booking: air freight of display sets Taipei → Leipzig/Halle",
@@ -150,16 +151,16 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-TNN-DSP"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Rotterdam terminal strike: response decision\n\n**What happened.** A strike has stopped the Maasvlakte deep-sea terminals in Rotterdam; two independent sources confirm it.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: an air-freight bridge for up to 60 % of Leipzig's displays from Tainan. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Tyres and cathode material still wait for Rotterdam; their stock covers the delay.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Rotterdam terminal strike: response decision\n\n**What happened.** A strike has stopped the Maasvlakte deep-sea terminals in Rotterdam; two independent sources confirm it.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: an air-freight bridge for up to 60 % of Leipzig's displays from Tainan. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Tyres and cathode material still wait for Rotterdam; their stock covers the delay.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V3: [
             { state: "executing" },
-            { say: "Option C approved. Drafting the build-without-displays plan for Leipzig; it waits for your approval in the Outbox." },
+            { say: "Option C approved. Drafting the build-without-displays plan for Leipzig; it waits for your approval." },
             { draft: {
               type: "replan", recipient: "Leipzig plant management",
               subject: "Build without displays from {{first_stop_date}}; retrofit in the yard",
-              body: "Decision: option C approved. When display stock runs out on day {{first_stop_day}} ({{first_stop_date}}), Leipzig keeps building and completes vehicles without displays.\n\nWhat to prepare\n- Release the build-without-displays sequence for up to eight days of output\n- Set up a retrofit area in the yard; rework is planned at €230 per vehicle\n- Hold affected vehicles from shipping until they are retrofitted\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
+              body: "Decision: option C approved. When display stock runs out on day {{first_stop_day}} ({{first_stop_date}}), Leipzig keeps building and completes vehicles without displays.\n\nWhat to prepare\n- Release the build-without-displays sequence for up to eight days of output\n- Set up a retrofit area in the yard; rework is planned at {{part.P-DSP.rework}} per vehicle\n- Hold affected vehicles from shipping until they are retrofitted\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
             } },
             { awaitActions: true },
             { report: "## Rotterdam terminal strike: response decision\n\n**What happened.** A strike has stopped the Maasvlakte deep-sea terminals in Rotterdam; two independent sources confirm it.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}); value at risk over 30 days **{{var}}**.\n\n**Decision.** Option C approved: build without displays and retrofit them in the yard. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} internal plans approved (drafts only, nothing sent).\n\n**Residual risk.** Yard rework is limited to eight days of output; a longer strike needs option A or B.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
@@ -193,14 +194,13 @@ window.SIM_RUNS = {
       { map: { route_ids: ["R-SEA-TH-RHINE-KAR", "R-SEA-IN-RHINE-FRA", "R-BARGE-BOT-LUH"], state: "at_risk" } },
 
       { state: "verifying" },
-      { geo: "geo_rhine_level", input: { station: "KAUB" },
-        summary: "Kaub 78 cm, down 19 cm in seven days and falling; barges can load about 26 % of normal capacity",
-        result: {
-          source: "PEGELONLINE, German Federal Waterways and Shipping Administration (representative values)",
-          station: "KAUB", gauge_cm: 78, measured_at: "today, 06:00",
-          last_7_days: { min_cm: 78, max_cm: 97, change_cm: -19, trend: "falling" },
-          estimated_barge_capacity_pct: 26, reference_low_water_cm: 77
-        } },
+      { web: {
+        query: "PEGELONLINE Kaub gauge water level today",
+        summary: "1 result: the federal waterways gauge page",
+        results: [
+          { title: "Kaub 78 cm, down 19 cm in seven days and falling; barges load about 26 % of normal", source: "German Federal Waterways and Shipping Administration (PEGELONLINE)", page_age: "today" }
+        ]
+      } },
       { say: "Check: the official gauge confirms the notice, so this is no longer a single-source claim. At 78 cm, barges can load only about a quarter of their normal capacity." },
       { web: {
         query: "Rhine Kaub low water surcharges part loads barges",
@@ -235,14 +235,13 @@ window.SIM_RUNS = {
       { impact: "hypothesis" },
       { say: "For two weeks at this level, value at risk is {{hyp.var}}: the stocks along the chain bridge the gap. Everything depends on how long the low water lasts, so I check the weather in the catchment and the waterway forecast." },
       { state: "verifying" },
-      { geo: "geo_weather", input: { lat: 47.6, lon: 8.7, days: 14, past_days: 3 },
-        summary: "Upper Rhine catchment: 7 mm of rain over 17 days, no rain event that would lift the river",
-        result: {
-          source: "Open-Meteo forecast API (representative values)",
-          location: { lat: 47.6, lon: 8.7, timezone: "Europe/Zurich" },
-          near: [], past_days: 3, total_precip_mm: 7.4, flags: [],
-          assessment: "No severe weather in this window."
-        } },
+      { web: {
+        query: "Upper Rhine catchment rain outlook two weeks",
+        summary: "1 result: a weather service outlook",
+        results: [
+          { title: "Upper Rhine catchment: 7 mm of rain over 17 days, no rain event that would lift the river", source: "National weather service outlook", page_age: "today" }
+        ]
+      } },
       { web: {
         query: "Rhine water level forecast Kaub coming weeks",
         summary: "1 result: the waterway forecast quoted by the trade press",
@@ -291,7 +290,7 @@ window.SIM_RUNS = {
         approved: {
           V1: [
             { state: "executing" },
-            { say: "Option A approved. Drafting the rail booking for the solvents and the notices to the solvent and tyre suppliers. Each draft waits for your approval in the Outbox; nothing is sent." },
+            { say: "Option A approved. Drafting the rail booking for the solvents and the notices to the solvent and tyre suppliers. Each draft waits for your approval; nothing is sent." },
             { draft: {
               type: "booking", recipient: "Contracted rail operator (framework agreement)",
               subject: "Mock booking: tank-wagon trains Duisburg → Ludwigshafen, 3 per week",
@@ -309,12 +308,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-LUD-ELY", "S-KAR-TYR", "S-FRA-BRK"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Rhine low water at Kaub: response decision\n\n**What happened.** The Rhine gauge at Kaub reads 78 cm and is falling; barges can carry about a quarter of a normal load. The gauge and market reports confirm it, and the forecast keeps Kaub below 80 cm for four to six weeks.\n\n**If we do nothing.** The solvent barge to Rhein-Neckar Elektrolyt, our only electrolyte source, cannot deliver in full. Leipzig runs short of battery cells on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: move all Kaub-bound cargo to rail from Duisburg.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** Rail slots on the Rhine corridor tighten as other shippers switch. The tier-2 electrolyte dependency remains a single point of failure worth a structural fix.\n\n**How we know.** The Kaub gauge, market reports and the waterway forecast; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Rhine low water at Kaub: response decision\n\n**What happened.** The Rhine gauge at Kaub reads 78 cm and is falling; barges can carry about a quarter of a normal load. The gauge and market reports confirm it, and the forecast keeps Kaub below 80 cm for four to six weeks.\n\n**If we do nothing.** The solvent barge to Rhein-Neckar Elektrolyt, our only electrolyte source, cannot deliver in full. Leipzig runs short of battery cells on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: move all Kaub-bound cargo to rail from Duisburg.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** Rail slots on the Rhine corridor tighten as other shippers switch. The tier-2 electrolyte dependency remains a single point of failure worth a structural fix.\n\n**How we know.** The Kaub gauge, market reports and the waterway forecast; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V2: [
             { state: "executing" },
-            { say: "Option B approved. Drafting the road-tanker booking and the notice to the solvent supplier; each draft waits for your approval in the Outbox." },
+            { say: "Option B approved. Drafting the road-tanker booking and the notice to the solvent supplier; each draft waits for your approval." },
             { draft: {
               type: "booking", recipient: "Contracted chemical road haulier (framework agreement)",
               subject: "Mock booking: ISO-tank trucks Rotterdam-Botlek → Ludwigshafen, daily",
@@ -327,12 +326,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-LUD-ELY"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Rhine low water at Kaub: response decision\n\n**What happened.** The Kaub gauge reads 78 cm and is falling; barges carry about a quarter of a normal load, likely for four to six weeks.\n\n**If we do nothing.** Leipzig runs short of battery cells on day {{first_stop_day}} ({{first_stop_date}}), because the solvent barge to our only electrolyte supplier cannot deliver in full. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: solvents by ISO-tank truck from Rotterdam-Botlek to Ludwigshafen. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Dangerous-goods tankers are scarce; rubber and calipers stay on part-loaded barges.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Rhine low water at Kaub: response decision\n\n**What happened.** The Kaub gauge reads 78 cm and is falling; barges carry about a quarter of a normal load, likely for four to six weeks.\n\n**If we do nothing.** Leipzig runs short of battery cells on day {{first_stop_day}} ({{first_stop_date}}), because the solvent barge to our only electrolyte supplier cannot deliver in full. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: solvents by ISO-tank truck from Rotterdam-Botlek to Ludwigshafen. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Dangerous-goods tankers are scarce; rubber and calipers stay on part-loaded barges.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V3: [
             { state: "executing" },
-            { say: "Option C approved. Drafting the contingency releases for the three cell suppliers; each draft waits for your approval in the Outbox." },
+            { say: "Option C approved. Drafting the contingency releases for the three cell suppliers; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Odra Cell Systems Sp. z o.o., Wrocław (supply chain)",
               subject: "Release contingency electrolyte (40 %) from {{date:+8}}",
@@ -350,7 +349,7 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-WRO-CELL", "S-DEB-CELL", "S-GOD-CELL"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Rhine low water at Kaub: response decision\n\n**What happened.** The Kaub gauge reads 78 cm and is falling; barges carry about a quarter of a normal load, likely for four to six weeks.\n\n**If we do nothing.** Leipzig runs short of battery cells on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option C approved: the three cell suppliers draw 40 % of their electrolyte from the approved Korean contingency source. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Rhein-Neckar Elektrolyt still runs short; the contingency covers only 40 % of electrolyte demand.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Rhine low water at Kaub: response decision\n\n**What happened.** The Kaub gauge reads 78 cm and is falling; barges carry about a quarter of a normal load, likely for four to six weeks.\n\n**If we do nothing.** Leipzig runs short of battery cells on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option C approved: the three cell suppliers draw 40 % of their electrolyte from the approved Korean contingency source. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Rhein-Neckar Elektrolyt still runs short; the contingency covers only 40 % of electrolyte demand.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           baseline: [
@@ -380,24 +379,13 @@ window.SIM_RUNS = {
       { map: { supplier_ids: ["S-HSC-MCU", "S-HSC-PSM", "S-ZHB-DDI", "S-TAO-PCB"], state: "at_risk", focus: { lat: 24.8, lon: 121.0, zoom: 8 } } },
 
       { state: "verifying" },
-      { geo: "geo_earthquakes", input: { min_magnitude: 5, days: 1 },
-        summary: "M6.4, 18 km south-east of Hsinchu at 14 km depth; four of our suppliers within 40 km",
-        result: {
-          source: "USGS earthquake feed 4.5_day (representative values)",
-          window_days: 1, min_magnitude: 5, total_events: 3,
-          within_300_km_of_nordwerk: [{
-            magnitude: 6.4, place: "18 km SE of Hsinchu, Taiwan", time_utc: "today, 03:41 UTC",
-            lat: 24.71, lon: 121.12, depth_km: 14, pager_alert: "yellow", tsunami: false,
-            near_nordwerk: [
-              { id: "S-HSC-PSM", name: "Formosa Wide-Bandgap Semiconductor Corp.", kind: "tier-2 supplier", distance_km: 14 },
-              { id: "S-HSC-MCU", name: "Hsinchu Microcontroller Foundry Corp.", kind: "tier-2 supplier", distance_km: 15 },
-              { id: "S-ZHB-DDI", name: "Zhubei Display Driver Semiconductor Corp.", kind: "tier-2 supplier", distance_km: 17 },
-              { id: "S-TAO-PCB", name: "Taoyuan Circuit Boards Co., Ltd.", kind: "tier-2 supplier", distance_km: 36 },
-              { id: "N-TPE", name: "Taipei Taoyuan International Airport", kind: "logistics node (airport)", distance_km: 43 }
-            ]
-          }],
-          strongest_elsewhere: []
-        } },
+      { web: {
+        query: "USGS earthquake Hsinchu Taiwan magnitude 6.4",
+        summary: "1 result: the USGS event page",
+        results: [
+          { title: "M 6.4, 18 km south-east of Hsinchu, Taiwan, at 14 km depth", source: "U.S. Geological Survey earthquake catalogue", page_age: "today" }
+        ]
+      } },
       { say: "Confirmed: the USGS feed records an M6.4 earthquake 18 km south-east of Hsinchu at 14 km depth, within 20 km of three of our suppliers. Seismic data and the first reports agree on the event." },
       { say: "Check: a strong quake near the fabs does not yet mean they are damaged. I look for the science park's own statement." },
       { web: {
@@ -477,7 +465,7 @@ window.SIM_RUNS = {
         approved: {
           V1: [
             { state: "executing" },
-            { say: "Option A approved. Drafting the broker request and the notices to our two inverter suppliers. Each draft waits for your approval in the Outbox; nothing is sent." },
+            { say: "Option A approved. Drafting the broker request and the notices to our two inverter suppliers. Each draft waits for your approval; nothing is sent." },
             { draft: {
               type: "email", recipient: "Authorised electronic-components distributor (key account)",
               subject: "Request: inverter control MCUs, up to 680 pcs per day from {{date:+4}}",
@@ -495,12 +483,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-HAT-INV", "S-NUE-INV"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Hsinchu earthquake: response decision\n\n**What happened.** An M6.4 earthquake struck 18 km from Hsinchu Science Park. The USGS feed and the science-park administration confirm it; our MCU foundry expects ten days without output, then half output for three weeks.\n\n**If we do nothing.** The foundry is the only source of Győr's inverter MCU. Győr stops on day {{first_stop_day}} ({{first_stop_date}}) and Leipzig follows on day {{plant.PL-LEJ.first_stop_day}} for lack of e-drive units. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: buy up to 40 % of the Győr chain's MCU demand from authorised brokers, with incoming inspection.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** Broker supply and authenticity; Győr stays single-sourced. Qualifying the Nijmegen MCU (option B) would remove that dependency for {{V2.mit}} in total.\n\n**How we know.** Seismic data and official statements; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Hsinchu earthquake: response decision\n\n**What happened.** An M6.4 earthquake struck 18 km from Hsinchu Science Park. The USGS feed and the science-park administration confirm it; our MCU foundry expects ten days without output, then half output for three weeks.\n\n**If we do nothing.** The foundry is the only source of Győr's inverter MCU. Győr stops on day {{first_stop_day}} ({{first_stop_date}}) and Leipzig follows on day {{plant.PL-LEJ.first_stop_day}} for lack of e-drive units. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: buy up to 40 % of the Győr chain's MCU demand from authorised brokers, with incoming inspection.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** Broker supply and authenticity; Győr stays single-sourced. Qualifying the Nijmegen MCU (option B) would remove that dependency for {{V2.mit}} in total.\n\n**How we know.** Seismic data and official statements; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V2: [
             { state: "executing" },
-            { say: "Option B approved. Drafting the broker request, the fast-track request to Nijmegen and the notices to our two inverter suppliers; each draft waits for your approval in the Outbox." },
+            { say: "Option B approved. Drafting the broker request, the fast-track request to Nijmegen and the notices to our two inverter suppliers; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Authorised electronic-components distributor (key account)",
               subject: "Request: inverter control MCUs, up to 680 pcs per day from {{date:+4}}",
@@ -509,7 +497,7 @@ window.SIM_RUNS = {
             { draft: {
               type: "email", recipient: "Waal Microcontrollers B.V., Nijmegen (sales)",
               subject: "Fast-track qualification of your pin-compatible inverter MCU",
-              body: "Dear Waal Microcontrollers team,\n\nAn earthquake near Hsinchu has interrupted the foundry that makes our inverter control MCU. Your pin-compatible variant is already approved in a sister programme, and we would like to qualify it for the NW-e7 inverter on a fast track.\n\nTarget\n- Firmware re-validation and release within 21 days\n- Up to 60 % of demand (about 1,020 pcs per day) from {{date:+22}}\n- Commercials: we cover qualification costs up to €320,000 and accept the agreed 8 % premium\n\nPlease nominate a project lead today; our inverter suppliers' engineers can start tomorrow.\n\nKind regards\nPurchasing, Semiconductors\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
+              body: "Dear Waal Microcontrollers team,\n\nAn earthquake near Hsinchu has interrupted the foundry that makes our inverter control MCU. Your pin-compatible variant is already approved in a sister programme, and we would like to qualify it for the NW-e7 inverter on a fast track.\n\nTarget\n- Firmware re-validation and release within 21 days\n- Up to 60 % of demand (about 1,020 pcs per day) from {{date:+22}}\n- Commercials: we cover qualification costs up to {{alt.A-NIJ-MCU.qualification}} and accept the agreed 8 % premium\n\nPlease nominate a project lead today; our inverter suppliers' engineers can start tomorrow.\n\nKind regards\nPurchasing, Semiconductors\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
             } },
             { draft: {
               type: "email", recipient: "Pannonia Power Electronics Kft., Hatvan (engineering)",
@@ -523,16 +511,16 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-HAT-INV", "S-NUE-INV", "A-NIJ-MCU"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Hsinchu earthquake: response decision\n\n**What happened.** An M6.4 earthquake struck 18 km from Hsinchu Science Park; our MCU foundry expects ten days without output, then half output for three weeks.\n\n**If we do nothing.** Győr stops on day {{first_stop_day}} ({{first_stop_date}}) and Leipzig follows on day {{plant.PL-LEJ.first_stop_day}}. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: broker MCUs bridge the gap while the pin-compatible MCU from Nijmegen is qualified on a 21-day fast track.\n\n| | Do nothing | Option B |\n|---|---|---|\n| Mitigation cost | – | {{V2.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V2.res}} |\n| Expected total | {{var}} | {{V2.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** The firmware re-validation must hold its 21 days. Afterwards Győr has two MCU sources instead of one.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Hsinchu earthquake: response decision\n\n**What happened.** An M6.4 earthquake struck 18 km from Hsinchu Science Park; our MCU foundry expects ten days without output, then half output for three weeks.\n\n**If we do nothing.** Győr stops on day {{first_stop_day}} ({{first_stop_date}}) and Leipzig follows on day {{plant.PL-LEJ.first_stop_day}}. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: broker MCUs bridge the gap while the pin-compatible MCU from Nijmegen is qualified on a 21-day fast track.\n\n| | Do nothing | Option B |\n|---|---|---|\n| Mitigation cost | – | {{V2.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V2.res}} |\n| Expected total | {{var}} | {{V2.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** The firmware re-validation must hold its 21 days. Afterwards Győr has two MCU sources instead of one.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V3: [
             { state: "executing" },
-            { say: "Option C approved. Drafting the fast-track request to Nijmegen and a re-plan note for Győr; each draft waits for your approval in the Outbox." },
+            { say: "Option C approved. Drafting the fast-track request to Nijmegen and a re-plan note for Győr; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Waal Microcontrollers B.V., Nijmegen (sales)",
               subject: "Fast-track qualification of your pin-compatible inverter MCU",
-              body: "Dear Waal Microcontrollers team,\n\nAn earthquake near Hsinchu has interrupted the foundry that makes our inverter control MCU. We would like to qualify your pin-compatible variant for the NW-e7 inverter on a fast track: firmware re-validation within 21 days and up to 60 % of demand (about 1,020 pcs per day) from {{date:+22}}.\n\nWe cover qualification costs up to €320,000 and accept the agreed 8 % premium. Please nominate a project lead today.\n\nKind regards\nPurchasing, Semiconductors\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
+              body: "Dear Waal Microcontrollers team,\n\nAn earthquake near Hsinchu has interrupted the foundry that makes our inverter control MCU. We would like to qualify your pin-compatible variant for the NW-e7 inverter on a fast track: firmware re-validation within 21 days and up to 60 % of demand (about 1,020 pcs per day) from {{date:+22}}.\n\nWe cover qualification costs up to {{alt.A-NIJ-MCU.qualification}} and accept the agreed 8 % premium. Please nominate a project lead today.\n\nKind regards\nPurchasing, Semiconductors\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
             } },
             { draft: {
               type: "replan", recipient: "Győr plant management",
@@ -541,7 +529,7 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["A-NIJ-MCU"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Hsinchu earthquake: response decision\n\n**What happened.** An M6.4 earthquake struck 18 km from Hsinchu Science Park; our MCU foundry expects ten days without output, then half output for three weeks.\n\n**If we do nothing.** Győr stops on day {{first_stop_day}} ({{first_stop_date}}); value at risk over 30 days **{{var}}**.\n\n**Decision.** Option C approved: fast-track the pin-compatible MCU from Nijmegen, without broker parts. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Győr stops before the new source delivers.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Hsinchu earthquake: response decision\n\n**What happened.** An M6.4 earthquake struck 18 km from Hsinchu Science Park; our MCU foundry expects ten days without output, then half output for three weeks.\n\n**If we do nothing.** Győr stops on day {{first_stop_day}} ({{first_stop_date}}); value at risk over 30 days **{{var}}**.\n\n**Decision.** Option C approved: fast-track the pin-compatible MCU from Nijmegen, without broker parts. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Győr stops before the new source delivers.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           baseline: [
@@ -571,19 +559,13 @@ window.SIM_RUNS = {
       { map: { supplier_ids: ["S-KID-ALY", "S-SLB-CAST"], state: "at_risk", focus: { lat: 46.7, lon: 15.3, zoom: 8 } } },
 
       { state: "verifying" },
-      { geo: "geo_weather", input: { lat: 46.405, lon: 15.795, days: 7, past_days: 3 },
-        summary: "148 mm of rain in 48 hours at Kidričevo; drying from tomorrow",
-        result: {
-          source: "Open-Meteo forecast API (representative values)",
-          location: { lat: 46.405, lon: 15.795, timezone: "Europe/Ljubljana" },
-          near: [
-            { id: "S-KID-ALY", name: "Drava Alloy Refining d.o.o.", kind: "tier-2 supplier", distance_km: 0 },
-            { id: "S-SLB-CAST", name: "Štajerska Lightmetal d.o.o.", kind: "tier-1 supplier", distance_km: 17 }
-          ],
-          past_days: 3, total_precip_mm: 156.2,
-          flags: ["extreme rainfall 92 mm yesterday", "heavy rainfall 56 mm the day before"],
-          assessment: "Weather events that can disrupt operations or transport."
-        } },
+      { web: {
+        query: "Kidričevo rainfall 48 hours Drava flood warning",
+        summary: "1 result: the national weather service",
+        results: [
+          { title: "148 mm of rain in 48 hours at Kidričevo; drying from tomorrow", source: "Slovenian Environment Agency (ARSO)", page_age: "today" }
+        ]
+      } },
       { say: "Check: the weather data confirms the rainfall, 148 mm in 48 hours at Kidričevo. Rain alone does not prove that a plant is flooded." },
       { web: {
         query: "Kidričevo flood industrial zone Drava aluminium",
@@ -670,7 +652,7 @@ window.SIM_RUNS = {
         approved: {
           V1: [
             { state: "executing" },
-            { say: "Option A approved. Drafting the requests to the caster and the heat-treatment subcontractor, and the truck shuttle between them. Each draft waits for your approval in the Outbox; nothing is sent." },
+            { say: "Option A approved. Drafting the requests to the caster and the heat-treatment subcontractor, and the truck shuttle between them. Each draft waits for your approval; nothing is sent." },
             { draft: {
               type: "email", recipient: "Štajerska Lightmetal d.o.o., Slovenska Bistrica (supply chain)",
               subject: "Flood contingency: spot alloy and subcontracted T6 heat treatment from {{date:+3}}",
@@ -688,12 +670,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-SLB-CAST"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Drava and Mur floods: response decision\n\n**What happened.** Flash floods along the Drava and Mur have stopped three of our tier-2 sites: the alloy refiner in Kidričevo, the heat-treater in Leoben and a forge in Ravne. Weather data and regional media confirm it.\n\n**If we do nothing.** Our caster Štajerska Lightmetal runs out of alloy and heat treatment, and Leipzig runs out of rear megacastings on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: keep the Slovenian casting line running with spot alloy and subcontracted heat treatment.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** Spot alloy needs a chemistry release before casting; the heat-treatment shuttle adds trucking.\n\n**How we know.** Weather data and regional reports; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Drava and Mur floods: response decision\n\n**What happened.** Flash floods along the Drava and Mur have stopped three of our tier-2 sites: the alloy refiner in Kidričevo, the heat-treater in Leoben and a forge in Ravne. Weather data and regional media confirm it.\n\n**If we do nothing.** Our caster Štajerska Lightmetal runs out of alloy and heat treatment, and Leipzig runs out of rear megacastings on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: keep the Slovenian casting line running with spot alloy and subcontracted heat treatment.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** Spot alloy needs a chemistry release before casting; the heat-treatment shuttle adds trucking.\n\n**How we know.** Weather data and regional reports; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V2: [
             { state: "executing" },
-            { say: "Option B approved. Drafting the surge request to Brescia and a re-plan note for Leipzig; each draft waits for your approval in the Outbox." },
+            { say: "Option B approved. Drafting the surge request to Brescia and a re-plan note for Leipzig; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Val Trompia Fonderie S.p.A., Brescia (key account)",
               subject: "Capacity request: +12 % rear megacastings for Leipzig from {{date:+7}}",
@@ -706,12 +688,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-BRE-CAST"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Drava and Mur floods: response decision\n\n**What happened.** Flash floods have stopped the alloy refiner, the heat-treater and a forge that supply our Slovenian caster.\n\n**If we do nothing.** Leipzig runs out of rear megacastings on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: Brescia raises its share by 12 %. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Brescia covers only part of the gap; Leipzig runs at a reduced rate until the Slovenian line restarts.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Drava and Mur floods: response decision\n\n**What happened.** Flash floods have stopped the alloy refiner, the heat-treater and a forge that supply our Slovenian caster.\n\n**If we do nothing.** Leipzig runs out of rear megacastings on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: Brescia raises its share by 12 %. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Brescia covers only part of the gap; Leipzig runs at a reduced rate until the Slovenian line restarts.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V3: [
             { state: "executing" },
-            { say: "Option C approved. Drafting the Slovenian contingency, the heat-treatment subcontract and the Brescia surge; each draft waits for your approval in the Outbox." },
+            { say: "Option C approved. Drafting the Slovenian contingency, the heat-treatment subcontract and the Brescia surge; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Štajerska Lightmetal d.o.o., Slovenska Bistrica (supply chain)",
               subject: "Flood contingency: spot alloy and subcontracted T6 heat treatment from {{date:+3}}",
@@ -729,7 +711,7 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-SLB-CAST", "S-BRE-CAST"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Drava and Mur floods: response decision\n\n**What happened.** Flash floods have stopped the alloy refiner, the heat-treater and a forge that supply our Slovenian caster.\n\n**If we do nothing.** Leipzig runs out of rear megacastings on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option C approved: the Slovenian contingency plus a 12 % surge in Brescia. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Low; the Brescia surge insures against delays in the contingency.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Drava and Mur floods: response decision\n\n**What happened.** Flash floods have stopped the alloy refiner, the heat-treater and a forge that supply our Slovenian caster.\n\n**If we do nothing.** Leipzig runs out of rear megacastings on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option C approved: the Slovenian contingency plus a 12 % surge in Brescia. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Low; the Brescia surge insures against delays in the contingency.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           baseline: [
@@ -813,7 +795,7 @@ window.SIM_RUNS = {
 
       { state: "diagnosing" },
       { tool: "erp_get_alternatives", input: { part_id: "P-DSP" } },
-      { say: "Response levers: an air-freight bridge from Tainan (€12 a set, four days' lead time), more volume from Hefei by rail (+15 %) and Lahn in Wetzlar (+10 %), or building without displays for up to eight days with a yard retrofit." },
+      { say: "Response levers: an air-freight bridge from Tainan ({{part.P-DSP.air}} a set, four days' lead time), more volume from Hefei by rail (+15 %) and Lahn in Wetzlar (+10 %), or building without displays for up to eight days with a yard retrofit." },
 
       { options: {
         recommended: "V1",
@@ -847,7 +829,7 @@ window.SIM_RUNS = {
         approved: {
           V1: [
             { state: "executing" },
-            { say: "Option A approved. Drafting the air-freight booking and the shipping request to Tainan. Each draft waits for your approval in the Outbox; nothing is sent." },
+            { say: "Option A approved. Drafting the air-freight booking and the shipping request to Tainan. Each draft waits for your approval; nothing is sent." },
             { draft: {
               type: "booking", recipient: "Contracted air-freight forwarder (framework agreement)",
               subject: "Mock booking: air freight of display sets Taipei → Leipzig/Halle",
@@ -860,12 +842,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-TNN-DSP"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Red Sea rerouting: response decision\n\n**What happened.** Carriers are rerouting Asia–Europe services around the Cape of Good Hope; carrier advisories and an official maritime security notice confirm it. Carriers quote about twelve extra days for Far East–North Europe.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}): 60 % of them come by sea from Tainan. Magnets, cathode material and tyres stay covered. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: an air-freight bridge for up to 60 % of Leipzig's displays.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** Air rates rise as other shippers switch. A longer closure would reach cathode material for our cell suppliers next.\n\n**How we know.** Carrier and security advisories; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Red Sea rerouting: response decision\n\n**What happened.** Carriers are rerouting Asia–Europe services around the Cape of Good Hope; carrier advisories and an official maritime security notice confirm it. Carriers quote about twelve extra days for Far East–North Europe.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}): 60 % of them come by sea from Tainan. Magnets, cathode material and tyres stay covered. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: an air-freight bridge for up to 60 % of Leipzig's displays.\n\n| | Do nothing | Option A |\n|---|---|---|\n| Mitigation cost | – | {{V1.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V1.res}} |\n| Expected total | {{var}} | {{V1.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** Air rates rise as other shippers switch. A longer closure would reach cathode material for our cell suppliers next.\n\n**How we know.** Carrier and security advisories; exposure from ERP master data; stop dates and euro figures from the deterministic impact engine.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V2: [
             { state: "executing" },
-            { say: "Option B approved. Drafting the surge requests to Hefei and Wetzlar and the extra rail capacity; each draft waits for your approval in the Outbox." },
+            { say: "Option B approved. Drafting the surge requests to Hefei and Wetzlar and the extra rail capacity; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Hefei Optoelectronics Co., Ltd. (key account)",
               subject: "Capacity request: +15 % display sets for Leipzig by rail from {{date:+7}}",
@@ -883,16 +865,16 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-HFE-DSP", "S-WTZ-DSP"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Red Sea rerouting: response decision\n\n**What happened.** Carriers are rerouting Asia–Europe services around the Cape of Good Hope, adding about twelve days.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: Hefei +15 % by rail and Lahn Display Modules +10 %. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** The extra rail volume needs {{V2.time}} days to arrive and depends on slots on the China–Europe corridor.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Red Sea rerouting: response decision\n\n**What happened.** Carriers are rerouting Asia–Europe services around the Cape of Good Hope, adding about twelve days.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}). Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: Hefei +15 % by rail and Lahn Display Modules +10 %. Mitigation cost {{V2.mit}}; remaining exposure {{V2.res}}; expected total {{V2.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** The extra rail volume needs {{V2.time}} days to arrive and depends on slots on the China–Europe corridor.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V3: [
             { state: "executing" },
-            { say: "Option C approved. Drafting the build-without-displays plan for Leipzig; it waits for your approval in the Outbox." },
+            { say: "Option C approved. Drafting the build-without-displays plan for Leipzig; it waits for your approval." },
             { draft: {
               type: "replan", recipient: "Leipzig plant management",
               subject: "Build without displays from {{first_stop_date}}; retrofit in the yard",
-              body: "Decision: option C approved. When display stock runs out on day {{first_stop_day}} ({{first_stop_date}}), Leipzig keeps building and completes vehicles without displays.\n\nWhat to prepare\n- Release the build-without-displays sequence for up to eight days of output\n- Set up a retrofit area in the yard; rework is planned at €230 per vehicle\n- Hold affected vehicles from shipping until they are retrofitted\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
+              body: "Decision: option C approved. When display stock runs out on day {{first_stop_day}} ({{first_stop_date}}), Leipzig keeps building and completes vehicles without displays.\n\nWhat to prepare\n- Release the build-without-displays sequence for up to eight days of output\n- Set up a retrofit area in the yard; rework is planned at {{part.P-DSP.rework}} per vehicle\n- Hold affected vehicles from shipping until they are retrofitted\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
             } },
             { awaitActions: true },
             { report: "## Red Sea rerouting: response decision\n\n**What happened.** Carriers are rerouting Asia–Europe services around the Cape of Good Hope, adding about twelve days.\n\n**If we do nothing.** Leipzig runs out of displays on day {{first_stop_day}} ({{first_stop_date}}); value at risk over 30 days **{{var}}**.\n\n**Decision.** Option C approved: build without displays and retrofit in the yard. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} internal plans approved (drafts only, nothing sent).\n\n**Residual risk.** Yard rework is limited to eight days of output.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
@@ -1014,7 +996,7 @@ window.SIM_RUNS = {
         approved: {
           V2: [
             { state: "executing" },
-            { say: "Option B approved. Drafting the supplier requests and the extra transport. Each draft waits for your approval in the Outbox; nothing is sent." },
+            { say: "Option B approved. Drafting the supplier requests and the extra transport. Each draft waits for your approval; nothing is sent." },
             { draft: {
               type: "email", recipient: "Banat Cable Systems SRL, Timișoara (key account)",
               subject: "Urgent capacity request: +20 % main harness volume for Leipzig from {{date:+5}}",
@@ -1023,7 +1005,7 @@ window.SIM_RUNS = {
             { draft: {
               type: "email", recipient: "Atlantic Wiring Kénitra SARL (plant management)",
               subject: "Tooling transfer and fast-track qualification for NW-e7 main harness sets",
-              body: "Dear Atlantic Wiring Kénitra team,\n\nYour sister plant in Tangier is out of production after last night's fire. We would like to transfer the NW-e7 main-harness tooling and test boards to Kénitra.\n\nTarget\n- Fast-track qualification (PPAP) within 14 days\n- First deliveries from {{date:+18}}, up to 40 % of Leipzig demand (340 sets per day)\n- Commercials: we cover qualification costs up to €180,000 and a 7 % premium during the transition\n\nPlease nominate a project lead today. Our supplier-quality engineers can be on site within 48 hours.\n\nKind regards\nPurchasing, Electrical Systems\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
+              body: "Dear Atlantic Wiring Kénitra team,\n\nYour sister plant in Tangier is out of production after last night's fire. We would like to transfer the NW-e7 main-harness tooling and test boards to Kénitra.\n\nTarget\n- Fast-track qualification (PPAP) within 14 days\n- First deliveries from {{date:+18}}, up to 40 % of Leipzig demand (340 sets per day)\n- Commercials: we cover qualification costs up to {{alt.A-KEN-HAR.qualification}} and a 7 % premium during the transition\n\nPlease nominate a project lead today. Our supplier-quality engineers can be on site within 48 hours.\n\nKind regards\nPurchasing, Electrical Systems\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
             } },
             { draft: {
               type: "email", recipient: "Sahel Wiring Systems SA, Sousse (key account)",
@@ -1042,12 +1024,12 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-TSR-HAR", "S-SOU-HAR", "S-MBO-SEAT", "A-KEN-HAR"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Tangier harness plant fire: response decision\n\n**What happened.** A fire has halted production at Tanger Harness Systems, our tier-1 supplier for 55 % of Leipzig's main wiring harnesses. Two independent sources confirmed it; the plant expects about five weeks to restart.\n\n**If we do nothing.** Leipzig runs out of main harnesses on day {{first_stop_day}} ({{first_stop_date}}). The same plant builds the seat harness for our single-source seat supplier, so seats run out on day {{part.P-SEAT.shortage_day}}. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: Timișoara +20 %, Sousse +8 %, seat harness re-sourced from Timișoara, and Tangier's tooling moved to the Kénitra sister plant on a 14-day fast track.\n\n| | Do nothing | Option B |\n|---|---|---|\n| Mitigation cost | – | {{V2.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V2.res}} |\n| Expected total | {{var}} | {{V2.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox. They are drafts: nothing was sent.\n\n**Residual risk.** Leipzig still runs short for a few days before Kénitra delivers, and the plan depends on Timișoara confirming its surge today.\n\n**How we know.** Exposure from ERP master data; stop dates and euro figures from the deterministic impact engine; the event confirmed by two independent sources.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Tangier harness plant fire: response decision\n\n**What happened.** A fire has halted production at Tanger Harness Systems, our tier-1 supplier for 55 % of Leipzig's main wiring harnesses. Two independent sources confirmed it; the plant expects about five weeks to restart.\n\n**If we do nothing.** Leipzig runs out of main harnesses on day {{first_stop_day}} ({{first_stop_date}}). The same plant builds the seat harness for our single-source seat supplier, so seats run out on day {{part.P-SEAT.shortage_day}}. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option B approved: Timișoara +20 %, Sousse +8 %, seat harness re-sourced from Timișoara, and Tangier's tooling moved to the Kénitra sister plant on a 14-day fast track.\n\n| | Do nothing | Option B |\n|---|---|---|\n| Mitigation cost | – | {{V2.mit}} |\n| Remaining exposure (30 days) | {{var}} | {{V2.res}} |\n| Expected total | {{var}} | {{V2.total}} |\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved. They are drafts: nothing was sent.\n\n**Residual risk.** Leipzig still runs short for a few days before Kénitra delivers, and the plan depends on Timișoara confirming its surge today.\n\n**How we know.** Exposure from ERP master data; stop dates and euro figures from the deterministic impact engine; the event confirmed by two independent sources.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V1: [
             { state: "executing" },
-            { say: "Option A approved. Drafting the surge requests and the seat-harness switch; each draft waits for your approval in the Outbox." },
+            { say: "Option A approved. Drafting the surge requests and the seat-harness switch; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Banat Cable Systems SRL, Timișoara (key account)",
               subject: "Urgent capacity request: +20 % main harness volume for Leipzig from {{date:+5}}",
@@ -1065,16 +1047,16 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-TSR-HAR", "S-SOU-HAR", "S-MBO-SEAT"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Tangier harness plant fire: response decision\n\n**What happened.** A fire has halted Tanger Harness Systems, our tier-1 supplier for 55 % of Leipzig's main harnesses; restart expected in about five weeks.\n\n**If we do nothing.** Main harnesses run out on day {{first_stop_day}} ({{first_stop_date}}), seats on day {{part.P-SEAT.shortage_day}}. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: Timișoara +20 %, Sousse +8 %, seat harness from Timișoara. Mitigation cost {{V1.mit}}; remaining exposure {{V1.res}}; expected total {{V1.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** About a quarter of main-harness demand stays uncovered until Tangier restarts. Revisit the Kénitra tooling transfer if the restart slips.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Tangier harness plant fire: response decision\n\n**What happened.** A fire has halted Tanger Harness Systems, our tier-1 supplier for 55 % of Leipzig's main harnesses; restart expected in about five weeks.\n\n**If we do nothing.** Main harnesses run out on day {{first_stop_day}} ({{first_stop_date}}), seats on day {{part.P-SEAT.shortage_day}}. Value at risk over 30 days: **{{var}}**.\n\n**Decision.** Option A approved: Timișoara +20 %, Sousse +8 %, seat harness from Timișoara. Mitigation cost {{V1.mit}}; remaining exposure {{V1.res}}; expected total {{V1.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** About a quarter of main-harness demand stays uncovered until Tangier restarts. Revisit the Kénitra tooling transfer if the restart slips.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           V3: [
             { state: "executing" },
-            { say: "Option C approved. Drafting the Kénitra tooling transfer and the seat-harness switch; each draft waits for your approval in the Outbox." },
+            { say: "Option C approved. Drafting the Kénitra tooling transfer and the seat-harness switch; each draft waits for your approval." },
             { draft: {
               type: "email", recipient: "Atlantic Wiring Kénitra SARL (plant management)",
               subject: "Tooling transfer and fast-track qualification for NW-e7 main harness sets",
-              body: "Dear Atlantic Wiring Kénitra team,\n\nWe would like to transfer the NW-e7 main-harness tooling and test boards from your Tangier sister plant to Kénitra, with fast-track qualification within 14 days and first deliveries from {{date:+18}} (up to 340 sets per day). We cover qualification costs up to €180,000 and a 7 % transition premium.\n\nKind regards\nPurchasing, Electrical Systems\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
+              body: "Dear Atlantic Wiring Kénitra team,\n\nWe would like to transfer the NW-e7 main-harness tooling and test boards from your Tangier sister plant to Kénitra, with fast-track qualification within 14 days and first deliveries from {{date:+18}} (up to 340 sets per day). We cover qualification costs up to {{alt.A-KEN-HAR.qualification}} and a 7 % transition premium.\n\nKind regards\nPurchasing, Electrical Systems\nNordwerk Automotive GmbH, Leipzig\n\nPrepared with the Navigator AI assistant. Requires human approval before sending."
             } },
             { draft: {
               type: "email", recipient: "Iser Seating Systems s.r.o., Mladá Boleslav (supply chain)",
@@ -1083,7 +1065,7 @@ window.SIM_RUNS = {
             } },
             { map: { supplier_ids: ["S-MBO-SEAT", "A-KEN-HAR"], state: "resolved" } },
             { awaitActions: true },
-            { report: "## Tangier harness plant fire: response decision\n\n**What happened.** A fire has halted Tanger Harness Systems, our tier-1 supplier for 55 % of Leipzig's main harnesses.\n\n**If we do nothing.** Main harnesses run out on day {{first_stop_day}} ({{first_stop_date}}); value at risk over 30 days **{{var}}**.\n\n**Decision.** Option C approved: tooling to Kénitra (14-day fast track) and seat harness from Timișoara, without surge premiums. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved in the outbox (drafts only, nothing sent).\n\n**Residual risk.** Leipzig runs on reduced main-harness supply for more than a week before Kénitra starts.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
+            { report: "## Tangier harness plant fire: response decision\n\n**What happened.** A fire has halted Tanger Harness Systems, our tier-1 supplier for 55 % of Leipzig's main harnesses.\n\n**If we do nothing.** Main harnesses run out on day {{first_stop_day}} ({{first_stop_date}}); value at risk over 30 days **{{var}}**.\n\n**Decision.** Option C approved: tooling to Kénitra (14-day fast track) and seat harness from Timișoara, without surge premiums. Mitigation cost {{V3.mit}}; remaining exposure {{V3.res}}; expected total {{V3.total}}.\n\n**Actions.** {{actions.approved}} of {{actions.total}} drafts approved (drafts only, nothing sent).\n\n**Residual risk.** Leipzig runs on reduced main-harness supply for more than a week before Kénitra starts.\n\n*Simulated run (scripted replay). Figures calculated by the impact engine from the synthetic world.*" },
             { end: "done" }
           ],
           baseline: [

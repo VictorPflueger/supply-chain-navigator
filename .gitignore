@@ -1,0 +1,5 @@
+# Local tooling, never part of the showcase.
+node_modules/
+.unlazy/
+.unlazy-hook-state.json
+.claude/settings.local.json

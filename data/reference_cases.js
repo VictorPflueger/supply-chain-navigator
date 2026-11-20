@@ -1,11 +1,11 @@
 /*
- * NAVIGATOR — reference cases for the six preset scenarios.
+ * NAVIGATOR: reference cases for the six scenarios.
  *
  * A reference case is the set of disruption parameters and response options a representative
  * agent run would arrive at AFTER verification. It serves two purposes:
  *   1. the scripted Simulation mode computes every € figure from these specs with the same
- *      deterministic engine the live agent uses (js/impact.js) — numbers are never typed in;
- *   2. the integrity check (js/world_check.js) runs them to prove each scenario bites.
+ *      deterministic engine the live agent uses (js/impact.js), so no number is typed in;
+ *   2. tests/figures.mjs runs them to prove each scenario bites.
  * The live agent never sees this file: it must derive its own parameters from evidence.
  *
  * `hypothesis` (optional) is the first, unverified assumption shown before the visible
@@ -28,7 +28,7 @@ window.REFERENCE_CASES = {
 
   "SC-RHINE-LOW": {
     disruption: {
-      label: "Rhine low water at Kaub (≈75 cm) — barge capacity ≈25 % for 6 weeks",
+      label: "Rhine low water at Kaub (about 75 cm): barge capacity about 25 % for 6 weeks",
       horizon_days: 30,
       route_disruptions: [{ node_id: "N-KAU", type: "capacity", capacity_pct: 25, duration_days: 42 }],
       variants: [
@@ -46,7 +46,7 @@ window.REFERENCE_CASES = {
 
   "SC-HSC-QUAKE": {
     disruption: {
-      label: "Hsinchu earthquake — fab outage 10 days, then 50 % for 3 weeks",
+      label: "Hsinchu earthquake: fabs down 10 days, then at 50 % for 3 weeks",
       horizon_days: 30,
       supplier_outages: [
         { supplier_id: "S-HSC-MCU", capacity_loss_pct: 100, duration_days: 10 },
@@ -79,7 +79,7 @@ window.REFERENCE_CASES = {
 
   "SC-STYRIA-FLOOD": {
     disruption: {
-      label: "Drava/Mur flooding — alloy refiner, heat-treater and forge down",
+      label: "Drava and Mur flooding: alloy refiner, heat-treater and forge down",
       horizon_days: 30,
       supplier_outages: [
         { supplier_id: "S-KID-ALY", capacity_loss_pct: 100, duration_days: 12 },
@@ -109,7 +109,7 @@ window.REFERENCE_CASES = {
 
   "SC-REDSEA": {
     disruption: {
-      label: "Red Sea closure — Asia–Europe services via Cape of Good Hope (+12 days)",
+      label: "Red Sea closure: Asia–Europe services via the Cape of Good Hope (+12 days)",
       horizon_days: 30,
       route_disruptions: [{ node_id: "N-BAB", type: "delay", delay_days: 12 }],
       variants: [
@@ -126,7 +126,7 @@ window.REFERENCE_CASES = {
 
   "SC-TNG-FIRE": {
     disruption: {
-      label: "Fire at the Tangier harness plant — production halted for 5 weeks",
+      label: "Fire at the Tangier harness plant: production halted for 5 weeks",
       horizon_days: 30,
       supplier_outages: [{ supplier_id: "S-TNG-HAR", capacity_loss_pct: 100, duration_days: 35 }],
       variants: [

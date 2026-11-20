@@ -6,21 +6,47 @@
 //      background or a mask;
 //   2. round drawing code in its HTML, CSS and JavaScript: <circle>, <ellipse>, a <rect> whose rx is
 //      at least half its height, "circle" or "ellipse" handed to anything that creates elements,
-//      L.circle and L.circleMarker, arc( and ellipse( on a canvas, and SVG path data with arc commands;
-//   3. the rendered app at the main states of a simulation run, in both themes: any element (or
-//      ::before and ::after) whose corner radius is at least half its height or width, round clip
-//      paths and radial gradients in the computed styles, and circle, ellipse, pill-shaped rect and
-//      arc-command path elements.
+//      arc( and ellipse( on a canvas, and SVG path data with arc commands;
+//   3. the rendered app in both themes: any element (or ::before and ::after) whose corner radius is at
+//      least half its height or width, round clip paths and radial gradients in the computed styles,
+//      and circle, ellipse, pill-shaped rect and arc-command path elements.
 // Each part first proves on planted examples that it catches every kind, and the test fails if one
-// slips through. vici/ is Vici's own (Vici checks it) and vendor/ holds other people's libraries; tests/
-// and tools/ are not part of the app. An exception needs its reason, written in EXCEPTIONS below.
-// The same file in all four prototypes; the states to visit are in tests/lib/prototype.mjs.
+// slips through. vici/ is Vici's own (Vici checks it); tests/ is not part of the app. An exception
+// needs its reason, written in EXCEPTIONS below.
+// The tour visits the guide, the five steps, the decision and the drafts, the scenario menu and the
+// Start agent dialog.
 // Usage: node tests/hexagon.mjs             (all three parts)
 //        node tests/hexagon.mjs files       (parts 1 and 2 only, no browser)
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { APP_ROOT, ONLY, launchBrowser, serveStatic, NETWORK_NOISE } from "./lib/harness.mjs";
-import { NAME, hexagonTour } from "./lib/prototype.mjs";
+import { APP_ROOT, ONLY, launchBrowser, serveStatic, NETWORK_NOISE, STEP_IDS } from "./lib/harness.mjs";
+
+const NAME = "Navigator";
+
+/** The states to look at: the guide's first and last chapters, the five steps, the decision, the drafts. */
+async function hexagonTour(page, visit) {
+  await page.waitForFunction(() => document.documentElement.dataset.boot === "ready", null, { timeout: 15000 });
+  await visit("guide, chapter 1");
+  await page.click(".vc-guide__rail .vc-step__button >> nth=-1");
+  await visit("guide, the talk track");
+  await page.keyboard.press("Escape");
+  for (const id of STEP_IDS) {
+    await page.click(`#steps [data-step="${id}"] button`);
+    await visit(id);
+  }
+  await page.click('#steps [data-step="propose"] button');
+  await page.click('.option[data-recommended="true"] [data-action="approve"]');
+  await visit("propose, approved");
+  await page.click('#steps [data-step="prepare"] button');
+  await visit("prepare, drafts");
+  await page.click("#approve-all");
+  await visit("prepare, approved");
+  await page.click("#scenario-button");
+  await visit("the scenario menu");
+  await page.keyboard.press("Escape");
+  await page.click("#start");
+  await visit("Start agent");
+}
 
 /**
  * Allowed round things, each with its reason: { file or state, match (a substring of the finding),
@@ -28,7 +54,7 @@ import { NAME, hexagonTour } from "./lib/prototype.mjs";
  */
 const EXCEPTIONS = [];
 
-const SKIP_DIRS = new Set(["vici", "vendor", "tests", "tools", "node_modules", ".git", ".github"]);
+const SKIP_DIRS = new Set(["vici", "tests", "node_modules", ".git", ".github"]);
 const KINDS = { ".css": "css", ".html": "html", ".svg": "svg", ".js": "js", ".mjs": "js" };
 
 // ------------------------------------------------------------------------------- 1. round CSS
@@ -255,11 +281,10 @@ if (!filesOnly) {
       report.push(`${missed.length || wrong.length ? "FAIL" : "PASS"}  page check: caught ${PLANTED_KINDS.length - missed.length}/${PLANTED_KINDS.length} planted examples`);
       await page.close();
     }
-    const port = 8790 + Math.floor(Math.random() * 300);
-    const server = await serveStatic(APP_ROOT, port);
+    const server = await serveStatic();
     try {
       for (const theme of ["light", "dark"]) {
-        const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme: theme });
+        const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: theme });
         await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort("blockedbyclient"));
         await context.addInitScript((t) => { try { localStorage.setItem("vc-theme", t); } catch { /* blocked storage */ } }, theme);
         const page = await context.newPage();
@@ -301,4 +326,4 @@ if (failures.length) {
   console.error(`\n${failures.map((f) => `✗ ${f}`).join("\n")}\n\n${failures.length} round thing(s) or failed self-test(s). Make them hexagons (Vici's --vc-hex, vc-hex, vc-capsule, vc-cell), or add an exception with its reason.`);
   process.exit(1);
 }
-console.log(`\nNothing round in ${NAME}.`);
+console.log(`\nNothing round in ${NAME}.\nHEXAGON OK`);

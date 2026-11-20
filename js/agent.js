@@ -1,61 +1,48 @@
-// Live agent: the Claude tool-use loop, run entirely in the presenter's browser.
+// Live agent: the Claude tool-use loop, run entirely in the visitor's browser on their own key.
 //
 // One run = repeated streaming calls to POST /v1/messages. Every response is appended to the
 // conversation unchanged (thinking blocks and signatures included). stop_reason drives the loop:
-//   tool_use   → execute client tools (independent erp/geo calls in parallel), send tool_result blocks
+//   tool_use   → execute client tools (independent ERP lookups in parallel), send tool_result blocks
 //   pause_turn → resend the conversation as is (a server tool loop paused)
 //   max_tokens → retry once with more room if a tool call was cut off, otherwise continue
 //   end_turn   → the run ends
-// All UI effects go through the run-event bus, exactly like the simulation player.
+// Everything on screen goes out through emit(), the same events the scripted run produces. A run
+// stops at 40 model calls or €3, whichever comes first.
 
-import { bus } from "./events.js";
 import { getModel } from "./world.js";
-import { MODELS, AGENT } from "./config.js";
-import { streamMessage, withRetry, ApiError, isWebSearchDisabled } from "./anthropic.js";
+import { streamMessage, withRetry, ApiError, getKey } from "./claude.js";
 import { toolDefinitions, createToolbox, UI_BLOCKING_TOOLS } from "./tools.js";
 import { buildSystemPrompt, buildOpeningMessage } from "./prompt.js";
-import { createCostTracker } from "./cost.js";
-import { recordApiExchange } from "./audit.js";
-import { getKey } from "./keystore.js";
+import { MODEL, createMeter } from "./cost.js";
 import { eurCents } from "./format.js";
 
 const ABORT = Symbol("abort");
-const ORDER_FREE = (name) => name.startsWith("erp_") || name.startsWith("geo_");
+const ORDER_FREE = (name) => name.startsWith("erp_");
+const AGENT = { maxSteps: 40, budgetEur: 3, idleTimeoutMs: 90000, maxOutputTokens: 128000 };
 
-/**
- * hooks: { onKeyRejected(), onWebSearchUnavailable(), getWebSearchState() → "unknown"|"available"|"unavailable" }
- */
-export function createLiveAgent(hooks = {}) {
+/** hooks: { emit(type, payload), onKeyRejected() } */
+export function createLiveAgent(hooks) {
   let current = null;
+  const emitAs = (r) => (type, payload) => { if (!r.ended || type === "run_end" || type === "state_change") hooks.emit(type, payload); };
 
-  async function run({ entry, scenario = null, customText = "", modelId }) {
+  async function run({ scenario }) {
     const model = getModel();
-    const modelDef = MODELS.find((m) => m.id === modelId) || MODELS[0];
     const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const r = {
-      entry, model, modelDef, today,
+      model, modelDef: MODEL, today,
       ended: false, cancelled: false,
       ac: new AbortController(),
       waiters: new Set(), poke: null,
       decisions: [], drafts: new Map(),
       phase: null, step: 0,
-      webSearch: hooks.getWebSearchState?.() !== "unavailable",
+      webSearch: true,
       compat: { effort: true, display: true, thinking: true, cache: true },
-      maxTokens: modelDef.maxTokens,
-      cost: createCostTracker(modelDef.id),
-      exchanges: 0
+      maxTokens: MODEL.maxTokens,
+      cost: createMeter()
     };
     current = r;
-
-    const offs = [
-      bus.on("option_decision", (ev) => { if (!r.ended) { r.decisions.push(ev); r.poke?.(); } }),
-      bus.on("action_decision", (ev) => {
-        if (r.ended) return;
-        const d = r.drafts.get(ev.payload.action_id);
-        if (d && d.status === "pending") d.status = ev.payload.decision;
-        r.poke?.();
-      })
-    ];
+    const bus = { emit: emitAs(r) };
+    r.bus = bus;
 
     const toolbox = createToolbox({
       model,
@@ -67,15 +54,11 @@ export function createLiveAgent(hooks = {}) {
       onPhase: (s) => setPhase(r, s)
     });
 
-    bus.emit("cost_update", r.cost.snapshot());
+    bus.emit("cost_update", r.cost.get());
     setPhase(r, "scanning");
 
     let system = buildSystemPrompt({ model, today, webSearch: r.webSearch });
-    const opening = buildOpeningMessage({
-      entry, model, today,
-      seed: entry === "custom" ? customText : scenario?.seed,
-      scenarioTitle: scenario?.title
-    });
+    const opening = buildOpeningMessage({ today, seed: scenario.seed, scenarioTitle: scenario.title });
     const messages = [{ role: "user", content: opening }];
     let sentUpTo = 0;
     let maxTokensRetried = false;
@@ -89,16 +72,14 @@ export function createLiveAgent(hooks = {}) {
         }
         r.step += 1;
 
-        const started = performance.now();
         const call = await callModel(r, {
           getSystem: () => system,
           messages,
           onSystemChange: () => { system = buildSystemPrompt({ model, today, webSearch: r.webSearch }); }
         });
-        const { message, requestId, incomplete, attemptBody } = call;
+        const { message, incomplete } = call;
         const snap = r.cost.add(message.usage);
         bus.emit("cost_update", snap);
-        audit(r, { step: r.step, body: attemptBody, appended: messages.slice(sentUpTo).filter((m) => m.role === "user"), message, requestId, ms: Math.round(performance.now() - started) });
         sentUpTo = messages.length;
 
         if (snap.eur > AGENT.budgetEur) {
@@ -139,18 +120,18 @@ export function createLiveAgent(hooks = {}) {
         }
         // end_turn (or anything else): the agent is done, unless it stopped before the workflow
         // was complete (for example to ask the presenter a question). Then it is asked, at most
-        // twice and visibly, to carry on: nobody can answer questions in the console.
+        // twice and visibly, to carry on: nobody can answer its questions on screen.
         const st = toolbox.state();
         if (st.outcome === "no_material_disruption") return finish(r, "no_findings");
         if (!st.reported && nudges < 2) {
           nudges += 1;
           bus.emit("notice", { level: "info", text: "The agent paused before finishing the workflow. Navigator asked it to continue on its own." });
-          sentUpTo = Math.min(sentUpTo, pushUserText(messages, continueInstruction(st, entry)));
+          sentUpTo = Math.min(sentUpTo, pushUserText(messages, continueInstruction(st)));
           continue;
         }
         if (!st.reported) {
           return finish(r, "incomplete", st.approvedOption
-            ? "The agent ended without a management summary. Approved drafts stay in the Outbox."
+            ? "The agent ended without a management summary. The drafts stay on screen; nothing was sent."
             : "The agent ended its turn twice without completing the workflow. Start a new run or try another model.");
         }
         return finish(r, "done");
@@ -162,7 +143,6 @@ export function createLiveAgent(hooks = {}) {
       }
       handleError(r, e);
     } finally {
-      offs.forEach((off) => off());
       for (const w of r.waiters) w();
       r.waiters.clear();
       if (current === r) current = null;
@@ -172,6 +152,7 @@ export function createLiveAgent(hooks = {}) {
   // ---- model calls ------------------------------------------------------------------------------
 
   async function callModel(r, { getSystem, messages, onSystemChange }) {
+    const bus = r.bus;
     const stream = makeStreamHooks(r);
     let downgraded = 0;
     for (;;) {
@@ -182,9 +163,9 @@ export function createLiveAgent(hooks = {}) {
           {
             retries: 2,
             signal: r.ac.signal,
-            onRetry: ({ attempt, waitMs, error }) => bus.emit("notice", {
+            onRetry: ({ attempt, ms, error }) => bus.emit("notice", {
               level: "warn",
-              text: `The API reported ${describeTransient(error)}. Retrying in ${Math.round(waitMs / 1000)} s (attempt ${attempt} of 2).`
+              text: `The API reported ${describeTransient(error)}. Retrying in ${Math.round(ms / 1000)} s (attempt ${attempt} of 2).`
             })
           }
         );
@@ -193,11 +174,10 @@ export function createLiveAgent(hooks = {}) {
         if (r.cancelled) throw ABORT;
         if (!(e instanceof ApiError) || e.status !== 400 || downgraded >= 4) throw e;
         // Graceful degradation for optional request features (TECH_NOTES §2–3).
-        if (isWebSearchDisabled(e) && r.webSearch) {
+        if (/web.?search/i.test(e.message || "") && r.webSearch) {
           r.webSearch = false;
-          hooks.onWebSearchUnavailable?.();
           onSystemChange();
-          bus.emit("notice", { level: "warn", text: "Web search is switched off for this API key's organisation. The agent continues with the open-data tools; verification is limited." });
+          bus.emit("notice", { level: "warn", text: "Web search is switched off for this API key's organisation, so the agent cannot check the report and treats it as a what-if." });
         } else if (/output_config|effort/i.test(e.message) && r.compat.effort) {
           r.compat.effort = false;
         } else if (/display/i.test(e.message) && r.compat.display) {
@@ -232,8 +212,9 @@ export function createLiveAgent(hooks = {}) {
     return body;
   }
 
-  /** Streams narration and reasoning to the console while a response arrives. */
+  /** Streams the agent's words to the screen while a response arrives. */
   function makeStreamHooks(r) {
+    const bus = r.bus;
     const pending = new Map();
     let timer = null;
     const flushPending = () => {
@@ -247,19 +228,14 @@ export function createLiveAgent(hooks = {}) {
       if (!timer) timer = setTimeout(flushPending, 45);
     };
     const nid = (i) => `n-${r.step}-${i}`;
-    const rid = (i) => `r-${r.step}-${i}`;
     return {
       hooks: {
         onText: (i, text) => { if (text.trim()) queue("narration", nid(i), text); },
-        onThinking: (i, text) => { if (text.trim()) queue("reasoning", rid(i), text); },
         onBlockStop: (i, block) => {
           if (r.ended) return;
           if (block.type === "text" && block.text.trim()) {
             pending.delete(nid(i));
             bus.emit("narration", { msg_id: nid(i), text: block.text, done: true });
-          } else if (block.type === "thinking" && block.thinking?.trim()) {
-            pending.delete(rid(i));
-            bus.emit("reasoning", { msg_id: rid(i), text: block.thinking, done: true });
           } else if (block.type === "server_tool_use") {
             setPhase(r, phaseForTool(r, block.name));
             bus.emit("tool_call", { call_id: block.id, name: block.name, input: block.input || {}, server: true });
@@ -300,6 +276,7 @@ export function createLiveAgent(hooks = {}) {
   }
 
   async function execOne(r, block, toolbox) {
+    const bus = r.bus;
     const name = block.name;
     if (!UI_BLOCKING_TOOLS.has(name)) setPhase(r, phaseForTool(r, name));
     bus.emit("tool_call", { call_id: block.id, name, input: block.input || {}, server: false });
@@ -314,9 +291,6 @@ export function createLiveAgent(hooks = {}) {
     // A slow lookup that returns after Abort or Reset is dropped, never shown in the next run.
     if (r.ended || r.cancelled) throw ABORT;
     bus.emit("tool_result", { call_id: block.id, name, ok: !out.isError, summary: out.summary, result: out.result, server: false });
-    if (out.result?.fallback_hint) {
-      bus.emit("notice", { level: "warn", text: `${name} could not reach its data source; the agent falls back to web search.` });
-    }
     return { type: "tool_result", tool_use_id: block.id, content: out.content, ...(out.isError ? { is_error: true } : {}) };
   }
 
@@ -325,7 +299,7 @@ export function createLiveAgent(hooks = {}) {
   function phaseForTool(r, name) {
     const late = ["options", "awaiting_approval", "executing"].includes(r.phase);
     if (late) return r.phase;
-    if (name === "web_search" || name.startsWith("geo_")) return r.phase === "scanning" && r.entry === "scan" ? "scanning" : "verifying";
+    if (name === "web_search") return "verifying";
     if (name.startsWith("erp_")) return "diagnosing";
     if (name === "sim_impact") return "simulating";
     return r.phase;
@@ -334,7 +308,7 @@ export function createLiveAgent(hooks = {}) {
   function setPhase(r, state) {
     if (!state || state === r.phase || r.ended) return;
     r.phase = state;
-    bus.emit("state_change", { state });
+    r.bus.emit("state_change", { state });
   }
 
   // ---- waits (human decisions) ------------------------------------------------------------------------
@@ -371,27 +345,27 @@ export function createLiveAgent(hooks = {}) {
     if (r.ended) return;
     r.ended = true;
     const st = status === "done" || status === "no_findings" ? "done" : status === "incomplete" ? "stopped" : status;
-    bus.emit("state_change", { state: st });
-    bus.emit("run_end", { status, ...(reason ? { reason } : {}) });
+    r.bus.emit("state_change", { state: st });
+    r.bus.emit("run_end", { status, ...(reason ? { reason } : {}) });
   }
 
   function handleError(r, e) {
-    console.error("[Navigator] live run failed:", e);
+    console.error("[showcase] live run failed:", e);
     let text;
     if (e instanceof ApiError) {
       if (e.status === 401) {
         text = "Anthropic rejected the API key (401). It has been removed from this tab; start again and enter a valid key.";
         hooks.onKeyRejected?.();
       } else if (e.spendLimit || e.status === 402) {
-        text = "The API key has reached its spend limit or has no credit. Raise the workspace's spend limit at platform.claude.com (Settings, Workspaces), or use Simulation mode.";
+        text = "The API key has reached its spend limit or has no credit. Raise the workspace's spend limit at platform.claude.com (Settings, Workspaces), or go back to the simulation.";
       } else if ((e.status === 400 || e.status === 403) && /workspace/i.test(e.message || "")) {
         text = `Anthropic refused the request because of this key's workspace (${e.message}). If the key works in several workspaces, create one scoped to a single workspace at platform.claude.com (Settings, API keys) and enter that key.`;
       } else if (e.status === 404) {
-        text = `The model ${r.modelDef.label} is not available to this API key. Choose another model.`;
+        text = `The model ${r.modelDef.label} is not available to this API key.`;
       } else if (e.status === 0 && e.type === "network_error") {
-        text = `Could not reach api.anthropic.com from this browser (${e.message}). Check the network or run Diagnostics; Simulation mode works offline.`;
+        text = `Could not reach api.anthropic.com from this browser (${e.message}). Try another network; the simulation works offline.`;
       } else if (e.retryable) {
-        text = `The API is busy right now (${describeTransient(e)}), even after two retries. Try again in a minute, or run the Simulation.`;
+        text = `The API is busy right now (${describeTransient(e)}), even after two retries. Try again in a minute, or go back to the simulation.`;
       } else {
         text = `The API returned an error (${e.status || ""} ${e.type}): ${e.message}`;
       }
@@ -399,7 +373,7 @@ export function createLiveAgent(hooks = {}) {
     } else {
       text = `The run stopped because of an unexpected error: ${e?.message || e}`;
     }
-    bus.emit("notice", { level: "error", text });
+    r.bus.emit("notice", { level: "error", text });
     finish(r, "error", "See the message above.");
   }
 
@@ -414,7 +388,24 @@ export function createLiveAgent(hooks = {}) {
     finish(r, "aborted", reason);
   }
 
-  return { run, abort, isActive: () => !!current && !current.ended };
+  /** A person's decision on an option ("approved" or "rejected"); the toolbox waits for it. */
+  function decide(option_id, decision) {
+    const r = current;
+    if (!r || r.ended) return;
+    r.decisions.push({ payload: { option_id, decision } });
+    r.poke?.();
+  }
+
+  /** A person's decision on one draft. */
+  function decideDraft(action_id, decision) {
+    const r = current;
+    if (!r || r.ended) return;
+    const d = r.drafts.get(action_id);
+    if (d && d.status === "pending") d.status = decision;
+    r.poke?.();
+  }
+
+  return { run, abort, decide, decideDraft, isActive: () => !!current && !current.ended };
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -427,7 +418,7 @@ function cleanContent(content, incomplete) {
 
 /**
  * Adds a text instruction as the next user turn, merging into a trailing user turn if needed.
- * Returns the index of the message it changed, so the audit records it again.
+ * Returns the index of the message it changed.
  */
 function pushUserText(messages, text) {
   const last = messages[messages.length - 1];
@@ -441,16 +432,13 @@ function pushUserText(messages, text) {
 }
 
 /** What the agent is told when it ends its turn before ui_final_report. */
-function continueInstruction(st, entry) {
-  const base = "Nobody can answer questions in the console, so do not wait for a reply. Decide yourself and continue the workflow with your tools.";
+function continueInstruction(st) {
+  const base = "Nobody can answer questions on screen, so do not wait for a reply. Decide yourself and continue the workflow with your tools.";
   if (st.approvedOption) {
     return `${base} The human approved ${st.approvedOption.label}. Draft its actions with ui_draft_action, call ui_await_approvals, then publish the management summary with ui_final_report.`;
   }
   if (st.options) {
     return `${base} The options are on screen. Call ui_await_decision to wait for the human decision.`;
-  }
-  if (entry === "scan") {
-    return `${base} If you found a material, verified event, run the full workflow on it. If not, publish a short scan summary with ui_final_report and outcome "no_material_disruption".`;
   }
   return `${base} Complete the steps: verify, quantify with sim_impact, raise the alert, cost exactly three options and present them with ui_propose_options. End your turn only after ui_final_report.`;
 }
@@ -477,41 +465,3 @@ function describeTransient(e) {
   if (e.type === "network_error") return "a network interruption";
   return `${e.status || ""} ${e.type}`.trim();
 }
-
-/** Audit record of one model exchange: the newly sent messages and the full response. */
-function audit(r, { step, body, appended, message, requestId, ms }) {
-  r.exchanges += 1;
-  const request = {
-    model: body.model, max_tokens: body.max_tokens,
-    thinking: body.thinking || null, output_config: body.output_config || null,
-    cache_control: body.cache_control || null,
-    tools: body.tools.map((t) => t.name),
-    messages_total: body.messages.length,
-    appended_messages: appended.map(stripOpaque)
-  };
-  if (r.exchanges === 1) {
-    request.system = body.system;
-    request.tool_definitions = body.tools;
-  }
-  recordApiExchange({
-    step, request_id: requestId, duration_ms: ms,
-    request,
-    response: { id: message.id, model: message.model, stop_reason: message.stop_reason, usage: message.usage, content: message.content.map(stripBlock) }
-  });
-}
-
-function stripOpaque(msg) {
-  return { role: msg.role, content: Array.isArray(msg.content) ? msg.content.map(stripBlock) : msg.content };
-}
-
-function stripBlock(b) {
-  if (!b || typeof b !== "object") return b;
-  const copy = { ...b };
-  if (copy.signature) copy.signature = "[signature omitted]";
-  if (copy.type === "redacted_thinking") copy.data = "[redacted]";
-  if (copy.type === "web_search_tool_result" && Array.isArray(copy.content)) {
-    copy.content = copy.content.map((x) => ({ type: x.type, title: x.title, url: x.url, page_age: x.page_age }));
-  }
-  return copy;
-}
-
