@@ -6,7 +6,7 @@
 //            and one rejected, the summary; the page says it is an AI, follows the agent's steps, sends
 //            nothing, keeps the key in the tab and measures the cost from the API's usage
 //   badkey   a key the API rejects: the dialog says so, and nothing is sent to the model
-//   stop     Stop the live run while the model answers: the run ends and says so, nothing arrives later
+//   stop     Stop, in the bar, while the model answers: the run ends and says so, nothing arrives later
 // Usage: NODE_PATH="$(npm root -g)" node tests/live.mjs [case…]
 import path from "node:path";
 import { createFakeClaude } from "./lib/fake-claude.mjs";
@@ -62,7 +62,7 @@ async function startLive(page) {
   await page.fill("#key-input", MOCK_KEY);
   await page.click("#start-live");
 }
-const kpi = (page, name) => page.evaluate((n) => { const t = document.querySelector(`[data-vc-kpi="${n}"]`); return { value: t.querySelector(".kpi-value").textContent.replace(/ /g, " ").trim(), note: t.querySelector(".kpi-note").textContent.trim(), tone: t.dataset.tone || "" }; }, name);
+const kpi = (page, name) => page.evaluate((n) => { const t = document.querySelector(`[data-vc-kpi="${n}"]`); const v = t.querySelector(".kpi-value"); const was = v.querySelector(".vc-stat__was"); return { value: [...v.childNodes].filter((c) => c !== was).map((c) => c.textContent).join("").replace(/ /g, " ").trim(), was: was?.textContent.trim() || null, note: t.querySelector(".kpi-note").textContent.trim(), tone: t.dataset.tone || "" }; }, name);
 const words = (page) => page.evaluate(() => document.getElementById("agent-words").innerText);
 const usage = (o = {}) => ({ input_tokens: 600, cache_creation_input_tokens: 0, cache_read_input_tokens: 9000, output_tokens: 420, ...o });
 const lastResults = (req) => { const last = req.messages[req.messages.length - 1]; return (Array.isArray(last.content) ? last.content : []).filter((b) => b.type === "tool_result"); };
@@ -147,8 +147,8 @@ try {
     try {
       await startLive(page);
       await page.waitForFunction(() => document.getElementById("mode-text").textContent === "LIVE", null, { timeout: 10000 });
-      const live = await page.evaluate((n) => ({ note: document.getElementById("agent-note").textContent, stop: !document.getElementById("stop").hidden, key: sessionStorage.getItem("showcase.anthropic.key"), stored: Object.keys(localStorage).filter((k) => /key/i.test(k)), says: document.body.innerText.includes(n) }), NOTICE);
-      check(live.note.includes(NOTICE) && live.says && live.stop, `live: the mode reads Live, the agent's panel says "${NOTICE}", and Stop is on screen`);
+      const live = await page.evaluate((n) => ({ note: document.getElementById("agent-note").textContent, stop: !!document.querySelector("#move #stop"), key: sessionStorage.getItem("showcase.anthropic.key"), stored: Object.keys(localStorage).filter((k) => /key/i.test(k)), says: document.body.innerText.includes(n) }), NOTICE);
+      check(live.note.includes(NOTICE) && live.says && live.stop, `live: the mode reads Live, the agent's panel says "${NOTICE}", and Stop sits in the bar`);
       check(live.key === MOCK_KEY && !live.stored.length, "live: the key sits in the tab's session storage only");
       const early = await kpi(page, "Value at risk");
       check(early.value === "Step 3", `live: Value at risk waits for the engine ("${early.value}", ${early.note})`);
@@ -157,6 +157,8 @@ try {
       const atOptions = await page.evaluate(() => ({ step: document.querySelector('#steps [aria-current="step"]')?.closest("li")?.dataset.step, alert: [...document.querySelectorAll("#steps li")].map((li) => li.querySelector("button").disabled) }));
       const v = await kpi(page, "Value at risk");
       check(atOptions.step === "propose" && v.value === DEMO.var, `live: the page follows the agent to Propose, and Value at risk is the engine's ${v.value}`);
+      const asks = await page.evaluate(() => ({ text: document.getElementById("move-text").textContent.trim(), rec: document.querySelector("#move #approve-rec")?.textContent.trim() || null }));
+      check(/^Your decision\. /.test(asks.text) && asks.rec === `Approve option ${DEMO.rec}`, `live: the bar asks for the decision too ("${asks.text}"; ${asks.rec})`);
       await page.click('#steps [data-step="check"] button');
       const checkStep = await page.evaluate(() => ({ title: document.getElementById("story-title").textContent, card: document.getElementById("story-card").innerText }));
       check(/Fire halts our tier-1 harness supplier/.test(checkStep.title) && /2 sources found|Two sources found/i.test(checkStep.card) && /confirmed by two sources/i.test(checkStep.card), `live: Check shows both sources and the alert ("${checkStep.title}")`);
@@ -166,16 +168,18 @@ try {
       await page.click('.option[data-option="V2"] [data-action="approve"]');
       await page.waitForSelector('.draft [data-action="approve"]', { timeout: 20000 });
       await page.waitForFunction(() => document.querySelectorAll('.draft [data-action="approve"]').length === 2, null, { timeout: 10000 });
+      const approval = await page.evaluate(() => ({ text: document.getElementById("move-text").textContent.trim(), all: document.querySelector("#move #approve-all")?.textContent.trim() || null }));
+      check(/^Your approval\. Two drafts wait for you\./.test(approval.text) && approval.all === "Approve all", `live: the bar asks for the approval ("${approval.text}"; ${approval.all})`);
       const decided = await kpi(page, "Value at risk");
       const clock = await kpi(page, "Detection → decision");
-      check(decided.value === DEMO["rec-left"] && clock.tone === "decided", `live: the approval moves Value at risk to ${decided.value} and stops the clock at ${clock.value}`);
+      check(decided.value === DEMO["rec-left"] && decided.was === DEMO.var && clock.tone === "decided", `live: the approval moves Value at risk from ${decided.was} to ${decided.value} and stops the clock at ${clock.value}`);
       const drafts = await page.$$eval(".draft", (els) => els.map((e) => e.querySelector(".draft-to").textContent));
       check(drafts.length === 2, `live: only the two drafts after the approval reach the page (${drafts.join("; ")})`);
       await page.screenshot({ path: path.join(OUT, "live-drafts.png") });
       await page.click('.draft >> nth=0 >> [data-action="approve"]');
       await page.click('.draft >> nth=1 >> [data-action="reject"]');
       await page.waitForSelector("details.summary", { timeout: 20000 });
-      await page.waitForFunction(() => document.getElementById("stop").hidden, null, { timeout: 15000 });
+      await page.waitForFunction(() => !document.getElementById("stop"), null, { timeout: 15000 });
       await page.screenshot({ path: path.join(OUT, "live-done.png") });
       const done = await page.evaluate(() => ({ summary: document.querySelector("details.summary").innerText, statuses: [...document.querySelectorAll(".draft")].map((d) => d.dataset.status), retry: document.getElementById("agent-words").innerText }));
       check(/Live agent run/.test(done.summary) && done.statuses.join() === "approved,rejected", `live: the summary follows the decisions (${done.statuses.join(", ")}) and says it is a live run`);
@@ -217,7 +221,7 @@ try {
     await t.page.waitForTimeout(600);
     await t.page.click("#stop");
     await t.page.waitForTimeout(3500);
-    const s = await t.page.evaluate(() => ({ words: document.getElementById("agent-words").innerText, stop: document.getElementById("stop").hidden }));
+    const s = await t.page.evaluate(() => ({ words: document.getElementById("agent-words").innerText, stop: !document.getElementById("stop") }));
     check(s.stop && /You stopped the live run/.test(s.words) && !/Signal received/.test(s.words) && t.calls.messages === 1, `stop: the run ends on Stop and says so, and the answer that comes later never reaches the page`);
     await t.page.click("#start");
     const reopened = await t.page.evaluate(() => document.getElementById("start-dialog").open);

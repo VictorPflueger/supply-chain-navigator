@@ -12,11 +12,16 @@ import { estimateEur } from "./cost.js";
 import { eurCompact, eurCents, eurExact, shortDate, days, pct, words } from "./format.js";
 
 export const STEPS = [
-  { id: "spot", label: "Spot", hint: "the report", lead: "An unverified report reaches the agent. It checks our suppliers and routes to see whether we are exposed." },
-  { id: "check", label: "Check", hint: "a second source", lead: "One report is not enough. The agent looks for a second, independent source before it raises an alert." },
-  { id: "calculate", label: "Calculate", hint: "the impact", lead: "A deterministic engine, not the AI, works out when each plant runs short and what a stopped line costs. The agent tests its first estimate against the evidence." },
-  { id: "propose", label: "Propose", hint: "your decision", lead: "The engine prices three responses next to doing nothing. The agent recommends one; you decide." },
-  { id: "prepare", label: "Prepare", hint: "the drafts", lead: "The agent drafts the emails and bookings for the option you approved. Each waits for your approval, and nothing is sent." }
+  { id: "spot", label: "Spot", hint: "the report", lead: "An unverified report reaches the agent. It checks our suppliers and routes to see whether we are exposed.",
+    next: "The agent reads the report and checks whether we are exposed.", doing: "reading the report and checking our suppliers" },
+  { id: "check", label: "Check", hint: "a second source", lead: "One report is not enough. The agent looks for a second, independent source before it raises an alert.",
+    next: "The agent looks for a second source before it raises an alert.", doing: "looking for a second, independent source" },
+  { id: "calculate", label: "Calculate", hint: "the impact", lead: "A deterministic engine, not the AI, works out when each plant runs short and what a stopped line costs. The agent tests its first estimate against the evidence.",
+    next: "An engine works out which plant stops when, and what it costs.", doing: "calculating the impact with the engine" },
+  { id: "propose", label: "Propose", hint: "your decision", lead: "The engine prices three responses next to doing nothing. The agent recommends one; you decide.",
+    next: "The agent prices three responses and recommends one.", doing: "pricing three responses" },
+  { id: "prepare", label: "Prepare", hint: "the drafts", lead: "The agent drafts the emails and bookings for the option you approved. Each waits for your approval, and nothing is sent.",
+    next: "The agent drafts the emails and bookings for the option you approved.", doing: "drafting the requests" }
 ];
 
 export const DEMO_ID = "SC-TNG-FIRE";

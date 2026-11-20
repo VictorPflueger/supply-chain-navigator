@@ -1,11 +1,13 @@
 // The presenter's shell: the talk track under the header (steps by click, the arrow keys, 1 to 5,
-// Home and ?step=), the key figures top right, the mode tag, the Start agent dialog with its
-// session key, the case menu and the decision clock. It knows nothing about supply chains, so
-// Rebate Hunter and Timetable Translator can take it with their own steps, figures and cases.
+// Home, Space and ?step=), the key figures top right, the mode tag, the Start agent dialog with its
+// session key, the case menu, the decision clock, and the bar under the story that asks
+// for every interaction in words. It knows nothing about supply chains, so Rebate Hunter and
+// Timetable Translator can take it with their own steps, figures and cases.
 //
-// The page's markup holds every word; this module wires it. It expects #steps (li[data-step] with
-// a .vc-step__button), tiles marked data-vc-kpi, #start, #stop, #restart, #next, #announce, #mode-tag,
-// #scenario-button and #scenario-menu, and the #start-dialog with #start-sim and #key-form.
+// The page's markup holds the fixed words; this module wires it. It expects #steps (li[data-step]
+// with a .vc-step__button), tiles marked data-vc-kpi, #start, #restart, #move with #move-text and
+// #move-actions, #announce, #mode-tag, #scenario-button and #scenario-menu, and the #start-dialog
+// with #start-sim and #key-form.
 
 import { getKey, setKey, forgetKey, looksLikeKey, checkKey, maskKey } from "./claude.js";
 import { clock } from "./format.js";
@@ -14,7 +16,7 @@ const $ = (id) => document.getElementById(id);
 
 /**
  * options: { steps: [{ id, label }], onStep(id, how), onStart(mode), onRestart(), onCase(slug),
- *            onStop(), onNext() }
+ *            onForward(), onSpace() }. Without onForward the right arrow shows the next step.
  */
 export function createShell(o) {
   const ids = o.steps.map((s) => s.id);
@@ -56,7 +58,8 @@ export function createShell(o) {
     if (e.target.closest?.("input, textarea, select, [contenteditable], dialog[open], .vc-menu")) return;
     if (document.querySelector("dialog[open]")) return;
     const n = Number(e.key);
-    if (e.key === "ArrowRight") step(1);
+    if (e.key === " " && o.onSpace && !e.target.closest?.("button, a")) o.onSpace();
+    else if (e.key === "ArrowRight") (o.onForward ? o.onForward() : step(1));
     else if (e.key === "ArrowLeft") step(-1);
     else if (e.key === "Home") go(ids[0], "key");
     else if (Number.isInteger(n) && n >= 1 && n <= ids.length) go(ids[n - 1], "key");
@@ -64,9 +67,54 @@ export function createShell(o) {
     e.preventDefault();
   });
 
-  $("next")?.addEventListener("click", () => o.onNext());
   $("restart")?.addEventListener("click", () => o.onRestart());
-  $("stop")?.addEventListener("click", () => o.onStop());
+
+  // ---- the request for interaction ------------------------------------------------------------
+  let shownMove = "";
+  /**
+   * Fills the bar under the story: what happens or what to do next, in words, and the
+   * actions for it. tone: "move" or "decide" (the visitor's turn), "working" (the agent's) or "done".
+   * actions: [{ id, label, icon, kind: "primary" | "secondary" | "ghost" | "danger", attention, onClick }];
+   * attention marks the one action the page is waiting for.
+   */
+  function setMove({ tone = "move", lead = "", text = "", actions = [] } = {}) {
+    const key = JSON.stringify([tone, lead, text, actions.map((a) => [a.id, a.label, a.kind, !!a.attention])]);
+    if (key === shownMove) return;
+    shownMove = key;
+    const box = $("move");
+    const hadFocus = box.contains(document.activeElement);
+    box.dataset.tone = tone;
+    const p = $("move-text");
+    p.replaceChildren();
+    if (lead) {
+      const b = document.createElement("strong");
+      b.textContent = lead;
+      p.append(b, " ");
+    }
+    p.append(text);
+    $("move-actions").replaceChildren(...actions.map((a) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `vc-button${a.kind && a.kind !== "primary" ? ` vc-button--${a.kind}` : ""}`;
+      if (a.id) b.id = a.id;
+      if (a.attention) b.dataset.attention = "";
+      if (a.icon) {
+        const i = document.createElement("span");
+        i.className = `vc-icon vc-icon--${a.icon}`;
+        i.setAttribute("aria-hidden", "true");
+        b.append(i);
+      }
+      b.append(a.label);
+      b.addEventListener("click", a.onClick);
+      return b;
+    }));
+    // Restart the bar's entrance, so a new request is seen arriving.
+    box.classList.remove("move--new");
+    void box.offsetWidth;
+    box.classList.add("move--new");
+    if (hadFocus) (box.querySelector("[data-attention]") || box.querySelector("button"))?.focus({ preventScroll: true });
+    if (tone !== "working") announce(p.textContent);
+  }
 
   // ---- the case menu ------------------------------------------------------------------------------
   const menuButton = $("scenario-button");
@@ -110,10 +158,20 @@ export function createShell(o) {
 
   // ---- key figures ------------------------------------------------------------------------------
   /** Sets the tile marked data-vc-kpi="name": its value, note and tone. */
-  function setKpi(name, { value, note, tone } = {}) {
+  function setKpi(name, { value, was, note, tone } = {}) {
     const tile = document.querySelector(`[data-vc-kpi="${name}"]`);
     if (!tile) return;
-    if (value !== undefined) tile.querySelector(".kpi-value").textContent = value;
+    if (value !== undefined) {
+      // A decision that moves a figure keeps its old value in view, struck through (Vici's vc-stat__was).
+      const el = tile.querySelector(".kpi-value");
+      if (!was) el.textContent = value;
+      else {
+        const old = document.createElement("s");
+        old.className = "vc-stat__was";
+        old.textContent = was;
+        el.replaceChildren(old, value);
+      }
+    }
     if (note !== undefined) tile.querySelector(".kpi-note").textContent = note;
     if (tone !== undefined) { if (tone) tile.dataset.tone = tone; else delete tile.dataset.tone; }
   }
@@ -133,12 +191,9 @@ export function createShell(o) {
 
   // ---- mode, notices -------------------------------------------------------------------------------
   function setMode(mode) {
-    const tag = $("mode-tag");
-    tag.dataset.mode = mode;
+    $("mode-tag").dataset.mode = mode;
     $("mode-text").textContent = mode === "live" ? "LIVE" : "SIMULATION";
-    $("stop").hidden = mode !== "live";
   }
-  function setLiveRunning(on) { $("stop").hidden = !on; }
   function announce(text) {
     const a = $("announce");
     a.textContent = "";
@@ -181,7 +236,7 @@ export function createShell(o) {
     o.onStart("live");
   });
 
-  return { go, setReached, current: () => current, setCases, setKpi, createClock, setMode, setLiveRunning, announce };
+  return { go, setReached, current: () => current, setCases, setKpi, createClock, setMode, setMove, announce, openCases: openMenu };
 }
 
 /** Reads or writes one address parameter without reloading the page. */

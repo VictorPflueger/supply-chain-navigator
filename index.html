@@ -57,7 +57,7 @@
       <div class="kpi vc-stat" data-vc-kpi="Detection → decision">
         <p class="vc-stat__label">Detection → decision</p>
         <p class="vc-stat__value kpi-value">0:00</p>
-        <p class="vc-stat__note kpi-note">from the report to your decision</p>
+        <p class="vc-stat__note kpi-note">starts with the report</p>
       </div>
       <div class="kpi vc-stat" data-vc-kpi="Session cost">
         <p class="vc-stat__label">Session cost</p>
@@ -98,7 +98,6 @@
       <button type="button" class="vc-button vc-button--ghost scenario-button" id="scenario-button" aria-haspopup="menu" aria-expanded="false" aria-controls="scenario-menu"><span class="vc-visually-hidden">Scenario: </span><span id="scenario-name">Tangier harness fire</span><span class="vc-icon vc-icon--chevron-down" aria-hidden="true"></span></button>
       <div class="vc-menu scenario-menu" id="scenario-menu" role="menu" aria-labelledby="scenario-button" hidden></div>
     </div>
-    <button type="button" class="vc-button vc-button--danger stop" id="stop" hidden><span class="vc-icon vc-icon--stop" aria-hidden="true"></span>Stop the live run</button>
     <span class="vc-tooltip-anchor">
       <button type="button" class="vc-icon-button restart" id="restart" aria-labelledby="tip-restart"><span class="vc-icon vc-icon--refresh" aria-hidden="true"></span></button>
       <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-restart">Start over</span>
@@ -130,8 +129,12 @@
         <figcaption><span class="vc-tag vc-tag--feature vc-tag--sm"><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span>Agent</span><span class="agent-note" id="agent-note">replayed, not live</span></figcaption>
         <div class="agent-words" id="agent-words"></div>
       </figure>
+      <!-- The request for interaction: what happens or what to do next, in words, with its one action. -->
       <div class="story-foot">
-        <button type="button" class="vc-button next" id="next">Next: Check<span class="vc-icon vc-icon--chevron-right" aria-hidden="true"></span></button>
+        <div class="move" id="move" data-tone="working" role="group" aria-label="What to do next">
+          <p class="move-text" id="move-text"><strong>The agent starts.</strong> It reads the report and checks whether we are exposed.</p>
+          <div class="move-actions" id="move-actions"></div>
+        </div>
       </div>
     </section>
   </main>
@@ -189,13 +192,13 @@
       </section>
       <section class="vc-guide__chapter" data-vc-chapter="present" data-vc-nav="How to present">
         <h3>Show it in five minutes</h3>
-        <p class="vc-guide__lead">Five steps of one minute each, on the buttons under the header.</p>
+        <p class="vc-guide__lead">Five steps, a minute each; the bar on the right says what to press.</p>
         <ol class="vc-guide__path">
-          <li><strong>Spot: point at the four figures.</strong> <span class="vc-guide__say">“<span data-fig="var">€19.1M</span> at risk, and Leipzig stops in <span data-fig="stop-day">9</span> days unless we act.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Check.</strong> <span class="vc-guide__say">“One report is not enough: the agent finds a second source.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Calculate.</strong> <span class="vc-guide__say">“An engine, not the AI, prices five weeks at <span data-fig="var">€19.1M</span>, not <span data-fig="hyp-var">€935k</span>.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Propose: click Approve on option <span data-fig="rec">B</span>.</strong> <span class="vc-guide__say">“<span data-fig="rec-cost">€984k</span> cuts the risk to <span data-fig="rec-left">€1.9M</span>; a person decides in about <span data-fig="decision-min">4 min</span>.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Prepare: click Approve all.</strong> <span class="vc-guide__say">“<span data-fig="drafts">Four emails and one booking</span> wait for approval. Live, this costs <span data-fig="estimate">€0.20</span>.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Spot: it starts by itself; point at the four figures.</strong> <span class="vc-guide__say">“<span data-fig="var">€19.1M</span> at risk, and Leipzig stops in <span data-fig="stop-day">9</span> days unless we act.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Check: press Run step 2.</strong> <span class="vc-guide__say">“One report is not enough: the agent finds a second source.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Calculate: press Run step 3.</strong> <span class="vc-guide__say">“An engine, not the AI, prices five weeks at <span data-fig="var">€19.1M</span>, not <span data-fig="hyp-var">€935k</span>.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Propose: press Run step 4, then Approve option <span data-fig="rec">B</span>.</strong> <span class="vc-guide__say">“<span data-fig="rec-cost">€984k</span> cuts the risk to <span data-fig="rec-left">€1.9M</span>; a person decides in about <span data-fig="decision-min">4 min</span>.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Prepare: it drafts by itself; press Approve all.</strong> <span class="vc-guide__say">“<span data-fig="drafts">Four emails and one booking</span> wait for approval. Live, this costs <span data-fig="estimate">€0.20</span>.”</span> <span class="vc-guide__time">1 min</span></li>
         </ol>
       </section>
     </div>

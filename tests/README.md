@@ -29,7 +29,7 @@ Screenshots go to the folder in `NAV_TEST_OUT`, or `navigator-tests` in the syst
 | `files` | The shell imports nothing of the case; the page's files, the imports and the workflow; `vici/` byte for byte at a ViciDesign main commit that CI checks out too | SHELL PORTABLE, FILES OK |
 | `lean` | At most 16 modules, 4,500 lines of JavaScript, 900 of CSS; one module and one host for the network; short docs | LEAN OK |
 | `vici` | Vici's guide, byline, writing and AI-notice checks on the page, every sentence the steps write and the docs, each first failing on a planted control | VICI CONTROLS OK, VICI STANDARDS OK |
-| `showcase` | The five steps by click, key and link; the scenarios; the first screen; the key figures; the layout at four window sizes in both themes | STEPS OK, SCENARIOS OK, FIRST SCREEN OK, KPIS OK, LAYOUT OK |
+| `showcase` | The five steps by click, key and link; the prototype running each step by itself; the bar that asks at every waiting point; the scenarios; the first screen; the key figures; the layout at four window sizes in both themes | STEPS OK, RUN OK, MOVE OK, SCENARIOS OK, FIRST SCREEN OK, KPIS OK, LAYOUT OK |
 | `guide` | ViciDesign's `check-guide-render.mjs` against the page over http, and every chapter fitting 1280 × 720 and 1366 × 768 | GUIDE OK |
 | `live` | A live run against a stand-in API that checks every request: approvals, nothing sent, the cost measured, a rejected key, a stop | LIVE OK |
 | `contrast` | Every visible text meets WCAG 2.2 AA, light and dark | CONTRAST OK |
