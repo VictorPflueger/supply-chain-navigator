@@ -2,7 +2,7 @@
  * Vici — small behaviours for the Vici design system.
  * No dependencies. Load with <script src="dist/vici.js" defer></script>.
  * Everything works without it except: theme toggle, tabs, toasts, dialog triggers,
- * the mobile header menu (without it the links stay visible), menu positioning (menus
+ * the mobile header menu (without it the links stay visible), the How it works guide, menu positioning (menus
  * open centred), slider fill, carousel dots, table sorting and copy buttons. Tooltips work
  * without it too; with it they move to the top layer, so no container can clip them.
  */
@@ -630,6 +630,7 @@
     initIndeterminate(scope);
     initScrollRegions(scope);
     syncThemeControls();
+    autoOpenGuides(scope);
   }
 
   // After a dismissible element is removed, focus goes to its neighbour, not to <body>.
@@ -654,6 +655,151 @@
   var backdropPress = null;
   document.addEventListener('pointerdown', function (e) { backdropPress = onBackdrop(e) ? e.target : null; }, true);
 
+
+  /* ------------------------------------------------ How it works guide */
+  // dialog.vc-guide[data-vc-guide] holds one section.vc-guide__chapter per chapter. The script
+  // builds the chapter rail, shows one chapter at a time and keeps the count, Back and Next in
+  // step. Every visible word comes from the page, so a German guide writes its own: the count in
+  // data-vc-guide-count ("{n} von {total}"), the rail's name in data-vc-guide-rail ("Kapitel"),
+  // and the last chapter's button in data-vc-guide-done on Next ("Los geht's").
+  function guideParts(dlg) {
+    if (dlg.__vcGuide) return dlg.__vcGuide;
+    var box = dlg.querySelector('.vc-guide__chapters');
+    var chapters = box ? $all('.vc-guide__chapter', box) : [];
+    if (!chapters.length) return null;
+    var body = document.createElement('div');
+    body.className = 'vc-guide__body';
+    box.parentNode.insertBefore(body, box);
+    var rail = document.createElement('nav');
+    rail.className = 'vc-guide__rail';
+    rail.setAttribute('aria-label', dlg.getAttribute('data-vc-guide-rail') || 'Chapters');
+    var list = document.createElement('ol');
+    list.className = 'vc-stepper vc-stepper--vertical';
+    var parts = { chapters: chapters, buttons: [], index: 0, opener: null };
+    chapters.forEach(function (ch, i) {
+      var li = document.createElement('li');
+      li.className = 'vc-step';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'vc-step__button';
+      var marker = document.createElement('span');
+      marker.className = 'vc-step__marker';
+      marker.setAttribute('aria-hidden', 'true');
+      marker.textContent = String(i + 1);
+      var label = document.createElement('span');
+      label.className = 'vc-step__label';
+      var heading = ch.querySelector('h2, h3');
+      label.textContent = ch.getAttribute('data-vc-nav') || (heading ? heading.textContent.trim() : String(i + 1));
+      b.appendChild(marker);
+      b.appendChild(label);
+      li.appendChild(b);
+      list.appendChild(li);
+      b.addEventListener('click', function () { showChapter(dlg, i, true); });
+      if (heading && !heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+      parts.buttons.push(b);
+    });
+    rail.appendChild(list);
+    body.appendChild(rail);
+    body.appendChild(box);
+    parts.next = dlg.querySelector('[data-vc-guide-next]');
+    parts.back = dlg.querySelector('[data-vc-guide-back]');
+    parts.count = dlg.querySelector('.vc-guide__count');
+    parts.nextHtml = parts.next ? parts.next.innerHTML : '';
+    if (parts.next) parts.next.addEventListener('click', function () {
+      if (parts.index < chapters.length - 1) showChapter(dlg, parts.index + 1, true);
+      else dlg.close('done');
+    });
+    if (parts.back) parts.back.addEventListener('click', function () {
+      if (parts.index > 0) showChapter(dlg, parts.index - 1, true);
+    });
+    // How the guide was last used. After a click or a tap, the heading that takes focus shows no ring;
+    // Chrome would otherwise pass on the ring the dialog opened with (overlays.css).
+    dlg.addEventListener('pointerdown', function () { dlg.setAttribute('data-vc-pointer', ''); });
+    dlg.addEventListener('keydown', function () { dlg.removeAttribute('data-vc-pointer'); });
+    dlg.addEventListener('close', function () {
+      dlg.dispatchEvent(new CustomEvent('vc:guideclose', { bubbles: true, detail: { returnValue: dlg.returnValue } }));
+      var back = parts.opener;
+      parts.opener = null;
+      if (back && back !== document.body && document.contains(back) && typeof back.focus === 'function') back.focus();
+    });
+    dlg.__vcGuide = parts;
+    return parts;
+  }
+
+  function showChapter(dlg, i, moveFocus) {
+    var g = guideParts(dlg);
+    if (!g) return;
+    var n = g.chapters.length;
+    var index = Math.max(0, Math.min(n - 1, i));
+    g.index = index;
+    g.chapters.forEach(function (ch, j) { ch.hidden = j !== index; });
+    g.buttons.forEach(function (b, j) {
+      b.parentNode.classList.toggle('vc-step--current', j === index);
+      if (j === index) b.setAttribute('aria-current', 'step');
+      else b.removeAttribute('aria-current');
+    });
+    if (g.count) {
+      g.count.textContent = (dlg.getAttribute('data-vc-guide-count') || '{n} of {total}')
+        .replace('{n}', String(index + 1)).replace('{total}', String(n));
+    }
+    if (g.back) g.back.disabled = index === 0;
+    if (g.next) {
+      var last = index === n - 1;
+      if (last) g.next.textContent = g.next.getAttribute('data-vc-guide-done') || 'Start';
+      else g.next.innerHTML = g.nextHtml;
+      g.next.setAttribute('data-vc-last', String(last));
+    }
+    var scroller = dlg.querySelector('.vc-guide__chapters');
+    if (scroller) scroller.scrollTop = 0;
+    if (dlg.open && g.buttons[index].scrollIntoView) g.buttons[index].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (moveFocus) {
+      var h = g.chapters[index].querySelector('h2, h3');
+      if (h) h.focus();
+    }
+    dlg.dispatchEvent(new CustomEvent('vc:guidechange', { bubbles: true, detail: { id: g.chapters[index].getAttribute('data-vc-chapter'), index: index } }));
+  }
+
+  // A chapter is named by its data-vc-chapter id ("present") or by its number ("3").
+  function chapterIndex(g, ref) {
+    if (ref == null || ref === '') return 0;
+    if (typeof ref === 'number') return ref;
+    for (var i = 0; i < g.chapters.length; i++) {
+      if (g.chapters[i].getAttribute('data-vc-chapter') === ref) return i;
+    }
+    return /^\d+$/.test(ref) ? Number(ref) - 1 : 0;
+  }
+
+  function openGuide(target, chapter, opener) {
+    var dlg = typeof target === 'string' ? document.getElementById(target) : target;
+    if (!dlg || typeof dlg.showModal !== 'function') return;
+    var g = guideParts(dlg);
+    if (!g) return;
+    g.opener = opener || document.activeElement;
+    if (!dlg.open) dlg.showModal();
+    showChapter(dlg, chapterIndex(g, chapter), false);
+    if (g.next) g.next.focus();
+  }
+
+  // A guide with data-vc-guide-auto opens by itself once per browser tab: a new tab or a new
+  // window shows it, a reload doesn't. ?guide=0 keeps it closed; ?guide=present (or any chapter
+  // id or number) opens it at that chapter.
+  function autoOpenGuides(scope) {
+    $all('dialog[data-vc-guide][data-vc-guide-auto]', scope).forEach(function (dlg) {
+      if (dlg.__vcGuideAuto) return;
+      dlg.__vcGuideAuto = true;
+      var param = null;
+      try { param = new URLSearchParams(window.location.search).get('guide'); } catch (e) { /* no URLSearchParams */ }
+      if (param === '0' || param === 'off') return;
+      if (param) { openGuide(dlg, param); return; }
+      var key = 'vc-guide:' + window.location.pathname + '#' + dlg.id;
+      var seen = null;
+      try { seen = window.sessionStorage.getItem(key); } catch (e) { /* storage blocked: open it */ }
+      if (seen) return;
+      try { window.sessionStorage.setItem(key, '1'); } catch (e) { /* storage blocked */ }
+      openGuide(dlg, 0);
+    });
+  }
+
   /* --------------------------------------------------- delegated events */
   document.addEventListener('click', function (e) {
     var t = e.target;
@@ -664,6 +810,12 @@
     var themeSet = t.closest('[data-vc-theme-set]');
     if (themeSet) { setTheme(themeSet.getAttribute('data-vc-theme-set')); return; }
 
+    var guideOpener = t.closest('[data-vc-guide-open]');
+    if (guideOpener) {
+      e.preventDefault();
+      openGuide(guideOpener.getAttribute('data-vc-guide-open'), guideOpener.getAttribute('data-vc-guide-chapter'), guideOpener);
+      return;
+    }
     var opener = t.closest('[data-vc-open]');
     if (opener) {
       var dlg = document.getElementById(opener.getAttribute('data-vc-open'));
@@ -755,6 +907,11 @@
     toast: toast,
     theme: { get: resolvedTheme, set: setTheme },
     copy: copyText,
+    guide: { open: function (id, chapter) { openGuide(id, chapter); }, show: function (id, chapter) {
+      var dlg = typeof id === 'string' ? document.getElementById(id) : id;
+      var g = dlg && guideParts(dlg);
+      if (g) showChapter(dlg, chapterIndex(g, chapter), true);
+    } },
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(document); });

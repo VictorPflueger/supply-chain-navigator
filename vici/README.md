@@ -1,14 +1,18 @@
 # Vici, copied into this prototype
 
 These files come unchanged from Vici, Victor Pflüger's design system
-(<https://victorpflueger.github.io/ViciDesign/index.html>), version **v1.0.0** (commit `fdd868b` on its main branch).
+(<https://victorpflueger.github.io/ViciDesign/index.html>), from its main branch at commit **`410adba`**
+(20 November 2026), on the way to Vici 2.0. That commit brings the How it works guide (`vc-guide`),
+the 2.0 byline, the rule that the How it works chapter explains every key figure, the AI notice for a
+live run and the brief for building a prototype, all of which this showcase follows; its files still
+call themselves 1.0.0 until 2.0 is released.
 The prototype loads them from here rather than from a CDN, so every page is served from this site alone.
 
 | File here | What it is |
 |---|---|
 | `dist/vici.min.css` | Vici's stylesheet: tokens, light and dark theme, components, icons |
-| `dist/vici.js` | Vici's small script: theme toggle, tooltips, and the behaviours of its components |
-| `dist/tokens.json` | Vici's token values, light and dark, for scripts and tests (the colour checks read it) |
+| `dist/vici.js` | Vici's small script: theme toggle, tooltips, the How it works guide and the behaviours of its components |
+| `dist/tokens.json` | Vici's token values, light and dark, for scripts and tests |
 | `assets/fonts/*.woff2` | Bricolage Grotesque, Inter, JetBrains Mono and Vici Mask, as the stylesheet expects them |
 | `assets/fonts/OFL-*.txt` | The SIL Open Font License of each font family |
 | `assets/marks/linkedin.png` | LinkedIn's [in] logo, as LinkedIn publishes it |
@@ -17,12 +21,14 @@ The prototype loads them from here rather than from a CDN, so every page is serv
 | `LICENSE` | Vici's licence |
 
 Keep the folder structure: the stylesheet finds the fonts at `../assets/fonts/`. Never edit these
-files; a fix belongs in Vici, and comes here with its next release.
+files; a fix belongs in Vici, and comes here with its next release. `tests/files.mjs` compares every
+file with ViciDesign at the commit above.
 
 **Licence.** `LICENSE` covers all of it: Vici's code and its Vici Mask font are MIT-licensed;
 Bricolage Grotesque, Inter and JetBrains Mono are under the SIL Open Font License; Victor Pflüger's
 name, portrait and logo are reserved for his own use; LinkedIn's logo belongs to LinkedIn.
 
-**Updating.** Copy the same files from a newer Vici release (from its `dist/` and `assets/` folders,
-and `LICENSE`) over these, and change the version and commit above. Then run the tests and look at
-the prototype in light and dark: a new release may rename a class or change a token.
+**Updating.** Copy the same files from a newer commit on Vici's main branch, or from the 2.0 release
+when it is tagged (from its `dist/` and `assets/` folders, and `LICENSE`), over these; change the
+commit above and in the GitHub Actions workflow; then run the tests and look at the page in light
+and dark.
