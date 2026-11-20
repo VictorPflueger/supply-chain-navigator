@@ -1,7 +1,7 @@
 # Vici, copied into this prototype
 
 These files come unchanged from Vici, Victor Pflüger's design system
-(<https://victorpflueger.github.io/ViciDesign/index.html>), from its main branch at commit **`bea0bb8`**
+(<https://victorpflueger.github.io/ViciDesign/index.html>), from its main branch at commit **`adafb78`**
 (20 November 2026), on the way to Vici 2.0. That commit brings the How it works guide (`vc-guide`),
 the 2.0 byline, the rule that the How it works chapter explains every key figure, a key figure's old
 value struck through when a decision moves it (`vc-stat__was`), the AI notice for a live run and the
