@@ -14,7 +14,7 @@
 // slips through. vici/ is Vici's own (Vici checks it); tests/ is not part of the app. An exception
 // needs its reason, written in EXCEPTIONS below.
 // The tour visits the guide, the five steps, the decision and the drafts, the scenario menu and the
-// Start agent dialog.
+// live-run dialog.
 // Usage: node tests/hexagon.mjs             (all three parts)
 //        node tests/hexagon.mjs files       (parts 1 and 2 only, no browser)
 import { readdirSync, readFileSync } from "node:fs";
@@ -45,7 +45,7 @@ async function hexagonTour(page, visit) {
   await visit("the scenario menu");
   await page.keyboard.press("Escape");
   await page.click("#start");
-  await visit("Start agent");
+  await visit("the live-run dialog");
 }
 
 /**

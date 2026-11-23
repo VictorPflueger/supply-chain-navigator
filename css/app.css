@@ -137,7 +137,7 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .story-card:empty { display: none; }
 /* The request for interaction: right under what just happened, where the eye is when a step ends,
    and held in view when the story is longer than the window. It says in words what to do next and holds that one action, which draws
-   attention while the page waits: merlot when it is your move, lilac while the agent works. */
+   the eye with Vici's vc-attention while the page waits: merlot when it is your move, lilac while the agent works. */
 .story-foot { position: sticky; bottom: 0; z-index: 1; padding: 6px 0 14px; background: linear-gradient(to bottom, transparent, var(--vc-surface) 10px); }
 .move { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 12px 10px 16px; background: var(--vc-accent-soft); color: var(--vc-on-accent-soft); border: 2px solid var(--vc-accent); border-radius: var(--vc-radius-md); }
 .move[data-tone="working"] { background: var(--vc-feature-bg); color: var(--vc-text); border-color: var(--vc-feature-border); }
@@ -148,11 +148,6 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 .move-actions .vc-button { --_h: var(--hit); }
 .move--new { animation: move-in 0.3s ease-out; }
 @keyframes move-in { from { opacity: 0; translate: 0 6px; } }
-.move [data-attention] { animation: attention 1.8s ease-out 0.5s infinite; }
-@keyframes attention {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--vc-accent) 55%, transparent); }
-  70%, 100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--vc-accent) 0%, transparent); }
-}
 
 .agent { display: flex; flex-direction: column; flex: none; margin: 0; padding: 10px 14px 12px; background: var(--vc-feature-bg); border: 1px solid var(--vc-feature-border); border-radius: var(--vc-radius-md); }
 .agent figcaption { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -295,8 +290,10 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
   .scenario-button.vc-button { max-width: 13rem; }
   .stage { padding: 10px 14px 10px; }
 }
-/* Laptop screens shared at 1280 × 720 or 1366 × 768: everything stays in view. */
+/* Laptop screens shared at 1280 × 720 or 1366 × 768: everything stays in view. The story takes a little
+   more of the width, so at the decision every option, Do nothing included, shows above the bar. */
 @media (max-height: 820px) and (min-width: 961px) {
+  .workspace { grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); }
   .app-header { min-height: 62px; padding-block: 5px; }
   .kpi.vc-stat { padding: 3px 12px 4px; }
   .intro { padding-block: 2px; }
@@ -353,6 +350,5 @@ html { font-size: clamp(100%, 0.48vw + 50%, 112.5%); }
 @media (prefers-reduced-motion: reduce) {
   .kpi.vc-stat, .boot { transition: none; }
   .move--new { animation: none; }
-  .move [data-attention] { animation: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--vc-accent) 40%, transparent); }
   .boot-help { animation: none; opacity: 1; visibility: visible; }
 }

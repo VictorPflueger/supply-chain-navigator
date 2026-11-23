@@ -27,7 +27,7 @@ The page opens with Vici's guide, *How the showcase works*, once per browser tab
 | Check | **Run step 2**: three sources, then the alert | "One report is not enough: the agent finds a second source." |
 | Calculate | **Run step 3**: the first estimate against the one after the check, and Leipzig's output falling to zero | "An engine, not the AI, prices five weeks at €19.1M, not €935k." |
 | Propose | **Run step 4**: three costed options next to doing nothing. **Approve option B**; the clock stops | "€984k cuts the risk to €1.9M; a person decides in about 4 minutes." |
-| Prepare | Drafted by itself: four emails and one booking. **Approve all** | "Four emails and one booking wait for approval. Live, this costs €0.20." |
+| Prepare | Drafted by itself: four emails and one booking. **Approve all** | "Four emails and one booking wait for approval. Live, this costs about €0.20." |
 
 `DEMO_SCRIPT.md` has the timings, the checks before the call and the questions you will get.
 
@@ -37,12 +37,12 @@ The page opens with Vici's guide, *How the showcase works*, once per browser tab
 
 **Other scenarios.** The menu beside the steps holds five more, from a strike in Rotterdam to ships avoiding the Red Sea. Every figure follows the scenario.
 
-## Start agent: the simulation or a live run
+## Simulation or live run
 
-**Start agent** offers two runs of the same five steps.
+**Run it live**, after the steps, offers two runs of the same five steps.
 
 - **Simulation**, the default and the presenter's path: a scripted replay of the agent. Free, needs no key, works offline.
-- **Live run**: Claude Sonnet 5.5 with real web search, on your own Anthropic API key. The page says "You are interacting with an AI system" wherever a live run is possible, as the EU AI Act asks. The key stays in the browser tab and goes only to api.anthropic.com. The agent waits for your approval of an option and of every draft, and nothing is ever sent: drafts stay on the page. The Session cost figure then shows the fees as the API reports them.
+- **Live run**: Claude Sonnet 5.5 with real web search, on your own Anthropic API key. The page says "You are interacting with an AI system" wherever a live run is possible, as the EU AI Act asks. The key stays in the browser tab and goes only to api.anthropic.com. The agent waits for your approval of an option and of every draft; drafts stay on the page, and nothing is sent. Session cost then shows the fees as the API reports them.
 
 ## What is real
 
@@ -58,9 +58,9 @@ The page opens with Vici's guide, *How the showcase works*, once per browser tab
 ## How it works
 
 ```
-index.html        the page: header, key figures, steps, map, story, guide, Start agent
+index.html        the page: header, key figures, steps, Run it live, map, story, guide
 js/main.js        plays the steps and says in the bar what to do; follows clicks, keys and a live run
-js/shell.js       the presenter's shell: steps, keys, links, the bar, key figures, Start agent, the clock
+js/shell.js       the presenter's shell: steps, keys, links, the bar, key figures, the live-run dialog, the clock
 js/claude.js      the browser's client for Claude: session key, streaming, retries
 js/cost.js        session cost: measured from the API's usage, or estimated from a replay
 js/format.js      euros, days, dates, minutes
@@ -101,7 +101,7 @@ Nine suites, from the figures to a live run against a stand-in API in Chromium. 
 
 ## History
 
-2.1.0 (20 November 2026): the prototype runs, and a bar under the story asks for every click. 2.0.0 turned the lab into this one-screen showcase on Vici 2.0. Release 1.2.0, the lab version with its toolbar, live scans, diagnostics, outbox and audit log, is in the git history at commit `61f1483`.
+2.1.1 (23 November 2026): Run it live after the steps; Do nothing in view. 2.1.0 (20 November 2026): the prototype runs, and a bar under the story asks for every click. 2.0.0 turned the lab into this one-screen showcase on Vici 2.0. Release 1.2.0, the lab with its toolbar, live scans, diagnostics, outbox and audit log, is in the git history at `61f1483`.
 
 ## Author
 

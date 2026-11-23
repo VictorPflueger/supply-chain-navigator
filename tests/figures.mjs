@@ -1,5 +1,5 @@
 // The figures: the app computes every one, and none is typed in. Node.js only.
-//   page   every [data-fig] figure written in index.html (the key figures, the guide, the Start agent
+//   page   every [data-fig] figure written in index.html (the key figures, the guide, the live-run
 //          dialog) equals the one the app computes for the Tangier demo; the talk track has five
 //          one-minute steps named as the page's; for all six scenarios every placeholder of every
 //          branch is filled from the engine, the options and key figures are the engine's, and no

@@ -63,10 +63,11 @@ function start() {
     onCase: (slug) => load(slug, null)
   });
 
-  // Detection → decision: from the report on screen to the person's approval, measured on this page.
+  // Detection → decision: from the report on screen to the person's approval, measured on this page. Once it
+  // stops, its note says so, as Vici asks (#19).
   const clock = shell.createClock((text, running) => shell.setKpi("Detection → decision", {
     value: text,
-    note: running ? "running since the report" : run?.decision ? "until your decision" : "starts with the report",
+    note: running ? "running since the report" : run?.decision ? "stopped at your decision" : "starts with the report",
     tone: run?.decision ? "decided" : ""
   }));
   /** The clock starts with the report on screen, once the guide is out of the way. */
@@ -313,7 +314,7 @@ function start() {
     const reason = run.live.reason;
     return {
       tone: "done", lead: run.live.status === "done" ? "Done." : "The live run stopped.",
-      text: run.live.status === "done" ? "Nothing was sent. Start over to replay the simulation." : `${reason || "It ended early."} Start agent runs it again; Start over replays the simulation.`,
+      text: run.live.status === "done" ? "Nothing was sent. Start over to replay the simulation." : `${reason || "It ended early."} Run it live tries again; Start over replays the simulation.`,
       actions: [{ id: "again", label: "Start over", icon: "refresh", kind: "secondary", onClick: () => load(run.scenario.slug, null) }]
     };
   }
