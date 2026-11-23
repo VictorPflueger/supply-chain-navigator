@@ -225,7 +225,7 @@ try {
     check(s.stop && /You stopped the live run/.test(s.words) && !/Signal received/.test(s.words) && t.calls.messages === 1, `stop: the run ends on Stop and says so, and the answer that comes later never reaches the page`);
     await t.page.click("#start");
     const reopened = await t.page.evaluate(() => document.getElementById("start-dialog").open);
-    check(reopened, "stop: Start agent opens again afterwards");
+    check(reopened, "stop: Run it live opens the dialog again afterwards");
     await t.context.close();
   }
 } finally {

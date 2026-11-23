@@ -1,5 +1,5 @@
 // The presenter's shell: the talk track under the header (steps by click, the arrow keys, 1 to 5,
-// Home, Space and ?step=), the key figures top right, the mode tag, the Start agent dialog with its
+// Home, Space and ?step=), the key figures top right, the mode tag, the live-run dialog with its
 // session key, the case menu, the decision clock, and the bar under the story that asks
 // for every interaction in words. It knows nothing about supply chains, so Rebate Hunter and
 // Timetable Translator can take it with their own steps, figures and cases.
@@ -97,7 +97,8 @@ export function createShell(o) {
       b.type = "button";
       b.className = `vc-button${a.kind && a.kind !== "primary" ? ` vc-button--${a.kind}` : ""}`;
       if (a.id) b.id = a.id;
-      if (a.attention) b.dataset.attention = "";
+      // The one action the page waits for draws the eye with Vici's vc-attention.
+      if (a.attention) { b.dataset.attention = ""; b.classList.add("vc-attention"); }
       if (a.icon) {
         const i = document.createElement("span");
         i.className = `vc-icon vc-icon--${a.icon}`;
@@ -200,7 +201,7 @@ export function createShell(o) {
     setTimeout(() => { a.textContent = text; }, 30);
   }
 
-  // ---- Start agent: the simulation, or a live run on the visitor's key ------------------------------
+  // ---- Run it live: a live run on the visitor's key, or the simulation again -----------------------
   const dialog = $("start-dialog");
   const keyInput = $("key-input");
   const keyError = $("key-error");
@@ -215,7 +216,8 @@ export function createShell(o) {
     keyInput.value = "";
     showKeyState();
     dialog.showModal();
-    $("start-sim").focus();
+    // The visitor asked for a live run, so the key comes first; the simulation stays one click away.
+    keyInput.focus();
   });
   $("start-sim").addEventListener("click", () => { dialog.close(); o.onStart("simulation"); });
   forget.addEventListener("click", () => { forgetKey(); showKeyState(); keyInput.focus(); });

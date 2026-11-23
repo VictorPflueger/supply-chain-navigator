@@ -30,7 +30,7 @@
 
 The bar under the agent's words always holds the next button; Space pauses a step.
 
-Say once: *"In this replay the agent's words are scripted; the engine calculates every figure. Start agent runs it live on Claude."*
+Say once: *"In this replay the agent's words are scripted; the engine calculates every figure. Run it live does the same on Claude."*
 
 ## Questions you will get
 

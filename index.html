@@ -34,7 +34,7 @@
     <div class="header-actions">
       <span class="vc-tooltip-anchor">
         <span class="vc-tag vc-tag--lg mode-tag" id="mode-tag" data-mode="simulation" tabindex="0" aria-describedby="tip-mode"><span id="mode-text">SIMULATION</span></span>
-        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-mode">A scripted replay of the agent; an engine computes every figure. Start agent offers a live run.</span>
+        <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-mode">A scripted replay of the agent; an engine computes every figure. For the agent on Claude and your own key, press Run it live.</span>
       </span>
       <button type="button" class="vc-button vc-button--secondary" data-vc-guide-open="guide"><span class="vc-icon vc-icon--info" aria-hidden="true"></span>How it works</button>
       <span class="vc-tooltip-anchor">
@@ -85,8 +85,6 @@
   </div>
 
   <nav class="talk-track" aria-label="Talk track">
-    <button type="button" class="vc-button vc-button--secondary start" id="start" data-vc-live><span class="vc-icon vc-icon--play" aria-hidden="true"></span>Start agent</button>
-    <span class="vc-tag vc-tag--feature ai-notice"><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span>You are interacting with an AI system</span>
     <ol class="vc-stepper steps" id="steps">
       <li class="vc-step" data-step="spot"><button type="button" class="vc-step__button"><span class="vc-step__marker" aria-hidden="true">1</span><span class="vc-step__label">Spot<span class="vc-step__hint">the report</span></span></button></li>
       <li class="vc-step" data-step="check"><button type="button" class="vc-step__button"><span class="vc-step__marker" aria-hidden="true">2</span><span class="vc-step__label">Check<span class="vc-step__hint">a second source</span></span></button></li>
@@ -102,6 +100,9 @@
       <button type="button" class="vc-icon-button restart" id="restart" aria-labelledby="tip-restart"><span class="vc-icon vc-icon--refresh" aria-hidden="true"></span></button>
       <span class="vc-tooltip vc-tooltip--bottom" role="tooltip" id="tip-restart">Start over</span>
     </span>
+    <!-- The simulation plays by itself; a live run is the visitor's option, so it stands after the steps. -->
+    <button type="button" class="vc-button vc-button--ghost live-button" id="start" data-vc-live><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span>Run it live</button>
+    <span class="vc-tag vc-tag--feature ai-notice"><span class="vc-icon vc-icon--sparkle" aria-hidden="true"></span>You are interacting with an AI system</span>
   </nav>
 
   <p class="vc-visually-hidden" id="announce" aria-live="polite"></p>
@@ -185,7 +186,7 @@
           <tbody>
             <tr><th scope="row">Scripted</th><td>The agent's words and its web sources in the replay, marked as representative</td></tr>
             <tr><th scope="row">Computed</th><td>Every euro and day, by a deterministic engine from Nordwerk's data; the AI only picks between costed options</td></tr>
-            <tr><th scope="row">A live run</th><td>Start agent runs Claude with real web search on your own API key. You are interacting with an AI system</td></tr>
+            <tr><th scope="row">A live run</th><td>Run it live starts Claude with real web search on your own API key. You are interacting with an AI system</td></tr>
             <tr><th scope="row">Nothing is sent</th><td>Emails and bookings stay drafts until you approve them, and even then go nowhere</td></tr>
           </tbody>
         </table></div>
@@ -198,7 +199,7 @@
           <li><strong>Check: press Run step 2.</strong> <span class="vc-guide__say">“One report is not enough: the agent finds a second source.”</span> <span class="vc-guide__time">1 min</span></li>
           <li><strong>Calculate: press Run step 3.</strong> <span class="vc-guide__say">“An engine, not the AI, prices five weeks at <span data-fig="var">€19.1M</span>, not <span data-fig="hyp-var">€935k</span>.”</span> <span class="vc-guide__time">1 min</span></li>
           <li><strong>Propose: press Run step 4, then Approve option <span data-fig="rec">B</span>.</strong> <span class="vc-guide__say">“<span data-fig="rec-cost">€984k</span> cuts the risk to <span data-fig="rec-left">€1.9M</span>; a person decides in about <span data-fig="decision-min">4 min</span>.”</span> <span class="vc-guide__time">1 min</span></li>
-          <li><strong>Prepare: it drafts by itself; press Approve all.</strong> <span class="vc-guide__say">“<span data-fig="drafts">Four emails and one booking</span> wait for approval. Live, this costs <span data-fig="estimate">€0.20</span>.”</span> <span class="vc-guide__time">1 min</span></li>
+          <li><strong>Prepare: it drafts by itself; press Approve all.</strong> <span class="vc-guide__say">“<span data-fig="drafts">Four emails and one booking</span> wait for approval. Live, this costs about <span data-fig="estimate">€0.20</span>.”</span> <span class="vc-guide__time">1 min</span></li>
         </ol>
       </section>
     </div>
@@ -209,10 +210,10 @@
     </footer>
   </dialog>
 
-  <!-- Start agent: the free simulation, or a live run on the visitor's own key. -->
+  <!-- Run it live: a live run on the visitor's own key, or back to the free simulation. -->
   <dialog class="vc-dialog start-dialog" id="start-dialog" aria-labelledby="start-title">
     <header class="vc-dialog__header">
-      <h2 class="vc-dialog__title" id="start-title">Start the agent</h2>
+      <h2 class="vc-dialog__title" id="start-title">Simulation or live run</h2>
       <button type="button" class="vc-icon-button" data-vc-close aria-label="Close"><span class="vc-icon vc-icon--close" aria-hidden="true"></span></button>
     </header>
     <div class="vc-dialog__body start-choices">

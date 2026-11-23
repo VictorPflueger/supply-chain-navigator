@@ -5,21 +5,28 @@
 //                 over time, Space pauses and continues, the guide holds it, an approval runs Prepare by
 //                 itself, and a click or a link shows a step at once
 //   move          at every point where the page waits, the bar under the story says in words what
-//                 to do, sits in view uncovered and holds the page's one primary action, which draws attention
+//                 to do, sits in view uncovered and holds the page's one primary action, which draws the
+//                 eye with Vici's vc-attention
 //   scenarios     the Tangier fire carries the demo; the other five wait behind one menu, and every
 //                 figure follows the scenario chosen, in the address too (?scenario=)
-//   first-screen  no lab control on the first screen; Start agent offers the simulation first and a
-//                 live run on the visitor's key, says it is an AI, and the replay connects nowhere
+//   first-screen  no lab control on the first screen; while step 1 plays, the talk track starts with the
+//                 steps and Run it live stands after them, the AI notice beside it; it asks for a live run
+//                 on the visitor's key or the simulation again, and the replay connects nowhere
 //   kpis          four key figures top right, marked data-vc-kpi, with values before anything happens;
-//                 the clock waits for the guide; the decision moves the figures
+//                 the clock waits for the guide; the decision moves the figures and stops the clock, which
+//                 says so
 //   layout        at 1920 × 1080, 1366 × 768 and 1280 × 720 in both themes every step fits the window,
-//                 the bar stays in view and clickable, every map label reads clear of the others and of
-//                 the marks, and the story shows names, not record ids; the
-//                 header keeps one line and every key figure reads in full, in all six scenarios; a 375 px
-//                 phone scrolls only down
+//                 the bar stays in view and clickable, every option and Do nothing show in full above it
+//                 at the decision, every map label reads clear of the others and of the marks, and the
+//                 story shows names, not record ids; the header keeps one line and every key figure reads
+//                 in full, and the decision shows every option, in all six scenarios; a 375 px phone
+//                 scrolls only down
+//   ids           Vici's recordIdProblems over every screen of all six scenarios, both ways a decision can
+//                 go, the drafts opened, the guide and the live-run dialog (needs ViciDesign, as vici does)
 // Usage: NODE_PATH="$(npm root -g)" node tests/showcase.mjs [case…]
 import path from "node:path";
-import { launchBrowser, serveStatic, offlineContext, outDir, wanted, loadApp, NETWORK_NOISE, STEP_IDS, KPI_NAMES, VIEWPORTS } from "./lib/harness.mjs";
+import { pathToFileURL } from "node:url";
+import { launchBrowser, serveStatic, offlineContext, outDir, wanted, loadApp, viciDir, REQUIRE_VICI, NETWORK_NOISE, STEP_IDS, KPI_NAMES, VIEWPORTS } from "./lib/harness.mjs";
 
 const { story, format } = await loadApp();
 const today = new Date();
@@ -216,7 +223,7 @@ try {
     const barProblems = (plant = null) => {
       const undo = [];
       if (plant === "static") { const f = document.querySelector(".story-foot"); f.style.position = "static"; document.getElementById("story").scrollTop = 0; undo.push(() => { f.style.position = ""; }); }
-      if (plant === "calm") { const b = document.querySelector("#move [data-attention]"); b.removeAttribute("data-attention"); undo.push(() => b.setAttribute("data-attention", "")); }
+      if (plant === "calm") { const b = document.querySelector("#move [data-attention]"); b.classList.remove("vc-attention"); undo.push(() => b.classList.add("vc-attention")); }
       if (plant === "two") { const c = document.querySelector("#move [data-attention]").cloneNode(true); c.removeAttribute("id"); document.getElementById("story-card").prepend(c); undo.push(() => c.remove()); }
       const out = [];
       const bar = document.getElementById("move");
@@ -231,7 +238,7 @@ try {
         const box = b.getBoundingClientRect();
         const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
         if (!hit || !b.contains(hit)) out.push(`"${b.textContent.trim()}" is covered`);
-        if (!b.hasAttribute("data-attention") || getComputedStyle(b).animationName !== "attention") out.push(`"${b.textContent.trim()}" does not draw attention`);
+        if (!b.classList.contains("vc-attention") || getComputedStyle(b).animationName !== "vc-attention") out.push(`"${b.textContent.trim()}" does not draw attention`);
       }
       if (document.getElementById("next")) out.push("the old Next button is still there");
       for (const u of undo) u();
@@ -336,16 +343,38 @@ try {
     const lab = controls.filter((c) => /\b(model|live scan|abort|diagnostics|options|outbox|audit|speed)\b|×\s?[124]\b/i.test(c));
     check(!lab.length && !(await page.$("select")), `no Model, replay speed, Live scan, Abort or Diagnostics control on the first screen${lab.length ? `; found ${lab.join(", ")}` : ""}`);
     check(controls.length <= 16, `${controls.length} controls on the first screen: ${controls.join(" · ")}`);
-    const notice = await page.evaluate(() => document.body.innerText.includes("You are interacting with an AI system"));
-    check(notice, "the first screen says \"You are interacting with an AI system\" beside Start agent");
+    // While the simulation plays, nothing invites a press to begin: the talk track starts with the steps,
+    // and the live run's button says live and stands after them, the AI notice beside it. The control: the
+    // same button moved before the steps is caught.
+    const liveProblems = (plant) => page.evaluate((plant) => {
+      const talk = document.querySelector(".talk-track");
+      const live = document.getElementById("start");
+      if (plant) talk.prepend(live);
+      const shown = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+      const first = [...talk.querySelectorAll("button")].filter(shown).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)[0];
+      const notice = talk.querySelector(".ai-notice").getBoundingClientRect();
+      const r = live.getBoundingClientRect();
+      const out = [];
+      if (!first.closest("#steps")) out.push(`the talk track starts with "${first.textContent.trim()}"`);
+      if (!/\blive\b/i.test(live.textContent) || /^\s*start\b/i.test(live.textContent) || live.querySelector(".vc-icon--play")) out.push(`the live button reads "${live.textContent.trim()}"`);
+      if (r.left < document.getElementById("steps").getBoundingClientRect().right) out.push("the live button stands before the end of the steps");
+      if (Math.max(notice.left - r.right, r.left - notice.right) > 16 || Math.abs(notice.top + notice.height / 2 - r.top - r.height / 2) > 12) out.push("the AI notice is not beside the live button");
+      if (!/You are interacting with an AI system/.test(talk.querySelector(".ai-notice").textContent)) out.push("the AI notice lost its words");
+      if (plant) talk.append(live);
+      return out;
+    }, plant);
+    const planted = await liveProblems(true);
+    const clean = await liveProblems(false);
+    const playing = await page.evaluate(() => document.getElementById("move").dataset.tone);
+    check(planted.length > 0 && !clean.length && playing === "working", `while step 1 plays, the talk track starts with the steps and Run it live stands after them, the AI notice beside it${clean.length ? `; ${clean.join("; ")}` : ""} (a button moved before the steps is caught: ${planted.join("; ") || "missed"})`);
     await page.click("#start");
     await page.waitForTimeout(150);
     const dialog = await page.evaluate(() => {
       const d = document.getElementById("start-dialog");
       const cards = [...d.querySelectorAll(".start-card h3")].map((h) => h.textContent.trim());
-      return { open: d.open, cards, focus: document.activeElement?.id, notice: d.querySelector(".start-card--live").innerText.includes("You are interacting with an AI system"), key: d.querySelector("#key-input")?.type, estimate: d.querySelector('.start-card [data-fig="estimate"]').textContent };
+      return { open: d.open, title: d.querySelector(".vc-dialog__title").textContent.trim(), cards, focus: document.activeElement?.id, notice: d.querySelector(".start-card--live").innerText.includes("You are interacting with an AI system"), key: d.querySelector("#key-input")?.type, estimate: d.querySelector('.start-card [data-fig="estimate"]').textContent };
     });
-    check(dialog.open && dialog.cards.join("|") === "Simulation|Live run" && dialog.focus === "start-sim", `Start agent offers the simulation first, focused, then a live run (${dialog.cards.join(", ")}; focus on ${dialog.focus})`);
+    check(dialog.open && dialog.title === "Simulation or live run" && dialog.cards.join("|") === "Simulation|Live run" && dialog.focus === "key-input", `Run it live asks "${dialog.title}": ${dialog.cards.join(", ")}, the focus on the key field (${dialog.focus})`);
     check(dialog.notice && dialog.key === "password" && dialog.estimate === DEMO.estimate, `the live run asks for the visitor's own key, says it is an AI and costs about ${dialog.estimate}`);
     await page.click("#start-sim");
     await page.waitForTimeout(150);
@@ -381,7 +410,7 @@ try {
     await page.waitForTimeout(1300);
     const later = (await kpis(page))["Detection → decision"].value;
     check(k["Value at risk"].value === DEMO["rec-left"] && k["Value at risk"].was === DEMO.var && k["Value at risk"].struck && k["Value at risk"].note === `option ${DEMO.rec} approved` && k["Value at risk"].tone === "at_risk", `the approval moves Value at risk from ${k["Value at risk"].was}, struck through, to ${k["Value at risk"].value} (${k["Value at risk"].note})`);
-    check(k["Detection → decision"].tone === "decided" && stopped === later && k["Detection → decision"].note === "until your decision", `the approval stops the clock at ${stopped} (${k["Detection → decision"].note})`);
+    check(k["Detection → decision"].tone === "decided" && stopped === later && k["Detection → decision"].note === "stopped at your decision", `the approval stops the clock at ${stopped}, and it says so (${k["Detection → decision"].note})`);
     check((k["First line stop in"].value !== norm(DEMO["stop-days"]) && k["First line stop in"].was === norm(DEMO["stop-days"])) || /slows/.test(k["First line stop in"].note), `First line stop in follows the option (${k["First line stop in"].was ? `${k["First line stop in"].was} struck through, then ` : ""}${k["First line stop in"].value}, ${k["First line stop in"].note})`);
     await page.click("#restart");
     await page.waitForTimeout(150);
@@ -420,6 +449,29 @@ try {
     }
     return out;
   }, plant);
+  // The decision: where the bar asks for it, every option, Do nothing included, shows in full above the bar.
+  // plant puts the columns back as they were before 2.1.1, which hid Do nothing at 1280 × 720: a control.
+  const decisionProblems = (page, plant = false) => page.evaluate((plant) => {
+    const ws = document.querySelector(".workspace");
+    if (plant) ws.style.gridTemplateColumns = "minmax(0, 52fr) minmax(0, 48fr)";
+    const out = [];
+    const asks = document.getElementById("move-text").textContent.replace(/\s+/g, " ").trim();
+    if (!/^Your decision\./.test(asks)) out.push(`the bar does not ask for the decision ("${asks.slice(0, 40)}")`);
+    const story = document.getElementById("story").getBoundingClientRect();
+    for (const o of document.querySelectorAll(".option")) {
+      const name = o.dataset.option === "baseline" ? "Do nothing" : `option ${o.querySelector(".option-letter").textContent}`;
+      for (const el of [o.querySelector(".option-title"), o.querySelector(".option-figs"), ...o.querySelectorAll("button")]) {
+        const r = el.getBoundingClientRect();
+        const corners = [[r.left + 3, r.top + 3], [r.right - 3, r.top + 3], [r.left + 3, r.bottom - 3], [r.right - 3, r.bottom - 3]];
+        if (r.top < story.top || r.bottom > story.bottom || corners.some(([x, y]) => { const hit = document.elementFromPoint(x, y); return !hit || !el.contains(hit); })) {
+          out.push(`${name}: "${el.textContent.trim().slice(0, 24)}" is covered or out of view`);
+          break;
+        }
+      }
+    }
+    if (plant) ws.style.gridTemplateColumns = "";
+    return out;
+  }, plant);
   await run("layout", "LAYOUT OK", async (check) => {
     for (const [width, height] of VIEWPORTS) {
       for (const theme of ["light", "dark"]) {
@@ -428,7 +480,16 @@ try {
         const first = await headerNow(page);
         for (const id of STEP_IDS) {
           await page.click(`#steps [data-step="${id}"] button`);
-          if (id === "propose") await page.click('.option[data-recommended="true"] [data-action="approve"]');
+          if (id === "propose") {
+            await page.waitForTimeout(120);
+            const d = await decisionProblems(page);
+            if (d.length) problems.push(`the decision: ${d.join("; ")}`);
+            if (width === 1280 && theme === "light") {
+              const planted = await decisionProblems(page, true);
+              check(planted.some((p) => /^Do nothing/.test(p)), `the decision check catches Do nothing hidden by the bar under the old columns (${planted.join("; ") || "nothing caught"})`);
+            }
+            await page.click('.option[data-recommended="true"] [data-action="approve"]');
+          }
           if (id === "prepare") await page.click("#approve-all");
           await page.waitForTimeout(120);
           const m = await page.evaluate(() => {
@@ -464,22 +525,81 @@ try {
       for (const choice of ["recommended", "baseline"]) {
         const { context, page, errors } = await open(`?scenario=${sc.slug}&step=propose&guide=0`, { width: 1280, height: 720 });
         const first = await headerNow(page);
+        const decision = await decisionProblems(page);
         await page.click(choice === "recommended" ? '.option[data-recommended="true"] [data-action="approve"]' : '.option[data-option="baseline"] [data-action="approve"]');
         await page.waitForTimeout(150);
         const head = await headerNow(page);
-        if (head.height !== first.height || head.cut.length || errors.length) sweep.push(`${sc.slug} ${choice}: ${head.height !== first.height ? `the header grew from ${first.height} to ${head.height} px` : ""}${head.cut.length ? ` cut: ${head.cut.join(", ")}` : ""}${errors.length ? ` errors: ${errors.join(" | ")}` : ""}`);
+        if (decision.length || head.height !== first.height || head.cut.length || errors.length) sweep.push(`${sc.slug} ${choice}: ${decision.length ? `the decision: ${decision.join("; ")}` : ""}${head.height !== first.height ? ` the header grew from ${first.height} to ${head.height} px` : ""}${head.cut.length ? ` cut: ${head.cut.join(", ")}` : ""}${errors.length ? ` errors: ${errors.join(" | ")}` : ""}`);
         else sweep.push(null);
         await context.close();
       }
     }
     const bad = sweep.filter(Boolean);
-    check(sweep.length === 12 && !bad.length, `at 1280 × 720 the header keeps one line with every key figure in full, in ${sweep.length / 2} scenarios after an approval and after accepting the risk${bad.length ? `; ${bad.join("; ")}` : ""}`);
+    check(sweep.length === 12 && !bad.length, `at 1280 × 720, in ${sweep.length / 2} scenarios, every option and Do nothing show in full above the bar at the decision, and the header keeps one line with every key figure in full after an approval and after accepting the risk${bad.length ? `; ${bad.join("; ")}` : ""}`);
     const phone = await open("?guide=0", { width: 375, height: 760 });
     const wide = await phone.page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     await phone.page.click('#steps [data-step="propose"] button');
     await phone.page.screenshot({ path: path.join(OUT, "375-propose.png"), fullPage: true });
     check(wide <= 0 && !phone.errors.length, `375 px: the page scrolls only down (${wide} px too wide)`);
     await phone.context.close();
+  });
+
+  // Names, not record ids (Vici #16): Vici's recordIdProblems over every screen of every scenario, both ways
+  // a decision can go, the drafts opened, the guide and the live-run dialog, with every id of Navigator's data.
+  await run("ids", "NAMES OK", async (check) => {
+    const dir = viciDir();
+    if (!dir) { check(!REQUIRE_VICI, `ids: ${REQUIRE_VICI ? "no" : "(skipped) no"} ViciDesign checkout for recordIdProblems`); return; }
+    const { recordIdProblems } = await import(pathToFileURL(path.join(dir, "scripts", "lib", "ids.mjs")).href);
+    const ids = new Set();
+    const REF = new Set(["id", "supplier", "to", "from", "part", "plant", "route", "parts", "plants"]);
+    const collect = (v, key = "") => {
+      if (Array.isArray(v)) v.forEach((x) => collect(x, key));
+      else if (v && typeof v === "object") Object.entries(v).forEach(([k, x]) => collect(x, k));
+      else if (typeof v === "string" && (REF.has(key) || key.endsWith("_id") || key.endsWith("_ids"))) ids.add(v);
+    };
+    collect(globalThis.WORLD);
+    for (const s of globalThis.SCENARIOS) ids.add(s.id);
+    const text = (page) => page.evaluate(() => [document.body.innerText, ...[...document.querySelectorAll("#map text")].map((t) => t.textContent)].join("\n"));
+    const hits = new Set();
+    let screens = 0;
+    const look = async (page, where) => { screens += 1; for (const p of recordIdProblems(await text(page), ids)) hits.add(`${where}: ${p}`); };
+    for (const sc of story.scenarioList()) {
+      for (const choice of ["recommended", "baseline"]) {
+        const { context, page } = await open(`?scenario=${sc.slug}&guide=0`, { width: 1280, height: 720 });
+        for (const id of STEP_IDS) {
+          await page.click(`#steps [data-step="${id}"] button`);
+          await page.waitForTimeout(80);
+          await look(page, `${sc.slug} ${id}`);
+          if (id === "propose") {
+            await page.click(choice === "recommended" ? '.option[data-recommended="true"] [data-action="approve"]' : '.option[data-option="baseline"] [data-action="approve"]');
+            await page.waitForTimeout(80);
+            await look(page, `${sc.slug} ${choice} decided`);
+          }
+        }
+        await page.evaluate(() => document.querySelectorAll("#story details").forEach((d) => { d.open = true; }));
+        await look(page, `${sc.slug} ${choice} drafts open`);
+        if (await page.$("#approve-all")) {
+          await page.click("#approve-all");
+          await page.waitForTimeout(80);
+          await look(page, `${sc.slug} ${choice} all approved`);
+        }
+        if (sc.slug === "tangier" && choice === "recommended") {
+          // The control: an id planted on the screen is caught by the same path.
+          const title = await page.evaluate(() => { const t = document.getElementById("story-title"); const was = t.textContent; t.textContent += " (S-TNG-HAR)"; return was; });
+          check(recordIdProblems(await text(page), ids).length > 0, "control: an id planted in the story's title is caught");
+          await page.evaluate((was) => { document.getElementById("story-title").textContent = was; }, title);
+          await page.click('[data-vc-guide-open="guide"]');
+          await page.waitForTimeout(120);
+          for (const b of await page.$$("#guide .vc-guide__rail .vc-step__button")) { await b.click(); await page.waitForTimeout(60); await look(page, "the guide"); }
+          await page.keyboard.press("Escape");
+          await page.click("#start");
+          await page.waitForTimeout(120);
+          await look(page, "the live-run dialog");
+        }
+        await context.close();
+      }
+    }
+    check(ids.size > 200 && !hits.size, `${screens} screens in ${story.scenarioList().length} scenarios show names, not any of the ${ids.size} record ids of Navigator's data${hits.size ? `; ${[...hits].slice(0, 4).join("; ")}` : ""}`);
   });
 } finally {
   await browser.close();

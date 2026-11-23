@@ -12,7 +12,7 @@ const SUITES = [
   { id: "files", what: "the page's files, the modules' imports, a portable shell, vici/ unchanged", file: "tests/files.mjs", browser: false, vici: true },
   { id: "lean", what: "how small the app stays: modules, lines, one host to connect to, short docs", file: "tests/lean.mjs", browser: false },
   { id: "vici", what: "Vici's own guide, byline, writing and AI-notice checks on the page and every sentence it writes", file: "tests/vici.mjs", browser: false, vici: true },
-  { id: "showcase", what: "the five steps by click, key and link, the run, the bar that asks, the scenarios, the first screen, the key figures, four window sizes, both themes", file: "tests/showcase.mjs", browser: true },
+  { id: "showcase", what: "the five steps by click, key and link, the run, the bar that asks, the scenarios, the first screen, the key figures, four window sizes, both themes, names on every screen", file: "tests/showcase.mjs", browser: true, vici: true },
   { id: "guide", what: "Vici's guide behaviour check over http, and every chapter fits 1280 × 720 and 1366 × 768", file: "tests/guide.mjs", browser: true, vici: true },
   { id: "live", what: "a live run on a session key against a stand-in API: approvals, nothing sent, cost measured", file: "tests/live.mjs", browser: true },
   { id: "contrast", what: "every visible text in the five steps and the guide meets WCAG 2.2 AA, light and dark", file: "tests/contrast.mjs", browser: true },

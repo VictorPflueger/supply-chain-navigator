@@ -1,7 +1,7 @@
 // Contrast: every visible text meets WCAG 2.2 AA (4.5:1, large text 3:1) against what is painted
 // behind it, in the light and the dark theme, at 1920 × 1080 and 1280 × 720: the guide's first and last
 // chapters, the five steps (the decision unanswered and answered, the drafts open and approved), the
-// scenario menu and the Start agent dialog. The measure is tests/lib/contrast.mjs; it first proves
+// scenario menu and the live-run dialog. The measure is tests/lib/contrast.mjs; it first proves
 // itself on a planted page.
 // Usage: NODE_PATH="$(npm root -g)" node tests/contrast.mjs
 import { launchBrowser, serveStatic, checks, STEP_IDS } from "./lib/harness.mjs";
@@ -55,7 +55,7 @@ try {
       await measure("the scenario menu");
       await page.keyboard.press("Escape");
       await page.click("#start");
-      await measure("Start agent");
+      await measure("the live-run dialog");
       await page.keyboard.press("Escape");
       check(measured > 400 && !below.length, `${width} × ${height} ${theme}: ${measured} texts measured in ${states} states${below.length ? `; below AA: ${[...new Set(below)].slice(0, 8).join(" | ")}` : ", all at AA or better"}`);
       await ctx.close();
